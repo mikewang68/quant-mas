@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}回测 - 量化交易系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>
+            <i class="fas fa-chart-bar"></i> 策略回测
+        </h1>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-cog"></i> 回测配置
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="backtest-form">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="strategy-select" class="form-label">策略</label>
+                            <select class="form-select" id="strategy-select" required>
+                                <option value="">选择策略</option>
+                                <option value="ma_crossover">均线交叉策略</option>
+                                <option value="multi_agent">多智能体策略</option>
+                                <option value="custom">自定义策略</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="symbols-input" class="form-label">股票代码</label>
+                            <input type="text" class="form-control" id="symbols-input" placeholder="例如: 000001,000002,600000" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="start-date" class="form-label">开始日期</label>
+                            <input type="date" class="form-control" id="start-date" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="end-date" class="form-label">结束日期</label>
+                            <input type="date" class="form-control" id="end-date" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="initial-capital" class="form-label">初始资金</label>
+                            <input type="number" class="form-control" id="initial-capital" value="1000000" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="commission" class="form-label">手续费率</label>
+                            <input type="number" class="form-control" id="commission" value="0.001" step="0.001" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button type="submit" class="btn btn-primary" id="run-backtest-btn">
+                                <i class="fas fa-play"></i> 运行回测
+                            </button>
+                            <button type="button" class="btn btn-secondary" id="clear-results-btn">
+                                <i class="fas fa-trash"></i> 清除结果
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="results-section" style="display: none;">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-chart-line"></i> 回测结果
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-white bg-success">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">总收益率</h6>
+                                <h3 id="total-return">0.00%</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-info">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">年化收益率</h6>
+                                <h3 id="annual-return">0.00%</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-warning">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">夏普比率</h6>
+                                <h3 id="sharpe-ratio">0.00</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-white bg-danger">
+                            <div class="card-body text-center">
+                                <h6 class="card-title">最大回撤</h6>
+                                <h3 id="max-drawdown">0.00%</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <h5>收益曲线</h5>
+                        <canvas id="equity-chart" height="300"></canvas>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <h5>交易分析</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>指标</th>
+                                        <th>数值</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>总交易数</td>
+                                        <td id="total-trades">0</td>
+                                    </tr>
+                                    <tr>
+                                        <td>胜率</td>
+                                        <td id="win-rate">0.00%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>平均盈利</td>
+                                        <td id="avg-win">¥0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td>平均亏损</td>
+                                        <td id="avg-loss">¥0.00</td>
+                                    </tr>
+                                    <tr>
+                                        <td>盈利因子</td>
+                                        <td id="profit-factor">0.00</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 设置默认日期
+    document.addEventListener('DOMContentLoaded', function() {
+        const today = new Date();
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(today.getFullYear() - 1);
+        
+        document.getElementById('start-date').valueAsDate = oneYearAgo;
+        document.getElementById('end-date').valueAsDate = today;
+    });
+
+    // 处理回测表单提交
+    document.getElementById('backtest-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // 获取表单值
+        const strategy = document.getElementById('strategy-select').value;
+        const symbols = document.getElementById('symbols-input').value;
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const initialCapital = document.getElementById('initial-capital').value;
+        const commission = document.getElementById('commission').value;
+        
+        if (!strategy || !symbols || !startDate || !endDate) {
+            alert('请填写所有必填字段');
+            return;
+        }
+        
+        // 显示加载状态
+        const runBtn = document.getElementById('run-backtest-btn');
+        const originalText = runBtn.innerHTML;
+        runBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 运行中...';
+        runBtn.disabled = true;
+        
+        // 在实际实现中，这会调用API来运行回测
+        // 为了演示目的，我们将模拟结果
+        setTimeout(() => {
+            // 隐藏加载状态
+            runBtn.innerHTML = originalText;
+            runBtn.disabled = false;
+            
+            // 显示结果
+            document.getElementById('results-section').style.display = 'block';
+            
+            // 更新指标（演示值）
+            document.getElementById('total-return').textContent = '+25.6%';
+            document.getElementById('annual-return').textContent = '+28.3%';
+            document.getElementById('sharpe-ratio').textContent = '1.42';
+            document.getElementById('max-drawdown').textContent = '-7.2%';
+            document.getElementById('total-trades').textContent = '127';
+            document.getElementById('win-rate').textContent = '62.2%';
+            document.getElementById('avg-win').textContent = '¥2,450.00';
+            document.getElementById('avg-loss').textContent = '¥1,230.00';
+            document.getElementById('profit-factor').textContent = '1.99';
+            
+            // 初始化收益曲线图
+            initializeEquityChart();
+        }, 2000);
+    });
+
+    // 处理清除结果按钮
+    document.getElementById('clear-results-btn').addEventListener('click', function() {
+        document.getElementById('results-section').style.display = 'none';
+        document.getElementById('backtest-form').reset();
+    });
+
+    // 初始化收益曲线图
+    function initializeEquityChart() {
+        const ctx = document.getElementById('equity-chart').getContext('2d');
+        
+        // 为收益曲线生成示例数据
+        const labels = [];
+        const data = [];
+        let currentValue = 1000000;
+        
+        for (let i = 0; i < 50; i++) {
+            labels.push(`第 ${i + 1} 天`);
+            // 模拟随机收益
+            const dailyReturn = (Math.random() - 0.45) * 0.02;
+            currentValue = currentValue * (1 + dailyReturn);
+            data.push(currentValue);
+        }
+        
+        // 创建图表
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '投资组合价值',
+                    data: data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}
+

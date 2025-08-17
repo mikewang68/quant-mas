@@ -1,0 +1,2 @@
+akshare:  https://akshare.akfamily.xyz/
+binance:  https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/README

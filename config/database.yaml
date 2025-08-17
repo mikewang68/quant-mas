@@ -1,0 +1,21 @@
+# MongoDB Configuration
+mongodb:
+  host: 192.168.1.2
+  port: 27017
+  database: stock
+  username: stock
+  password: 681123
+  auth_database: admin
+
+# Collections
+collections:
+  stock_codes: code
+  k_data: k_data
+  update_dates: update_date
+  weekly_selections: weekly_selections
+  config: config
+  accounts: accounts
+  agents: agents
+  strategies: strategies
+  pool: pool
+

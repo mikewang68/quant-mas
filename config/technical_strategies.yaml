@@ -1,0 +1,7 @@
+# Technical Strategies Configuration
+# List of strategy IDs to execute with the technical selector agent
+
+strategy_ids:
+  - "689853fd9a7440733f19d935"  # 周线选股 strategy
+  - "6898541a9a7440733f19d936"  # 趋势跟踪 strategy
+

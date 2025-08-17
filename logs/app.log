@@ -1,0 +1,43 @@
+INFO:__main__:Successfully connected to MongoDB
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5004
+ * Running on http://192.168.1.177:5004
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:Successfully connected to MongoDB
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 100-116-709
+INFO:werkzeug: * Detected change in '/home/mike/quant_mas/web/app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:Successfully connected to MongoDB
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 100-116-709
+INFO:werkzeug:127.0.0.1 - - [09/Aug/2025 08:43:10] "GET /api/accounts HTTP/1.1" 200 -
+INFO:werkzeug: * Detected change in '/home/mike/quant_mas/web/app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:Successfully connected to MongoDB
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 100-116-709
+INFO:werkzeug: * Detected change in '/home/mike/quant_mas/web/app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:Successfully connected to MongoDB
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 100-116-709
+INFO:werkzeug: * Detected change in '/home/mike/quant_mas/web/app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:Successfully connected to MongoDB
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 100-116-709
+INFO:werkzeug: * Detected change in '/home/mike/quant_mas/web/app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:Successfully connected to MongoDB
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 100-116-709
+INFO:werkzeug: * Detected change in '/home/mike/quant_mas/web/app.py', reloading
+INFO:werkzeug: * Restarting with stat
+INFO:__main__:Successfully connected to MongoDB
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 100-116-709

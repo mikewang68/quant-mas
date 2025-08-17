@@ -1,0 +1,38 @@
+# MongoDB Configuration
+mongodb:
+  host: 192.168.1.2
+  port: 27017
+  database: stock
+  username: 
+  password: 
+
+# n8n Configuration
+n8n:
+  host: 192.168.1.2
+  port: 5678
+  api_key: 
+
+# Data Configuration
+data:
+  source: akshare
+  default_start_date: "2020-01-01"
+  default_end_date: "2025-12-31"
+
+# Strategy Configuration
+strategy:
+  default_capital: 100000
+  commission: 0.001
+  slippage: 0.0005
+
+# Web Configuration
+web:
+  host: 0.0.0.0
+  port: 5000
+  debug: false
+
+# Logging Configuration
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: logs/quant_system.log
+

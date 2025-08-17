@@ -1,0 +1,999 @@
+{% extends "base.html" %}
+
+{% block title %}策略 - 量化交易系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>
+            <i class="fas fa-cogs"></i> 交易策略
+        </h1>
+        <hr>
+    </div>
+</div>
+
+
+    <!-- Run Agent Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>
+                        <i class="fas fa-play-circle"></i> 运行智能体
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row row-cols-5" id="available-agents-container">
+                        <!-- Available agents will be loaded here as individual boxes -->
+                    </div>
+                    <div class="mt-3">
+                        <strong>全局运行状态:</strong> <span id="global-run-status">空闲</span>
+                    </div>
+                    <div class="mt-2" id="last-execution-time">
+                        <small class="text-muted">上次执行时间: 加载中...</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+<!-- Agent Management Section -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-robot"></i> 智能体管理
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Agent List Table -->
+                <div class="table-responsive mb-3">
+                    <table class="table table-striped" id="agents-table">
+                        <thead>
+                            <tr>
+                                <th>智能体名称</th>
+                                <th>描述</th>
+                                <th>关联策略</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="agents-table-body">
+                            <!-- Agent data will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Add New Agent Button -->
+                <button class="btn btn-success" id="add-agent-btn">
+                    <i class="fas fa-plus"></i> 添加智能体
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <!-- Strategy Management Section -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>
+                        <i class="fas fa-chart-bar"></i> 策略管理
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Strategy List Table -->
+                    <div class="table-responsive mb-3">
+                        <table class="table table-striped" id="strategies-table">
+                            <thead>
+                                <tr>
+                                    <th>策略名称</th>
+                                    <th>类型</th>
+                                    <th>描述</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="strategies-table-body">
+                                <!-- Strategy data will be loaded here -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Add New Strategy Button -->
+                    <button class="btn btn-success" id="add-strategy-btn">
+                        <i class="fas fa-plus"></i> 添加策略
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    
+<!-- Agent Modal -->
+<div class="modal fade" id="agentModal" tabindex="-1" aria-labelledby="agentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="agentModalLabel">添加/编辑智能体</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="agent-form">
+                    <input type="hidden" id="agent-id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="agent-name" class="form-label">智能体名称 *</label>
+                            <input type="text" class="form-control" id="agent-name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="agent-status" class="form-label">状态</label>
+                            <select class="form-select" id="agent-status">
+                                <option value="active">活跃</option>
+                                <option value="inactive">非活跃</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="agent-description" class="form-label">描述</label>
+                        <textarea class="form-control" id="agent-description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="agent-program" class="form-label">执行程序</label>
+                        <input type="text" class="form-control" id="agent-program" placeholder="请输入执行程序文件名，如：technical_selector.py">
+                        <div class="form-text">指定此智能体使用的执行程序文件</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">关联策略</label>
+                        <div id="agent-strategies-checkboxes" class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            <!-- Strategy checkboxes will be loaded here -->
+                        </div>
+                        <div class="form-text">点击复选框选择策略</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="save-agent-btn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Strategy Modal -->
+<div class="modal fade" id="strategyModal" tabindex="-1" aria-labelledby="strategyModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="strategyModalLabel">添加/编辑策略</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="strategy-form">
+                    <input type="hidden" id="strategy-id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="strategy-name" class="form-label">策略名称 *</label>
+                            <input type="text" class="form-control" id="strategy-name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="strategy-type" class="form-label">策略类型 *</label>
+                            <select class="form-select" id="strategy-type" required>
+                                <option value="">选择类型</option>
+                                <option value="technical">技术分析</option>
+                                <option value="fundamental">基本面分析</option>
+                                <option value="sentiment">舆情分析</option>
+                                <option value="ml">机器学习</option>
+                                <option value="risk">风险控制</option>
+                                <option value="backtest">回测分析</option>
+                                <option value="investment">投资分析</option>
+                                <option value="multi_agent">多智能体</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="strategy-description" class="form-label">描述</label>
+                        <textarea class="form-control" id="strategy-description" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="strategy-program" class="form-label">执行程序</label>
+                        <input type="text" class="form-control" id="strategy-program" placeholder="请输入执行程序文件名，如：ma_crossover_strategy.py">
+                    </div>
+                    <div class="mb-3">
+                        <label for="strategy-parameters" class="form-label">参数 (JSON)</label>
+                        <textarea class="form-control" id="strategy-parameters" rows="6"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="save-strategy-btn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Global variables
+    let agents = [];
+    let strategies = [];
+    let editingAgentId = null;
+    let editingStrategyId = null;
+
+    // Show loading indicator
+    function showLoading() {
+        const globalStatus = document.getElementById('global-run-status');
+        if (globalStatus) {
+            globalStatus.textContent = '加载中...';
+            globalStatus.className = 'text-info';
+        }
+    }
+
+    // Hide loading indicator
+    function hideLoading() {
+        const globalStatus = document.getElementById('global-run-status');
+        if (globalStatus) {
+            globalStatus.textContent = '空闲';
+            globalStatus.className = '';
+        }
+    }
+
+    // Load last execution time from server
+    function loadLastExecutionTime() {
+        fetch('/api/last-execution-time')
+            .then(response => response.json())
+            .then(data => {
+                const lastExecutionTimeElement = document.getElementById('last-execution-time');
+                if (lastExecutionTimeElement) {
+                    if (data.last_execution_time) {
+                        lastExecutionTimeElement.innerHTML = `<small class="text-muted">上次执行时间: ${data.last_execution_time}</small>`;
+                    } else {
+                        lastExecutionTimeElement.innerHTML = '<small class="text-muted">上次执行时间: 无记录</small>';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading last execution time:', error);
+            });
+    }
+
+    // Show error message
+    function showError(message) {
+        alert('错误: ' + message);
+    }
+
+    // Show success message
+    function showSuccess(message) {
+        alert('成功: ' + message);
+    }
+
+    // Load agents from server
+    function loadAgents() {
+        showLoading();
+        fetch('/api/agents')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                agents = data;
+                renderAgentsTable();
+                updateAgentSelector();
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error loading agents:', error);
+                showError('加载智能体数据失败: ' + error.message);
+                hideLoading();
+            });
+    }
+
+    // Load strategies from server
+    function loadStrategies() {
+        showLoading();
+        fetch('/api/strategies')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                strategies = data;
+                renderStrategiesTable();
+                updateStrategySelectors();
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error loading strategies:', error);
+                showError('加载策略数据失败: ' + error.message);
+                hideLoading();
+            });
+    }
+
+    // Render agents table
+    function renderAgentsTable() {
+        const tbody = document.getElementById('agents-table-body');
+        if (!tbody) {
+            console.error('Agents table body not found');
+            return;
+        }
+        tbody.innerHTML = '';
+
+        agents.forEach(agent => {
+            const row = document.createElement('tr');
+            const strategyNames = agent.strategies && agent.strategies.length > 0 
+                ? agent.strategies.map(id => {
+                    const strategy = strategies.find(s => s._id === id);
+                    return strategy ? strategy.name : id;
+                }).join(', ')
+                : '无关联策略';
+
+            row.innerHTML = `
+                <td>${agent.name}</td>
+                <td>${agent.description || ''}</td>
+                <td>${strategyNames}</td>
+                <td><span class="badge bg-${agent.status === 'active' ? 'success' : 'secondary'}">${agent.status === 'active' ? '活跃' : '非活跃'}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary edit-agent-btn me-1" data-id="${agent._id}">
+                        <i class="fas fa-edit"></i> 编辑
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-agent-btn" data-id="${agent._id}">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Add event listeners to edit and delete buttons
+        document.querySelectorAll('.edit-agent-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const agentId = this.getAttribute('data-id');
+                editAgent(agentId);
+            });
+        });
+
+        document.querySelectorAll('.delete-agent-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const agentId = this.getAttribute('data-id');
+                deleteAgent(agentId);
+            });
+        });
+        
+        // Update the available agents table for running
+        renderAvailableAgentsTable();
+    }
+
+    // Render available agents as individual boxes for running
+    function renderAvailableAgentsTable() {
+        const container = document.getElementById('available-agents-container');
+        if (!container) {
+            console.error('Available agents container not found');
+            return;
+        }
+        container.innerHTML = '';
+
+        // Filter active agents only
+        const activeAgents = agents.filter(agent => agent.status === 'active');
+
+        if (activeAgents.length === 0) {
+            container.innerHTML = '<div class="col-12"><p class="text-center">暂无活跃智能体</p></div>';
+            return;
+        }
+
+        activeAgents.forEach(agent => {
+            const col = document.createElement('div');
+            col.className = 'col mb-3';
+            col.innerHTML = `
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">${agent.name}</h5>
+                        <p class="card-text">${agent.description || '无描述'}</p>
+                        <p class="card-text">
+                            <small class="text-muted">状态: <span class="agent-status" id="status-${agent._id}">空闲</span></small>
+                        </p>
+                        <p class="card-text">
+                            <small class="text-muted">上次执行: <span class="agent-last-execution" id="last-execution-${agent._id}">加载中...</span></small>
+                        </p>
+                        <button class="btn btn-primary run-agent-btn" data-id="${agent._id}">
+                            <i class="fas fa-play"></i> 运行
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(col);
+        });
+
+        // Add event listeners to run buttons
+        document.querySelectorAll('.run-agent-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const agentId = this.getAttribute('data-id');
+                runAgent(agentId);
+            });
+        });
+
+        // Load last execution time for each agent
+        activeAgents.forEach(agent => {
+            loadAgentLastExecutionTime(agent._id);
+        });
+    }
+
+    // Load last execution time for a specific agent
+    function loadAgentLastExecutionTime(agentId) {
+        fetch(`/api/agent-last-execution-time/${agentId}`)
+            .then(response => response.json())
+            .then(data => {
+                const lastExecutionElement = document.getElementById(`last-execution-${agentId}`);
+                if (lastExecutionElement) {
+                    if (data.last_execution_time) {
+                        lastExecutionElement.textContent = data.last_execution_time;
+                    } else {
+                        lastExecutionElement.textContent = '无记录';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error(`Error loading last execution time for agent ${agentId}:`, error);
+                const lastExecutionElement = document.getElementById(`last-execution-${agentId}`);
+                if (lastExecutionElement) {
+                    lastExecutionElement.textContent = '加载失败';
+                }
+            });
+    }
+
+    // Render strategies table
+    function renderStrategiesTable() {
+        const tbody = document.getElementById('strategies-table-body');
+        if (!tbody) {
+            console.error('Strategies table body not found');
+            return;
+        }
+        tbody.innerHTML = '';
+
+        strategies.forEach(strategy => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${strategy.name}</td>
+                <td>${getStrategyTypeText(strategy.type)}</td>
+                <td>${strategy.description || ''}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary edit-strategy-btn me-1" data-id="${strategy._id}">
+                        <i class="fas fa-edit"></i> 编辑
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger delete-strategy-btn" data-id="${strategy._id}">
+                        <i class="fas fa-trash"></i> 删除
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Add event listeners to edit and delete buttons
+        document.querySelectorAll('.edit-strategy-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const strategyId = this.getAttribute('data-id');
+                editStrategy(strategyId);
+            });
+        });
+
+        document.querySelectorAll('.delete-strategy-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const strategyId = this.getAttribute('data-id');
+                deleteStrategy(strategyId);
+            });
+        });
+    }
+
+    // Get strategy type text
+    function getStrategyTypeText(type) {
+        const typeMap = {
+            'technical': '技术分析',
+            'fundamental': '基本面分析',
+            'sentiment': '舆情分析',
+            'ml': '机器学习',
+            'risk': '风险控制',
+            'backtest': '回测分析',
+            'investment': '投资分析',
+            'multi_agent': '多智能体'
+        };
+        return typeMap[type] || type;
+    }
+
+    // Update agent selector dropdown
+    function updateAgentSelector() {
+        const selector = document.getElementById('agent-selector');
+        if (!selector) {
+            console.error('Agent selector not found');
+            return;
+        }
+        selector.innerHTML = '<option value="">请选择智能体</option>';
+        
+        agents.forEach(agent => {
+            if (agent.status === 'active') {
+                const option = document.createElement('option');
+                option.value = agent._id;
+                option.textContent = agent.name;
+                selector.appendChild(option);
+            }
+        });
+    }
+
+    // Update strategy selectors
+    function updateStrategySelectors() {
+        // Update strategy selector in run section
+        const runSelector = document.getElementById('strategy-selector');
+        if (runSelector) {
+            runSelector.innerHTML = '';
+            
+            strategies.forEach(strategy => {
+                const option = document.createElement('option');
+                option.value = strategy._id;
+                option.textContent = strategy.name;
+                runSelector.appendChild(option);
+            });
+        }
+        
+        // Update strategy checkboxes in agent modal
+        const agentStrategiesContainer = document.getElementById('agent-strategies-checkboxes');
+        if (agentStrategiesContainer) {
+            agentStrategiesContainer.innerHTML = '';
+            
+            strategies.forEach(strategy => {
+                const div = document.createElement('div');
+                div.className = 'form-check mb-2';
+                div.innerHTML = `
+                    <input class="form-check-input" type="checkbox" value="${strategy._id}" id="strategy-${strategy._id}">
+                    <label class="form-check-label" for="strategy-${strategy._id}">
+                        ${strategy.name}
+                    </label>
+                `;
+                agentStrategiesContainer.appendChild(div);
+            });
+        }
+    }
+
+    // Show add agent modal
+    document.getElementById('add-agent-btn').addEventListener('click', function() {
+        editingAgentId = null;
+        document.getElementById('agentModalLabel').textContent = '添加智能体';
+        document.getElementById('agent-form').reset();
+        document.getElementById('agent-id').value = '';
+        
+        // Clear strategy selection
+        const strategyCheckboxes = document.querySelectorAll('#agent-strategies-checkboxes input[type="checkbox"]');
+        strategyCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        
+        new bootstrap.Modal(document.getElementById('agentModal')).show();
+    });
+
+    // Show add strategy modal
+    document.getElementById('add-strategy-btn').addEventListener('click', function() {
+        editingStrategyId = null;
+        document.getElementById('strategyModalLabel').textContent = '添加策略';
+        document.getElementById('strategy-form').reset();
+        document.getElementById('strategy-id').value = '';
+        document.getElementById('strategy-parameters').value = '{}';
+        
+        new bootstrap.Modal(document.getElementById('strategyModal')).show();
+    });
+
+    // Edit agent
+    function editAgent(agentId) {
+        const agent = agents.find(a => a._id === agentId);
+        if (!agent) return;
+
+        editingAgentId = agentId;
+        document.getElementById('agentModalLabel').textContent = '编辑智能体';
+        document.getElementById('agent-id').value = agent._id;
+        document.getElementById('agent-name').value = agent.name;
+        document.getElementById('agent-description').value = agent.description || '';
+        document.getElementById('agent-status').value = agent.status || 'active';
+        document.getElementById('agent-program').value = agent.program || '';
+
+        // Set strategy selection
+        const strategyCheckboxes = document.querySelectorAll('#agent-strategies-checkboxes input[type="checkbox"]');
+        strategyCheckboxes.forEach(checkbox => {
+            checkbox.checked = agent.strategies && agent.strategies.includes(checkbox.value);
+        });
+
+        new bootstrap.Modal(document.getElementById('agentModal')).show();
+    }
+
+    // Edit strategy
+    function editStrategy(strategyId) {
+        const strategy = strategies.find(s => s._id === strategyId);
+        if (!strategy) return;
+
+        editingStrategyId = strategyId;
+        document.getElementById('strategyModalLabel').textContent = '编辑策略';
+        document.getElementById('strategy-id').value = strategy._id;
+        document.getElementById('strategy-name').value = strategy.name;
+        document.getElementById('strategy-type').value = strategy.type;
+        document.getElementById('strategy-description').value = strategy.description || '';
+        document.getElementById('strategy-program').value = strategy.program || '';
+        document.getElementById('strategy-parameters').value = JSON.stringify(strategy.parameters || {}, null, 2);
+
+        new bootstrap.Modal(document.getElementById('strategyModal')).show();
+    }
+
+    // Delete agent
+    function deleteAgent(agentId) {
+        if (confirm('确定要删除这个智能体吗？此操作无法撤销。')) {
+            showLoading();
+            fetch(`/api/agents/${agentId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showSuccess('智能体删除成功');
+                    loadAgents(); // Reload agents
+                } else {
+                    showError('删除智能体失败：' + data.message);
+                }
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error deleting agent:', error);
+                showError('删除智能体时发生错误');
+                hideLoading();
+            });
+        }
+    }
+
+    // Delete strategy
+    function deleteStrategy(strategyId) {
+        if (confirm('确定要删除这个策略吗？此操作无法撤销。')) {
+            showLoading();
+            fetch(`/api/strategies/${strategyId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    showSuccess('策略删除成功');
+                    loadStrategies(); // Reload strategies
+                    loadAgents(); // Reload agents as well since they might reference this strategy
+                } else {
+                    showError('删除策略失败：' + data.message);
+                }
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('Error deleting strategy:', error);
+                showError('删除策略时发生错误');
+                hideLoading();
+            });
+        }
+    }
+
+    // Save agent
+    document.getElementById('save-agent-btn').addEventListener('click', function() {
+        const agentId = document.getElementById('agent-id').value;
+        const name = document.getElementById('agent-name').value.trim();
+        const description = document.getElementById('agent-description').value.trim();
+        const status = document.getElementById('agent-status').value;
+        const program = document.getElementById('agent-program').value.trim();
+        
+        // Get selected strategies
+        const strategyCheckboxes = document.querySelectorAll('#agent-strategies-checkboxes input[type="checkbox"]');
+        const selectedStrategies = Array.from(strategyCheckboxes)
+            .filter(checkbox => checkbox.checked)
+            .map(checkbox => checkbox.value);
+
+        // Validation
+        if (!name) {
+            alert('请输入智能体名称！');
+            return;
+        }
+
+        // Prepare agent data
+        const agentData = {
+            name,
+            description,
+            status,
+            program,
+            strategies: selectedStrategies
+        };
+
+        if (editingAgentId) {
+            // Update existing agent
+            fetch(`/api/agents/${editingAgentId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(agentData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAgents(); // Reload agents
+                    bootstrap.Modal.getInstance(document.getElementById('agentModal')).hide();
+                } else {
+                    alert('更新智能体失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating agent:', error);
+                alert('更新智能体时发生错误');
+            });
+        } else {
+            // Add new agent
+            fetch('/api/agents', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(agentData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAgents(); // Reload agents
+                    bootstrap.Modal.getInstance(document.getElementById('agentModal')).hide();
+                } else {
+                    alert('创建智能体失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error creating agent:', error);
+                alert('创建智能体时发生错误');
+            });
+        }
+    });
+
+    // Save strategy
+    document.getElementById('save-strategy-btn').addEventListener('click', function() {
+        const strategyId = document.getElementById('strategy-id').value;
+        const name = document.getElementById('strategy-name').value.trim();
+        const type = document.getElementById('strategy-type').value;
+        const description = document.getElementById('strategy-description').value.trim();
+        const program = document.getElementById('strategy-program').value.trim();
+        const parametersText = document.getElementById('strategy-parameters').value.trim();
+
+        // Validation
+        if (!name) {
+            alert('请输入策略名称！');
+            return;
+        }
+
+        if (!type) {
+            alert('请选择策略类型！');
+            return;
+        }
+
+        // Parse parameters
+        let parameters = {};
+        if (parametersText) {
+            try {
+                parameters = JSON.parse(parametersText);
+            } catch (e) {
+                alert('参数格式错误，请输入有效的JSON格式！');
+                return;
+            }
+        }
+
+        // Prepare strategy data
+        const strategyData = {
+            name,
+            type,
+            description,
+            program,
+            parameters
+        };
+
+        if (editingStrategyId) {
+            // Update existing strategy
+            fetch(`/api/strategies/${editingStrategyId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(strategyData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadStrategies(); // Reload strategies
+                    loadAgents(); // Reload agents as well since they might reference this策略
+                    bootstrap.Modal.getInstance(document.getElementById('strategyModal')).hide();
+                } else {
+                    alert('更新策略失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating strategy:', error);
+                alert('更新策略时发生错误');
+            });
+        } else {
+            // Add new strategy
+            fetch('/api/strategies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(strategyData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadStrategies(); // Reload strategies
+                    loadAgents(); // Reload agents as well since they might reference this策略
+                    bootstrap.Modal.getInstance(document.getElementById('strategyModal')).hide();
+                } else {
+                    alert('创建策略失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error creating strategy:', error);
+                alert('创建策略时发生错误');
+            });
+        }
+    });
+
+    // Run a specific agent
+    function runAgent(agentId) {
+        // Find the agent
+        const agent = agents.find(a => a._id === agentId);
+        if (!agent) {
+            showError('未找到智能体');
+            return;
+        }
+
+        // Find and disable the run button
+        const runButton = document.querySelector(`.run-agent-btn[data-id="${agentId}"]`);
+        if (runButton) {
+            runButton.disabled = true;
+            runButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 运行中...';
+        }
+
+        // Update agent status to "running"
+        const statusElement = document.getElementById(`status-${agentId}`);
+        if (statusElement) {
+            statusElement.textContent = '运行中...';
+            statusElement.className = 'agent-status text-warning';
+        }
+
+        // Update global status
+        const globalStatus = document.getElementById('global-run-status');
+        if (globalStatus) {
+            globalStatus.textContent = `正在运行 ${agent.name}...`;
+            globalStatus.className = 'text-warning';
+        }
+
+        // Prepare run data (in a real implementation, this would include actual strategy data)
+        const runData = {
+            agent_id: agentId,
+            // For now, we'll just pass an empty array of strategies
+            // In a real implementation, you might want to allow selecting strategies
+            strategy_ids: []
+        };
+
+        // Call the API to run the agent
+        fetch('/api/run-agent', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(runData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            // Update agent status based on result
+            const statusElement = document.getElementById(`status-${agentId}`);
+            if (statusElement) {
+                if (data.status === 'success') {
+                    statusElement.textContent = '已完成';
+                    statusElement.className = 'agent-status text-success';
+                } else {
+                    statusElement.textContent = '失败';
+                    statusElement.className = 'agent-status text-danger';
+                }
+            }
+
+            // Update global status
+            const globalStatus = document.getElementById('global-run-status');
+            const now = new Date();
+            const executionTime = now.toLocaleString('zh-CN');
+            
+            if (data.status === 'success') {
+                globalStatus.textContent = '运行完成';
+                globalStatus.className = 'text-success';
+                
+                // Add execution time display below the status
+                let executionTimeElement = document.getElementById('execution-time-display');
+                if (!executionTimeElement) {
+                    executionTimeElement = document.createElement('div');
+                    executionTimeElement.id = 'execution-time-display';
+                    executionTimeElement.className = 'mt-2';
+                    globalStatus.parentNode.appendChild(executionTimeElement);
+                }
+                executionTimeElement.innerHTML = `<small class="text-muted">执行时间: ${executionTime}</small>`;
+                
+                // Update the agent's last execution time display
+                const agentLastExecutionElement = document.getElementById(`last-execution-${agentId}`);
+                if (agentLastExecutionElement) {
+                    agentLastExecutionElement.textContent = executionTime;
+                }
+            } else {
+                globalStatus.textContent = '运行失败: ' + data.message;
+                globalStatus.className = 'text-danger';
+                
+                // Add execution time display below the status
+                let executionTimeElement = document.getElementById('execution-time-display');
+                if (!executionTimeElement) {
+                    executionTimeElement = document.createElement('div');
+                    executionTimeElement.id = 'execution-time-display';
+                    executionTimeElement.className = 'mt-2';
+                    globalStatus.parentNode.appendChild(executionTimeElement);
+                }
+                executionTimeElement.innerHTML = `<small class="text-muted">执行时间: ${executionTime}</small>`;
+            }
+
+            // Re-enable the run button
+            if (runButton) {
+                runButton.disabled = false;
+                runButton.innerHTML = '<i class="fas fa-play"></i> 运行';
+            }
+
+            // Don't show popup messages - just update the status display
+        })
+        .catch(error => {
+            console.error('Error running agent:', error);
+            
+            // Update agent status to error
+            const statusElement = document.getElementById(`status-${agentId}`);
+            if (statusElement) {
+                statusElement.textContent = '错误';
+                statusElement.className = 'agent-status text-danger';
+            }
+
+            // Update global status
+            const globalStatus = document.getElementById('global-run-status');
+            globalStatus.textContent = '运行错误: ' + error.message;
+            globalStatus.className = 'text-danger';
+            
+            // Add execution time display below the status
+            const now = new Date();
+            const executionTime = now.toLocaleString('zh-CN');
+            let executionTimeElement = document.getElementById('execution-time-display');
+            if (!executionTimeElement) {
+                executionTimeElement = document.createElement('div');
+                executionTimeElement.id = 'execution-time-display';
+                executionTimeElement.className = 'mt-2';
+                globalStatus.parentNode.appendChild(executionTimeElement);
+            }
+            executionTimeElement.innerHTML = `<small class="text-muted">执行时间: ${executionTime}</small>`;
+
+            // Re-enable the run button
+            if (runButton) {
+                runButton.disabled = false;
+                runButton.innerHTML = '<i class="fas fa-play"></i> 运行';
+            }
+
+            // Don't show popup messages - just update the status display
+        });
+    }
+
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAgents();
+        loadStrategies();
+        loadLastExecutionTime(); // Load last execution time when page loads
+    });
+</script>
+{% endblock %}
+</file>
+

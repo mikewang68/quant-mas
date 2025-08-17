@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="page-title">
+                <i class="fas fa-coins"></i> 加密货币
+            </h2>
+            <p class="text-muted">查看和管理您的加密货币投资组合</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">总市值</h6>
+                            <h3 class="mb-0">¥1,250,000</h3>
+                        </div>
+                        <div class="stat-icon bg-primary">
+                            <i class="fas fa-wallet"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">24小时收益</h6>
+                            <h3 class="mb-0 text-success">+2.5%</h3>
+                        </div>
+                        <div class="stat-icon bg-success">
+                            <i class="fas fa-arrow-up"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">持仓币种</h6>
+                            <h3 class="mb-0">8</h3>
+                        </div>
+                        <div class="stat-icon bg-info">
+                            <i class="fas fa-coins"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-lg-3">
+            <div class="card stat-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted">交易对</h6>
+                            <h3 class="mb-0">12</h3>
+                        </div>
+                        <div class="stat-icon bg-warning">
+                            <i class="fas fa-exchange-alt"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-line"></i> 持仓概览
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>币种</th>
+                                    <th>数量</th>
+                                    <th>当前价格</th>
+                                    <th>市值</th>
+                                    <th>24小时变化</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="coin-icon bg-warning">
+                                                <i class="fab fa-bitcoin"></i>
+                                            </div>
+                                            <div class="ms-2">
+                                                <div class="fw-bold">BTC</div>
+                                                <div class="text-muted small">比特币</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>0.52</td>
+                                    <td>¥385,620</td>
+                                    <td>¥200,522</td>
+                                    <td class="text-success">+3.2%</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">交易</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="coin-icon bg-secondary">
+                                                <i class="fab fa-ethereum"></i>
+                                            </div>
+                                            <div class="ms-2">
+                                                <div class="fw-bold">ETH</div>
+                                                <div class="text-muted small">以太坊</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>12.3</td>
+                                    <td>¥24,560</td>
+                                    <td>¥302,088</td>
+                                    <td class="text-success">+1.8%</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">交易</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="coin-icon bg-info">
+                                                <i class="fab fa-btc"></i>
+                                            </div>
+                                            <div class="ms-2">
+                                                <div class="fw-bold">BNB</div>
+                                                <div class="text-muted small">币安币</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>45.2</td>
+                                    <td>¥3,250</td>
+                                    <td>¥146,900</td>
+                                    <td class="text-danger">-0.5%</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">交易</button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="coin-icon bg-success">
+                                                <i class="fas fa-coins"></i>
+                                            </div>
+                                            <div class="ms-2">
+                                                <div class="fw-bold">SOL</div>
+                                                <div class="text-muted small">Solana</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>125</td>
+                                    <td>¥980</td>
+                                    <td>¥122,500</td>
+                                    <td class="text-success">+5.7%</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary">交易</button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-plus-circle"></i> 添加交易对
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">交易对</label>
+                            <select class="form-select">
+                                <option>BTC/USDT</option>
+                                <option>ETH/USDT</option>
+                                <option>BNB/USDT</option>
+                                <option>SOL/USDT</option>
+                                <option>ADA/USDT</option>
+                                <option>DOT/USDT</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">交易类型</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tradeType" id="buy" checked>
+                                <label class="form-check-label" for="buy">买入</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="tradeType" id="sell">
+                                <label class="form-check-label" for="sell">卖出</label>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">数量</label>
+                            <input type="number" class="form-control" placeholder="输入数量">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-exchange-alt"></i> 执行交易
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Crypto page specific scripts
+    $(document).ready(function() {
+        console.log("Crypto page loaded");
+    });
+</script>
+{% endblock %}
+

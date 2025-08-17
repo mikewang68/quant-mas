@@ -1,0 +1,831 @@
+{% extends "base.html" %}
+
+{% block title %}设置 - 量化交易系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>
+            <i class="fas fa-cog"></i> 系统设置
+        </h1>
+        <hr>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-wallet"></i> 账户设置
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <button class="btn btn-primary" id="add-account-btn">
+                        <i class="fas fa-plus"></i> 添加账户
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>账户名称</th>
+                                <th>账户类型</th>
+                                <th>初始资金</th>
+                                <th>现金</th>
+                                <th>持股信息</th>
+                                <th>总资产</th>
+                                <th>盈亏</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts-table-body">
+                            <!-- 账户信息将通过JavaScript动态加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-chart-line"></i> 交易参数
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="trading-config-form">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="max-position" class="form-label">单股最大仓位</label>
+                            <input type="number" class="form-control" id="max-position" value="0.1" step="0.01" min="0" max="1">
+                            <div class="form-text">每只股票的最大仓位占比 (0.0 - 1.0)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="stop-loss" class="form-label">止损点</label>
+                            <input type="number" class="form-control" id="stop-loss" value="0.05" step="0.01" min="0" max="1">
+                            <div class="form-text">触发止损的亏损百分比 (0.0 - 1.0)</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="take-profit" class="form-label">止盈点</label>
+                            <input type="number" class="form-control" id="take-profit" value="0.1" step="0.01" min="0" max="1">
+                            <div class="form-text">触发止盈的盈利百分比 (0.0 - 1.0)</div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="commission" class="form-label">手续费率</label>
+                            <input type="number" class="form-control" id="commission" value="0.001" step="0.001" min="0" max="0.1">
+                            <div class="form-text">交易手续费率 (0.0 - 0.1)</div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="data-adjustment" class="form-label">数据复权方式</label>
+                            <select class="form-select" id="data-adjustment">
+                                <option value="">不复权</option>
+                                <option value="qfq">前复权</option>
+                                <option value="hfq">后复权</option>
+                            </select>
+                            <div class="form-text">选择历史数据的复权方式</div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存交易参数
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-robot"></i> 智能体配置
+                </h5>
+            </div>
+            <div class="card-body">
+                <form id="agent-config-form">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="weekly-selector-enabled" class="form-label">周选股策略</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="weekly-selector-enabled" checked>
+                                <label class="form-check-label" for="weekly-selector-enabled">启用</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="daily-trader-enabled" class="form-label">日交易策略</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="daily-trader-enabled" checked>
+                                <label class="form-check-label" for="daily-trader-enabled">启用</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="weekly-selector-schedule" class="form-label">周选股执行时间</label>
+                            <select class="form-select" id="weekly-selector-schedule">
+                                <option value="monday">每周一</option>
+                                <option value="friday">每周五</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="daily-trader-schedule" class="form-label">日交易执行时间</label>
+                            <select class="form-select" id="daily-trader-schedule">
+                                <option value="daily">每个交易日</option>
+                                <option value="custom">自定义</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> 保存智能体配置
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-sync-alt"></i> 系统操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-success w-100" id="update-data-btn">
+                            <i class="fas fa-download"></i> 更新市场数据
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-warning w-100" id="reset-data-btn">
+                            <i class="fas fa-trash"></i> 重置市场数据
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-danger w-100" id="reset-system-btn">
+                            <i class="fas fa-power-off"></i> 重置系统
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Account Modal -->
+<div class="modal fade" id="accountModal" tabindex="-1" aria-labelledby="accountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="accountModalLabel">添加账户</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="account-form">
+                    <input type="hidden" id="account-id">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="account-name" class="form-label">账户名称 *</label>
+                            <input type="text" class="form-control" id="account-name" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="account-type" class="form-label">账户类型 *</label>
+                            <select class="form-select" id="account-type" required>
+                                <option value="">请选择账户类型</option>
+                                <option value="a_stock">A股账户</option>
+                                <option value="crypto">加密货币账户</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="initial-capital" class="form-label">初始资金 *</label>
+                            <input type="number" class="form-control" id="initial-capital" step="0.01" min="0" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="cash" class="form-label">现金 *</label>
+                            <input type="number" class="form-control" id="cash" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    
+                    <!-- Stocks section -->
+                    <div class="stocks-section" id="stocks-section">
+                        <h6>持股信息</h6>
+                        <div id="stocks-container">
+                            <!-- Stock rows will be added here dynamically -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm mt-2" id="add-stock-btn">
+                            <i class="fas fa-plus"></i> 添加持股
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="save-account-btn">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Account management functions
+    let accounts = [];
+    let editingAccountId = null;
+
+    // Load accounts from server
+    function loadAccounts() {
+        fetch('/api/accounts')
+            .then(response => response.json())
+            .then(data => {
+                accounts = data;
+                renderAccountsTable();
+            })
+            .catch(error => {
+                console.error('Error loading accounts:', error);
+                // Fallback to mock data if API fails
+                accounts = [
+                    { 
+                        id: 1, 
+                        name: 'wdg', 
+                        type: 'a_stock', 
+                        cash: 100000, 
+                        stocks: [
+                            { code: '000001', name: '平安银行', quantity: 1000, cost: 15.20 },
+                            { code: '000002', name: '万科A', quantity: 500, cost: 25.50 }
+                        ]
+                    },
+                    { 
+                        id: 2, 
+                        name: 'wap', 
+                        type: 'a_stock', 
+                        cash: 150000, 
+                        stocks: [
+                            { code: '600000', name: '浦发银行', quantity: 2000, cost: 10.80 }
+                        ]
+                    },
+                    { 
+                        id: 3, 
+                        name: 'zjl', 
+                        type: 'a_stock', 
+                        cash: 80000, 
+                        stocks: []
+                    },
+                    { 
+                        id: 4, 
+                        name: 'wangdg', 
+                        type: 'crypto', 
+                        cash: 50000, 
+                        stocks: [
+                            { code: 'BTCUSDT', name: '比特币', quantity: 0.5, cost: 40000 },
+                            { code: 'ETHUSDT', name: '以太坊', quantity: 10, cost: 3000 }
+                        ]
+                    }
+                ];
+                renderAccountsTable();
+            });
+    }
+
+    // Render accounts table
+    function renderAccountsTable() {
+        const tbody = document.getElementById('accounts-table-body');
+        tbody.innerHTML = '';
+        
+        // Create a promise to fetch all stock prices
+        const stockPricePromises = [];
+        const stockMap = new Map(); // Map to store stock code to account index and stock index
+        
+        // Collect all stock codes to fetch prices
+        accounts.forEach((account, accountIndex) => {
+            if (account.stocks) {
+                account.stocks.forEach((stock, stockIndex) => {
+                    if (stock.code) {
+                        const promise = fetch(`/api/stock-price/${stock.code}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.price) {
+                                    stock.currentPrice = data.price;
+                                } else {
+                                    stock.currentPrice = stock.cost; // Fallback to cost price
+                                }
+                                return { accountIndex, stockIndex, stock };
+                            })
+                            .catch(error => {
+                                console.error('Error fetching stock price:', error);
+                                stock.currentPrice = stock.cost; // Fallback to cost price
+                                return { accountIndex, stockIndex, stock };
+                            });
+                        stockPricePromises.push(promise);
+                        stockMap.set(`${accountIndex}-${stockIndex}`, stock);
+                    }
+                });
+            }
+        });
+        
+        // Wait for all stock prices to be fetched
+        Promise.all(stockPricePromises).then(() => {
+            accounts.forEach(account => {
+                // Calculate total assets and profit/loss
+                let stockValue = 0;
+                let totalCost = 0;
+                let totalProfitLoss = 0;
+                
+                if (account.stocks) {
+                    account.stocks.forEach(stock => {
+                        // Use the fetched current price or fallback to cost price
+                        const currentPrice = stock.currentPrice || stock.cost;
+                        const marketValue = stock.quantity * currentPrice;
+                        const costValue = stock.quantity * stock.cost;
+                        const stockProfitLoss = marketValue - costValue;
+                        
+                        stockValue += marketValue;
+                        totalCost += costValue;
+                        totalProfitLoss += stockProfitLoss;
+                    });
+                }
+                
+                const totalAssets = account.cash + stockValue;
+                // Calculate profit/loss based on initial capital
+                const initialCapital = account.initial_capital || account.cash; // Fallback to cash if initial_capital not set
+                const profitLoss = totalAssets - initialCapital;
+                
+                // Format stocks information with better styling
+                let stocksInfo = '';
+                if (account.stocks && account.stocks.length > 0) {
+                    stocksInfo = '<div class="stocks-container">';
+                    account.stocks.forEach(stock => {
+                        // Determine currency symbol based on account type
+                        const currencySymbol = account.type === 'crypto' ? '$' : '¥';
+                        // For crypto, show the trading pair as unit
+                        const quantityUnit = account.type === 'crypto' ? stock.code : '股';
+                        // Use the fetched current price or fallback to cost price
+                        const currentPrice = stock.currentPrice || stock.cost;
+                        const marketValue = stock.quantity * currentPrice;
+                        const costValue = stock.quantity * stock.cost;
+                        const stockProfitLoss = marketValue - costValue;
+                        const stockProfitLossPercent = costValue > 0 ? (stockProfitLoss / costValue * 100) : 0;
+                        
+                        stocksInfo += `
+                            <div class="stock-item mb-3 p-2 border rounded">
+                                <div class="stock-name fw-bold text-primary">${stock.name}</div>
+                                <div class="stock-code text-muted small">代码: ${stock.code}</div>
+                                <div class="stock-details d-flex justify-content-between mt-1">
+                                    <span>数量: ${stock.quantity} ${quantityUnit}</span>
+                                    <span>成本价: ${currencySymbol}${stock.cost.toFixed(2)}</span>
+                                </div>
+                                <div class="stock-realtime d-flex justify-content-between mt-1 small">
+                                    <span>现价: ${currencySymbol}${currentPrice.toFixed(2)}</span>
+                                    <span>市值: ${currencySymbol}${marketValue.toFixed(2)}</span>
+                                </div>
+                                <div class="stock-profit d-flex justify-content-between mt-1 small ${stockProfitLoss >= 0 ? 'text-success' : 'text-danger'}">
+                                    <span>盈亏: ${currencySymbol}${stockProfitLoss.toFixed(2)}</span>
+                                    <span>收益率: ${stockProfitLossPercent.toFixed(2)}%</span>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    stocksInfo += '</div>';
+                } else {
+                    stocksInfo = '<span class="text-muted">无持股</span>';
+                }
+                
+                // Determine currency symbol based on account type
+                const accountCurrencySymbol = account.type === 'crypto' ? '$' : '¥';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${account.name}</td>
+                    <td>${getAccountTypeText(account.type)}</td>
+                    <td>${accountCurrencySymbol}${(account.initial_capital || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${accountCurrencySymbol}${account.cash.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>${stocksInfo}</td>
+                    <td>${accountCurrencySymbol}${totalAssets.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td class="${profitLoss >= 0 ? 'text-success' : 'text-danger'}">
+                        ${profitLoss >= 0 ? '+' : ''}${accountCurrencySymbol}${Math.abs(profitLoss).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}<br>
+                        <small>(${initialCapital > 0 ? ((profitLoss / initialCapital) * 100).toFixed(2) : '0.00'}%)</small>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary edit-account-btn me-1" data-id="${account._id || account.id}">
+                            <i class="fas fa-edit"></i> 编辑
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger delete-account-btn" data-id="${account._id || account.id}">
+                            <i class="fas fa-trash"></i> 删除
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Add event listeners to edit and delete buttons
+            document.querySelectorAll('.edit-account-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const accountId = this.getAttribute('data-id');
+                    editAccount(accountId);
+                });
+            });
+            
+            document.querySelectorAll('.delete-account-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const accountId = this.getAttribute('data-id');
+                    deleteAccount(accountId);
+                });
+            });
+        });
+    }
+
+    // Get account type text
+    function getAccountTypeText(type) {
+        switch(type) {
+            case 'a_stock': return 'A股账户';
+            case 'crypto': return '加密货币账户';
+            default: return type;
+        }
+    }
+
+    // Show add account modal
+    document.getElementById('add-account-btn').addEventListener('click', function() {
+        editingAccountId = null;
+        document.getElementById('accountModalLabel').textContent = '添加账户';
+        document.getElementById('account-form').reset();
+        document.getElementById('account-id').value = '';
+        
+        // Clear stocks container
+        document.getElementById('stocks-container').innerHTML = '';
+        
+        new bootstrap.Modal(document.getElementById('accountModal')).show();
+    });
+
+    // Add stock row
+    document.getElementById('add-stock-btn').addEventListener('click', function() {
+        addStockRow();
+    });
+
+    // Add stock row function
+    function addStockRow(stock = null) {
+        const container = document.getElementById('stocks-container');
+        const stockIndex = container.children.length;
+        
+        const stockRow = document.createElement('div');
+        stockRow.className = 'stock-row mb-3'; // Increased margin for better spacing
+        stockRow.innerHTML = `
+            <div class="row align-items-center">
+                <div class="col-md-2 mb-2">
+                    <input type="text" class="form-control stock-code" placeholder="代码" value="${stock?.code || ''}">
+                </div>
+                <div class="col-md-3 mb-2">
+                    <input type="text" class="form-control stock-name" placeholder="名称" value="${stock?.name || ''}">
+                </div>
+                <div class="col-md-2 mb-2">
+                    <input type="number" class="form-control stock-quantity" placeholder="数量" step="0.001" min="0" value="${stock?.quantity || ''}">
+                </div>
+                <div class="col-md-4 mb-2">
+                    <div class="input-group">
+                        <span class="input-group-text currency-symbol">¥</span>
+                        <input type="number" class="form-control stock-cost" placeholder="成本价" step="0.01" min="0" value="${stock?.cost || ''}">
+                    </div>
+                </div>
+                <div class="col-md-1 mb-2">
+                    <button type="button" class="btn btn-outline-danger remove-stock-btn">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(stockRow);
+        
+        // Add event listener to remove button
+        stockRow.querySelector('.remove-stock-btn').addEventListener('click', function() {
+            container.removeChild(stockRow);
+        });
+        
+        // Add event listener to code input for auto-fetching stock name
+        const codeInput = stockRow.querySelector('.stock-code');
+        const nameInput = stockRow.querySelector('.stock-name');
+        const currencySymbol = stockRow.querySelector('.currency-symbol');
+        
+        // Update currency symbol based on account type
+        const accountType = document.getElementById('account-type').value;
+        if (accountType === 'crypto') {
+            currencySymbol.textContent = '$';
+        } else {
+            currencySymbol.textContent = '¥';
+        }
+        
+        codeInput.addEventListener('blur', function() {
+            const code = this.value.trim();
+            if (code) {
+                fetchStockName(code, nameInput);
+            }
+        });
+    }
+    
+    // Fetch stock name from MongoDB
+    function fetchStockName(code, nameInput) {
+        // Make API call to get stock name from MongoDB
+        fetch(`/api/stock-name/${code}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.name) {
+                    nameInput.value = data.name;
+                } else {
+                    nameInput.value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching stock name:', error);
+                nameInput.value = '';
+            });
+    }
+
+    // Edit account
+    function editAccount(accountId) {
+        // Find account by _id (MongoDB) or id (mock data)
+        const account = accounts.find(a => a._id === accountId || a.id === accountId);
+        if (!account) {
+            console.error('Account not found:', accountId);
+            return;
+        }
+        
+        editingAccountId = accountId;
+        document.getElementById('accountModalLabel').textContent = '编辑账户';
+        document.getElementById('account-id').value = account._id || account.id;
+        document.getElementById('account-name').value = account.name;
+        document.getElementById('account-type').value = account.type;
+        document.getElementById('initial-capital').value = account.initial_capital || '';
+        document.getElementById('cash').value = account.cash;
+        
+        // Clear and populate stocks container
+        const stocksContainer = document.getElementById('stocks-container');
+        stocksContainer.innerHTML = '';
+        
+        if (account.stocks && account.stocks.length > 0) {
+            account.stocks.forEach(stock => {
+                addStockRow(stock);
+            });
+        }
+        
+        new bootstrap.Modal(document.getElementById('accountModal')).show();
+    }
+
+    // Delete account
+    function deleteAccount(accountId) {
+        if (confirm('确定要删除这个账户吗？此操作无法撤销。')) {
+            fetch(`/api/accounts/${accountId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAccounts(); // Reload accounts from server
+                } else {
+                    alert('删除账户失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error deleting account:', error);
+                alert('删除账户时发生错误');
+            });
+        }
+    }
+
+    // Save account
+    document.getElementById('save-account-btn').addEventListener('click', function() {
+        const accountId = document.getElementById('account-id').value;
+        const name = document.getElementById('account-name').value.trim();
+        const type = document.getElementById('account-type').value;
+        const initialCapital = parseFloat(document.getElementById('initial-capital').value);
+        const cash = parseFloat(document.getElementById('cash').value);
+        
+        // Validation
+        if (!name) {
+            alert('请输入账户名称！');
+            return;
+        }
+        
+        if (!type) {
+            alert('请选择账户类型！');
+            return;
+        }
+        
+        if (isNaN(initialCapital) || initialCapital < 0) {
+            alert('请输入有效的初始资金！');
+            return;
+        }
+        
+        if (isNaN(cash) || cash < 0) {
+            alert('请输入有效的现金！');
+            return;
+        }
+        
+        // Get stock data
+        const stocks = [];
+        const stockRows = document.querySelectorAll('.stock-row');
+        for (let i = 0; i < stockRows.length; i++) {
+            const row = stockRows[i];
+            const code = row.querySelector('.stock-code').value.trim();
+            const name = row.querySelector('.stock-name').value.trim();
+            const quantity = parseFloat(row.querySelector('.stock-quantity').value);
+            const cost = parseFloat(row.querySelector('.stock-cost').value);
+            
+            // Skip empty rows
+            if (!code && !name && isNaN(quantity) && isNaN(cost)) {
+                continue;
+            }
+            
+            // Validate stock data
+            if (!code) {
+                alert(`第${i+1}行：请输入股票代码！`);
+                return;
+            }
+            
+            if (!name) {
+                alert(`第${i+1}行：请输入股票名称！`);
+                return;
+            }
+            
+            if (isNaN(quantity) || quantity <= 0) {
+                alert(`第${i+1}行：请输入有效的持股数量！`);
+                return;
+            }
+            
+            if (isNaN(cost) || cost <= 0) {
+                alert(`第${i+1}行：请输入有效的成本价！`);
+                return;
+            }
+            
+            stocks.push({ code, name, quantity, cost });
+        }
+        
+        // Prepare account data
+        const accountData = {
+            name,
+            type,
+            initial_capital: initialCapital,
+            cash,
+            stocks
+        };
+        
+        if (editingAccountId) {
+            // Update existing account
+            fetch(`/api/accounts/${editingAccountId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(accountData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAccounts(); // Reload accounts from server
+                    bootstrap.Modal.getInstance(document.getElementById('accountModal')).hide();
+                } else {
+                    alert('更新账户失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error updating account:', error);
+                alert('更新账户时发生错误');
+            });
+        } else {
+            // Add new account
+            fetch('/api/accounts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(accountData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    loadAccounts(); // Reload accounts from server
+                    bootstrap.Modal.getInstance(document.getElementById('accountModal')).hide();
+                } else {
+                    alert('创建账户失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error creating account:', error);
+                alert('创建账户时发生错误');
+            });
+        }
+    });
+
+    // Load configuration from server
+    function loadConfig() {
+        fetch('/api/config')
+            .then(response => response.json())
+            .then(data => {
+                // Set form values from config
+                if (data.max_position !== undefined) {
+                    document.getElementById('max-position').value = data.max_position;
+                }
+                if (data.stop_loss !== undefined) {
+                    document.getElementById('stop-loss').value = data.stop_loss;
+                }
+                if (data.take_profit !== undefined) {
+                    document.getElementById('take-profit').value = data.take_profit;
+                }
+                if (data.commission !== undefined) {
+                    document.getElementById('commission').value = data.commission;
+                }
+                if (data.data_adjustment !== undefined) {
+                    document.getElementById('data-adjustment').value = data.data_adjustment;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading config:', error);
+            });
+    }
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+        loadAccounts();
+        loadConfig();
+    });
+
+    // Handle trading config form submission
+    document.getElementById('trading-config-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Get form values
+        const configData = {
+            max_position: parseFloat(document.getElementById('max-position').value),
+            stop_loss: parseFloat(document.getElementById('stop-loss').value),
+            take_profit: parseFloat(document.getElementById('take-profit').value),
+            commission: parseFloat(document.getElementById('commission').value),
+            data_adjustment: document.getElementById('data-adjustment').value
+        };
+        
+        // Save config to server
+        fetch('/api/config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(configData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('交易参数保存成功！');
+            } else {
+                alert('保存失败：' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error saving config:', error);
+            alert('保存配置时发生错误');
+        });
+    });
+
+    // Handle agent config form submission
+    document.getElementById('agent-config-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        alert('智能体配置保存成功！');
+    });
+
+    // Handle update data button
+    document.getElementById('update-data-btn').addEventListener('click', function() {
+        if (confirm('确定要更新市场数据吗？这可能需要一些时间。')) {
+            alert('市场数据更新已开始。这可能需要几分钟时间。');
+        }
+    });
+
+    // Handle reset data button
+    document.getElementById('reset-data-btn').addEventListener('click', function() {
+        if (confirm('确定要重置市场数据吗？此操作无法撤销。')) {
+            alert('市场数据重置成功！');
+        }
+    });
+
+    // Handle reset system button
+    document.getElementById('reset-system-btn').addEventListener('click', function() {
+        if (confirm('确定要重置整个系统吗？此操作无法撤销。')) {
+            alert('系统重置成功！');
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,24 @@
+{
+  "mongodb": {
+    "host": "192.168.1.2",
+    "port": 27017,
+    "database": "stock"
+  },
+  "akshare": {
+    "timeout": 30
+  },
+  "backtesting": {
+    "initial_capital": 1000000,
+    "commission": 0.001
+  },
+  "web": {
+    "host": "0.0.0.0",
+    "port": 5000
+  },
+  "n8n": {
+    "host": "192.168.1.2",
+    "port": 5678,
+    "workflow_id": "8UIHGB7Qq2aNVXyZ"
+  }
+}
+

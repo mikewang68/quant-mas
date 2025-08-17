@@ -1,0 +1,12 @@
+# Strategy parameters for weekly stock selector
+golden_cross_short: 5
+golden_cross_long: 20
+short: 5
+mid: 13
+long: 34
+rsi_period: 14
+rsi_min: 30
+rsi_max: 70
+volume_period: 20
+min_volume: 1000000
+

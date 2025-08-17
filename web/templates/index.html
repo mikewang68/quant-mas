@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - Quant Trading System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>
+            <i class="fas fa-home"></i> 欢迎使用量化交易系统
+        </h1>
+        <hr>
+        <p class="lead">这是一个基于多智能体的量化交易系统，包含以下主要功能模块：</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-tachometer-alt fa-3x text-primary mb-3"></i>
+                <h5 class="card-title">系统仪表板</h5>
+                <p class="card-text">查看系统状态、账户价值、持仓情况和投资组合表现。</p>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary">进入仪表板</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-robot fa-3x text-success mb-3"></i>
+                <h5 class="card-title">交易策略</h5>
+                <p class="card-text">管理不同的交易策略，包括周K线选股和日K线交易策略。</p>
+                <a href="{{ url_for('strategies') }}" class="btn btn-success">查看策略</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-bar fa-3x text-info mb-3"></i>
+                <h5 class="card-title">策略回测</h5>
+                <p class="card-text">对策略进行历史回测，评估策略表现和风险。</p>
+                <a href="{{ url_for('backtest') }}" class="btn btn-info">开始回测</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-list fa-3x text-warning mb-3"></i>
+                <h5 class="card-title">股票列表</h5>
+                <p class="card-text">查看和管理可交易的股票列表。</p>
+                <a href="{{ url_for('stocks') }}" class="btn btn-warning">查看股票</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-cog fa-3x text-danger mb-3"></i>
+                <h5 class="card-title">系统设置</h5>
+                <p class="card-text">配置系统参数，如仓位控制、止损止盈等。</p>
+                <a href="{{ url_for('settings') }}" class="btn btn-danger">系统设置</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-question-circle fa-3x text-secondary mb-3"></i>
+                <h5 class="card-title">帮助文档</h5>
+                <p class="card-text">查看系统使用说明和功能介绍。</p>
+                <a href="#" class="btn btn-secondary" onclick="alert('帮助文档功能正在开发中')">查看帮助</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

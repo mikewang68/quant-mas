@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Quant Trading System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>
+            <i class="fas fa-tachometer-alt"></i> System Dashboard
+        </h1>
+        <hr>
+    </div>
+</div>
+
+<div class="row">
+    <!-- System Status Card -->
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-server"></i> System Status
+                </h5>
+                <p class="card-text display-6" id="system-status">Running</p>
+                <small class="text-white">Last updated: <span id="last-update">Just now</span></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Value Card -->
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-wallet"></i> Portfolio Value
+                </h5>
+                <p class="card-text display-6" id="portfolio-value">¥1,000,000</p>
+                <small class="text-white">Initial: ¥1,000,000</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Today's P&L Card -->
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-line"></i> Today's P&L
+                </h5>
+                <p class="card-text display-6 text-success" id="today-pnl">+¥2,500</p>
+                <small class="text-white">Return: <span id="today-return">+0.25%</span></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Positions Card -->
+    <div class="col-md-3 mb-4">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-chart-pie"></i> Positions
+                </h5>
+                <p class="card-text display-6" id="positions-count">5</p>
+                <small class="text-white">Active positions</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Portfolio Chart -->
+    <div class="col-md-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-chart-area"></i> Portfolio Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="portfolio-chart" height="300"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Trades -->
+    <div class="col-md-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-exchange-alt"></i> Recent Trades
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Symbol</th>
+                                <th>Action</th>
+                                <th>Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-trades">
+                            <tr>
+                                <td>10:30:15</td>
+                                <td>000001</td>
+                                <td class="text-success">BUY</td>
+                                <td>15.23</td>
+                            </tr>
+                            <tr>
+                                <td>09:45:22</td>
+                                <td>600000</td>
+                                <td class="text-danger">SELL</td>
+                                <td>9.87</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Strategy Performance -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-robot"></i> Agent Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Agent</th>
+                                <th>Status</th>
+                                <th>Last Run</th>
+                                <th>Performance</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Weekly Selector</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>2023-06-15</td>
+                                <td class="text-success">+1.2%</td>
+                            </tr>
+                            <tr>
+                                <td>Daily Trader</td>
+                                <td><span class="badge bg-success">Active</span></td>
+                                <td>Today</td>
+                                <td class="text-success">+0.25%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Market Overview -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-globe-asia"></i> Market Overview
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Index</th>
+                                <th>Value</th>
+                                <th>Change</th>
+                                <th>Change %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>上证指数</td>
+                                <td>3,200.12</td>
+                                <td class="text-success">+15.23</td>
+                                <td class="text-success">+0.48%</td>
+                            </tr>
+                            <tr>
+                                <td>深证成指</td>
+                                <td>11,500.45</td>
+                                <td class="text-danger">-25.67</td>
+                                <td class="text-danger">-0.22%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Initialize portfolio chart
+    const ctx = document.getElementById('portfolio-chart').getContext('2d');
+    const portfolioChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+            datasets: [{
+                label: 'Portfolio Value',
+                data: [1000000, 1020000, 980000, 1050000, 1080000, 1100000],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: false
+                }
+            }
+        }
+    });
+
+    // Update system status periodically
+    setInterval(function() {
+        const now = new Date();
+        document.getElementById('last-update').textContent = now.toLocaleTimeString();
+    }, 30000);
+</script>
+{% endblock %}
+
