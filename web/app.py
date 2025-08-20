@@ -724,14 +724,112 @@ def register_routes(app: Flask):
                     return jsonify(
                         {"status": "error", "message": f"Failed to run weekly selector agent: {str(selector_error)}"}
                     ), 500
+            elif "技术分析" in agent_name:
+                # Handle technical analysis agents
+                logger.info(f"Running technical analysis agent {agent['name']} with strategies {strategy_ids}")
+
+                try:
+                    # Initialize components
+                    db_manager = app.config["MONGO_MANAGER"]
+                    from utils.akshare_client import AkshareClient
+                    data_fetcher = AkshareClient()
+
+                    # Initialize the technical stock selector
+                    from agents.technical_selector import TechnicalStockSelector
+                    selector = TechnicalStockSelector(db_manager, data_fetcher)
+
+                    # Execute technical analysis and update pool
+                    success = selector.update_pool_with_technical_analysis()
+
+                    if success:
+                        logger.info("Successfully executed technical analysis agent")
+                        return jsonify(
+                            {
+                                "status": "success",
+                                "message": f"Agent {agent['name']} completed successfully",
+                                "agent_id": agent_id,
+                                "result": {
+                                    "analysis_complete": True,
+                                    "stocks_updated": True
+                                }
+                            }
+                        )
+                    else:
+                        logger.error("Failed to execute technical analysis agent")
+                        return jsonify(
+                            {
+                                "status": "error",
+                                "message": f"Failed to run technical analysis agent: Execution failed",
+                                "agent_id": agent_id
+                            }
+                        ), 500
+
+                except Exception as selector_error:
+                    logger.error(f"Error running technical analysis agent: {selector_error}")
+                    return jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Failed to run technical analysis agent: {str(selector_error)}",
+                            "agent_id": agent_id
+                        }
+                    ), 500
+            elif "技术选股" in agent_name:
+                # Handle technical selector agents
+                logger.info(f"Running technical selector agent {agent['name']} with strategies {strategy_ids}")
+
+                try:
+                    # Initialize components
+                    db_manager = app.config["MONGO_MANAGER"]
+                    from utils.akshare_client import AkshareClient
+                    data_fetcher = AkshareClient()
+
+                    # Initialize the technical stock selector
+                    from agents.technical_selector import TechnicalStockSelector
+                    selector = TechnicalStockSelector(db_manager, data_fetcher)
+
+                    # Execute technical analysis and update pool
+                    success = selector.update_pool_with_technical_analysis()
+
+                    if success:
+                        logger.info("Successfully executed technical selector agent")
+                        return jsonify(
+                            {
+                                "status": "success",
+                                "message": f"Agent {agent['name']} completed successfully",
+                                "agent_id": agent_id,
+                                "result": {
+                                    "analysis_complete": True,
+                                    "stocks_updated": True
+                                }
+                            }
+                        )
+                    else:
+                        logger.error("Failed to execute technical selector agent")
+                        return jsonify(
+                            {
+                                "status": "error",
+                                "message": f"Failed to run technical selector agent: Execution failed",
+                                "agent_id": agent_id
+                            }
+                        ), 500
+
+                except Exception as selector_error:
+                    logger.error(f"Error running technical selector agent: {selector_error}")
+                    return jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Failed to run technical selector agent: {str(selector_error)}",
+                            "agent_id": agent_id
+                        }
+                    ), 500
             else:
                 # For other agents, simulate a successful run
                 logger.info(f"Running agent {agent['name']} with strategies {strategy_ids}")
-                
+
                 # Simulate some processing time
                 import time
                 time.sleep(2)
-                
+
                 return jsonify(
                     {
                         "status": "success",

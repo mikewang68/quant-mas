@@ -10,6 +10,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from strategies.base_strategy import BaseStrategy
+from utils.strategy_utils import calculate_position_from_score
 import talib
 
 class AcceleratingUptrendStrategy(BaseStrategy):
@@ -254,10 +255,14 @@ class AcceleratingUptrendStrategy(BaseStrategy):
                             'volume_confirmed': self._check_volume_confirmation(data)
                         }
                     
+                    # Calculate position based on score
+                    position = calculate_position_from_score(score)
+
                     selected_stocks.append({
                         'code': code,
                         'selection_reason': reason,
                         'score': score,
+                        'position': position,  # Add position field based on score
                         'technical_analysis': technical_analysis,
                         'uptrend_accelerating': uptrend_accelerating
                     })
@@ -329,37 +334,42 @@ class AcceleratingUptrendStrategy(BaseStrategy):
                     if i < len(angles) and i < len(previous_angles):
                         current_angle = angles[i]
                         previous_angle = previous_angles[i] if i < len(previous_angles) else 0
-                        
+
+                        # Calculate score for position sizing
+                        score = self._calculate_score(current_angle, previous_angle)
+
                         # Buy signal: angle above threshold and accelerating
                         if current_angle >= self.angle_threshold and current_angle > previous_angle:
                             signals.loc[signals.index[i], 'signal'] = 'BUY'
-                            signals.loc[signals.index[i], 'position'] = 1.0
+                            signals.loc[signals.index[i], 'position'] = calculate_position_from_score(score)
                         # Sell signal: angle below threshold or not accelerating
                         elif current_angle < self.angle_threshold or current_angle <= previous_angle:
                             signals.loc[signals.index[i], 'signal'] = 'SELL'
-                            signals.loc[signals.index[i], 'position'] = -1.0
+                            signals.loc[signals.index[i], 'position'] = -calculate_position_from_score(score)
                 
             except Exception as e:
                 self.log_warning(f"生成信号时出错: {e}")
         
         return signals
     
-    def calculate_position_size(self, signal: str, portfolio_value: float, 
+    def calculate_position_size(self, signal: str, portfolio_value: float,
                               price: float) -> float:
         """
         Calculate position size based on signal and portfolio value.
-        
+
         Args:
             signal: Trading signal ('BUY', 'SELL', 'HOLD')
             portfolio_value: Current portfolio value
             price: Current asset price
-            
+
         Returns:
             Position size (number of shares/contracts)
         """
+        # For this strategy, we'll use a fixed position size based on signal strength
+        # In a real implementation, this might be based on score or other factors
         if signal == 'BUY':
-            # Allocate 10% of portfolio value
-            return (portfolio_value * 0.1) / price
+            # Use a moderate position size for buy signals
+            return 100.0
         elif signal == 'SELL':
             return -100.0  # Sell 100 shares
         else:
