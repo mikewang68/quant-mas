@@ -63,13 +63,13 @@ def main():
             logger.error("No strategies found for technical analysis agent")
             sys.exit(1)
         
-        # Initialize selector with empty default params (strategies will provide their own params)
+        # Initialize selector
         logger.info("Initializing technical stock selector...")
-        selector = TechnicalStockSelector(db_manager, data_fetcher, {})
-        
+        selector = TechnicalStockSelector(db_manager, data_fetcher)
+
         # Execute strategies
         logger.info(f"Executing {len(strategy_ids)} strategies...")
-        results = selector.run(strategy_ids)
+        results = selector.run()
         logger.info(f"Execution completed: {results}")
         
         # Close database connection

@@ -642,15 +642,21 @@ class MongoDBManager:
     def get_strategies(self) -> list:
         """
         Get all strategies from strategies collection
-        
+
         Returns:
             List of strategies
         """
         try:
-            strategies = list(self.strategies_collection.find({}, {'_id': 1, 'name': 1, 'type': 1, 'description': 1, 'parameters': 1, 'program': 1}))
-            # Convert ObjectId to string for JSON serialization
+            strategies = list(self.strategies_collection.find({}, {'_id': 1, 'name': 1, 'type': 1, 'description': 1, 'parameters': 1, 'program': 1, 'file': 1, 'class_name': 1}))
+            # Convert ObjectId to string for JSON serialization and handle field mapping
             for strategy in strategies:
                 strategy['_id'] = str(strategy['_id'])
+                # Handle backward compatibility: convert program field to file/class_name if needed
+                if 'program' in strategy and isinstance(strategy['program'], dict):
+                    if 'file' in strategy['program']:
+                        strategy['file'] = strategy['program']['file']
+                    if 'class' in strategy['program']:
+                        strategy['class_name'] = strategy['program']['class']
             return strategies
         except Exception as e:
             self.logger.error(f"Error getting strategies: {e}")
@@ -659,10 +665,10 @@ class MongoDBManager:
     def get_strategy(self, strategy_id: str):
         """
         Get a specific strategy by ID
-        
+
         Args:
             strategy_id: Strategy ID
-            
+
         Returns:
             Strategy document or None
         """
@@ -670,6 +676,12 @@ class MongoDBManager:
             strategy = self.strategies_collection.find_one({'_id': ObjectId(strategy_id)})
             if strategy:
                 strategy['_id'] = str(strategy['_id'])
+                # Handle backward compatibility: convert program field to file/class_name if needed
+                if 'program' in strategy and isinstance(strategy['program'], dict):
+                    if 'file' in strategy['program']:
+                        strategy['file'] = strategy['program']['file']
+                    if 'class' in strategy['program']:
+                        strategy['class_name'] = strategy['program']['class']
             return strategy
         except Exception as e:
             self.logger.error(f"Error getting strategy {strategy_id}: {e}")

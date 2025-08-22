@@ -98,8 +98,8 @@ class DatabaseOperations:
                 if '日期' in query:
                     date_query = query['日期']
                     if isinstance(date_query, dict):
-                        date_query['$lte'] = end_date
-                    query['日期'] = date_query
+                        date_query['$lte'] = end_date  # type: ignore
+                    query['日期'] = date_query  # type: ignore
                 else:
                     query['日期'] = {'$lte': end_date}
 
@@ -389,11 +389,11 @@ class DatabaseOperations:
     def save_config(self, key: str, value: Any) -> Optional[bool | str]:
         """
         Save a config value by key
-        
+
         Args:
             key: Config key
             value: Config value
-            
+
         Returns:
             Modified count or inserted ID
         """
@@ -406,22 +406,23 @@ class DatabaseOperations:
                     {'key': key},
                     {'$set': {'value': value}}
                 )
-                return result.modified_count > 0
+                modified_count = result.modified_count if result.modified_count is not None else 0
+                return modified_count > 0
             else:
                 result = collection.insert_one({'key': key, 'value': value})
-                return str(result.inserted_id)
+                return str(result.inserted_id) if result.inserted_id is not None else None
         except Exception as e:
             self.logger.error(f"Error saving config {key}: {e}")
             return None
 
     # Pool operations
-    def save_selected_stocks_to_pool(self, strategy_key: str, agent_name: str, strategy_id: str, 
-                                   strategy_name: str, stocks: List[Dict], date: str, 
-                                   last_data_date: Optional[str] = None, 
+    def save_selected_stocks_to_pool(self, strategy_key: str, agent_name: str, strategy_id: str,
+                                   strategy_name: str, stocks: List[Dict], date: str,
+                                   last_data_date: Optional[str] = None,
                                    strategy_params: Optional[Dict] = None) -> bool:
         """
         Save selected stocks to pool collection with proper identification
-        
+
         Args:
             strategy_key: Unique key for this agent-strategy combination
             agent_name: Name of the agent
@@ -431,62 +432,64 @@ class DatabaseOperations:
             date: Selection date
             last_data_date: Last date of stock data used for selection
             strategy_params: Strategy parameters used for selection
-            
+
         Returns:
             True if saved successfully, False otherwise
         """
         if date is None:
             date = datetime.now().strftime('%Y-%m-%d')
-        
+
         # Use last_data_date to determine year-week key, fallback to selection date
         if last_data_date:
             reference_date = datetime.strptime(last_data_date, '%Y-%m-%d')
         else:
             reference_date = datetime.strptime(date, '%Y-%m-%d')
-        
+
         try:
             # Create a collection for pool
             collection = self.db['pool']
-            
+
             # Calculate ISO year and week number based on reference date
             iso_year, iso_week, _ = reference_date.isocalendar()
             year_week_key = f"{iso_year}-{iso_week:02d}"
-            
+
             # Prepare stocks data (already includes selection reasons)
             stocks_data = stocks
-            
+
+            # Get strategy configuration from database if not provided
+            strategy_parameters = strategy_params or {}
+            if not strategy_parameters:
+                # Try to get strategy parameters from database
+                strategy_doc = self.get_strategy(strategy_id)
+                if strategy_doc and 'parameters' in strategy_doc:
+                    strategy_parameters = strategy_doc['parameters']
+
             # Save selection record with upsert
             record = {
-                '_id': strategy_key,  # Use agent-strategy-year-week as primary key
-                'agent_name': agent_name,
-                'strategy_id': strategy_id,
+                '_id': year_week_key,  # Use year-week as primary key
+                'strategy_key': strategy_key,
                 'strategy_name': strategy_name,
-                'strategy_parameters': strategy_params or {},
-                'year': iso_year,
-                'week': iso_week,
-                'selection_date': datetime.strptime(date, '%Y-%m-%d') if date else datetime.now(),
-                'selection_timestamp': datetime.now(),  # Add full timestamp
-                'reference_date': reference_date,
+                'strategy_parameters': strategy_parameters,
                 'stocks': stocks_data,
                 'count': len(stocks),
                 'created_at': datetime.now(),
                 'updated_at': datetime.now()
             }
-            
+
             # Use upsert to insert or update the record
             result = collection.replace_one(
-                {'_id': strategy_key},  # Filter by _id
+                {'_id': year_week_key},  # Filter by _id
                 record,  # Document to insert/update
                 upsert=True  # Create if doesn't exist
             )
-            
+
             if result.upserted_id:
-                self.logger.info(f"Inserted new strategy selection record {strategy_key} with {len(stocks)} stocks")
+                self.logger.info(f"Inserted new strategy selection record {year_week_key} with {len(stocks)} stocks")
             else:
-                self.logger.info(f"Updated existing strategy selection record {strategy_key} with {len(stocks)} stocks")
-                
+                self.logger.info(f"Updated existing strategy selection record {year_week_key} with {len(stocks)} stocks")
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error saving strategy selection to pool: {e}")
             return False
@@ -520,11 +523,11 @@ class DatabaseOperations:
                                    strategy_params: Optional[Dict] = None,
                                    additional_metadata: Optional[Dict] = None) -> bool:
         """
-        Save strategy output results to pool collection with upsert functionality.
-        This method can be used by any strategy to automatically save its results.
-        
+        Save strategy output results to pool collection by updating the latest record's stocks field.
+        This method updates existing stocks in the latest pool record rather than creating new records.
+
         Args:
-            strategy_key: Unique key for this agent-strategy combination (e.g., "agentname_strategyid_2025-32")
+            strategy_key: Unique key for this agent-strategy combination (used for logging)
             agent_name: Name of the agent that executed the strategy
             strategy_id: Strategy ID
             strategy_name: Strategy name
@@ -533,83 +536,92 @@ class DatabaseOperations:
             last_data_date: Last date of stock data used for selection (optional)
             strategy_params: Strategy parameters used for selection (optional)
             additional_metadata: Additional metadata to store with the record (optional)
-            
+
         Returns:
             True if saved successfully, False otherwise
         """
-        if date is None:
-            date = datetime.now().strftime('%Y-%m-%d')
-        
-        # Use last_data_date to determine year-week key, fallback to selection date
-        if last_data_date:
-            reference_date = datetime.strptime(last_data_date, '%Y-%m-%d')
-        else:
-            reference_date = datetime.strptime(date, '%Y-%m-%d')
-        
         try:
             # Get pool collection
             collection = self.db['pool']
-            
-            # Calculate ISO year and week number based on reference date
-            iso_year, iso_week, _ = reference_date.isocalendar()
-            year_week_key = f"{iso_year}-{iso_week:02d}"
-            
-            # If no strategy_key provided, create one
-            if not strategy_key:
-                strategy_key = f"{agent_name}_{strategy_id}_{year_week_key}"
-            
-            # Prepare stocks data
-            stocks_data = []
-            for stock in stocks:
-                stock_data = {
-                    'code': stock.get('code', ''),
-                    'selection_reason': stock.get('selection_reason', ''),
-                    'score': stock.get('score', None),
-                    'technical_analysis': stock.get('technical_analysis', {})
-                }
-                # Add any additional stock fields
-                for key, value in stock.items():
-                    if key not in ['code', 'selection_reason', 'score', 'technical_analysis']:
-                        stock_data[key] = value
-                stocks_data.append(stock_data)
-            
-            # Prepare base record
-            record = {
-                '_id': strategy_key,
-                'agent_name': agent_name,
-                'strategy_id': strategy_id,
-                'strategy_name': strategy_name,
-                'strategy_parameters': strategy_params or {},
-                'year': iso_year,
-                'week': iso_week,
-                'selection_date': datetime.strptime(date, '%Y-%m-%d') if date else datetime.now(),
-                'selection_timestamp': datetime.now(),  # Add full timestamp
-                'reference_date': reference_date,
-                'stocks': stocks_data,
-                'count': len(stocks_data),
-                'created_at': datetime.now(),
+
+            # Find the latest pool record
+            latest_pool_record = collection.find_one(sort=[('selection_date', -1)])
+
+            if not latest_pool_record:
+                self.logger.error("No records found in pool collection")
+                return False
+
+            # Get existing stocks from the latest record
+            existing_stocks = latest_pool_record.get('stocks', [])
+
+            # Create a mapping of existing stocks by code for easy lookup
+            existing_stock_map = {stock.get('code'): stock for stock in existing_stocks}
+
+            # Update or add technical analysis data to existing stocks
+            updated_stocks = existing_stocks[:]  # Create a copy of existing stocks
+            for new_stock in stocks:
+                stock_code = new_stock.get('code')
+                if stock_code in existing_stock_map:
+                    # Update existing stock with new data
+                    existing_index = next((i for i, s in enumerate(updated_stocks) if s.get('code') == stock_code), None)
+                    if existing_index is not None:
+                        updated_stocks[existing_index].update(new_stock)
+                else:
+                    # Add new stock if it doesn't exist in the pool (optional based on requirements)
+                    # For now, we'll skip stocks that don't already exist in the pool
+                    pass
+
+            # Prepare the update data
+            update_data = {
+                'stocks': self._convert_numpy_types(updated_stocks),
                 'updated_at': datetime.now()
             }
-            
+
             # Add additional metadata if provided
             if additional_metadata:
-                record.update(additional_metadata)
-            
-            # Use upsert to insert or update the record
-            result = collection.replace_one(
-                {'_id': strategy_key},  # Filter by _id
-                record,  # Document to insert/update
-                upsert=True  # Create if doesn't exist
+                update_data.update(additional_metadata)
+
+            # Update the latest pool record with modified stocks
+            result = collection.update_one(
+                {'_id': latest_pool_record['_id']},
+                {'$set': update_data}
             )
-            
-            if result.upserted_id:
-                self.logger.info(f"Inserted new strategy output record {strategy_key} with {len(stocks_data)} stocks")
+
+            if result.modified_count > 0:
+                self.logger.info(f"Updated latest pool record with {len(stocks)} stocks from {strategy_name}")
             else:
-                self.logger.info(f"Updated existing strategy output record {strategy_key} with {len(stocks_data)} stocks")
-                
+                self.logger.info("No changes made to the latest pool record")
+
             return True
-            
+
         except Exception as e:
-            self.logger.error(f"Error saving strategy output to pool: {e}")
+            self.logger.error(f"Error updating latest pool record with strategy output: {e}")
             return False
+
+    def _convert_numpy_types(self, obj):
+        """
+        Convert numpy data types to native Python types for MongoDB compatibility.
+
+        Args:
+            obj: Object to convert (dict, list, or value)
+
+        Returns:
+            Object with numpy types converted to native Python types
+        """
+        import numpy as np
+
+        if isinstance(obj, dict):
+            return {key: self._convert_numpy_types(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_numpy_types(item) for item in obj]
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.bool_):
+            return bool(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return obj
 

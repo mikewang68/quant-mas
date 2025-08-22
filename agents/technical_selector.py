@@ -160,7 +160,8 @@ class TechnicalStockSelector(BaseAgent):
             for strategy_id in strategy_ids:
                 try:
                     # Get strategy from database
-                    strategy_doc = self.db_manager.strategies_collection.find_one({"_id": strategy_id})
+                    from bson import ObjectId
+                    strategy_doc = self.db_manager.strategies_collection.find_one({"_id": ObjectId(strategy_id)})
                     if not strategy_doc:
                         self.log_warning(f"Strategy {strategy_id} not found in database")
                         continue
@@ -202,6 +203,17 @@ class TechnicalStockSelector(BaseAgent):
                     # Execute the strategy
                     self.log_info(f"Executing strategy: {strategy_name}")
                     selected_stocks = strategy.execute(stock_data, "技术分析Agent", self.db_manager)
+
+                    # Calculate positions for selected stocks using position_calculator
+                    from utils.position_calculator import calculate_position_from_score
+                    for stock in selected_stocks:
+                        if 'score' in stock:
+                            try:
+                                stock['position'] = calculate_position_from_score(stock['score'])
+                            except Exception as pos_error:
+                                self.log_warning(f"Error calculating position for stock {stock.get('code', 'unknown')}: {pos_error}")
+                                stock['position'] = 0.0
+
                     all_selected_stocks.extend(selected_stocks)
                     self.log_info(f"Strategy {strategy_name} selected {len(selected_stocks)} stocks")
 
@@ -210,77 +222,85 @@ class TechnicalStockSelector(BaseAgent):
                     continue
 
             self.log_info(f"Technical analysis completed. Total selected stocks: {len(all_selected_stocks)}")
-            return True
+
+            # Update the latest pool record with technical analysis results
+            success = self.update_latest_pool_record(all_selected_stocks)
+            return success
 
         except Exception as e:
             self.log_error(f"Error updating pool with technical analysis: {e}")
             return False
 
-    def save_selected_stocks(self, stocks: List[Dict], date: Optional[str] = None) -> bool:
+    def update_latest_pool_record(self, technical_stocks: List[Dict]) -> bool:
         """
-        Save selected stocks to database with technical analysis information
+        Update the latest pool record with technical analysis results
 
         Args:
-            stocks: List of selected stocks with analysis data
-            date: Selection date
+            technical_stocks: List of stocks with technical analysis data
 
         Returns:
-            True if saved successfully, False otherwise
+            True if updated successfully, False otherwise
         """
-        if date is None:
-            date = datetime.now().strftime('%Y-%m-%d')
-
         try:
-            # Create a collection for pool
+            # Get pool collection
             collection = self.db_manager.db['pool']
 
-            # Use date as key for technical analysis (different from weekly selector)
-            date_key = f"tech_{date}"
+            # Find the latest pool record
+            latest_pool_record = collection.find_one(sort=[('selection_date', -1)])
 
-            # Prepare stocks data with technical analysis information
-            stocks_data = []
-            for stock_info in stocks:
-                # Extract relevant information
-                stock_data = {
-                    'code': stock_info.get('code', ''),
-                    'selection_reason': stock_info.get('selection_reason', ''),
-                    'score': stock_info.get('score', 0.0),
-                    'position': stock_info.get('position', 0.0),
-                    'technical_analysis': stock_info.get('technical_analysis', {}),
-                    'strategy_name': stock_info.get('strategy_name', ''),
+            if not latest_pool_record:
+                self.log_error("No records found in pool collection")
+                return False
+
+            # Get existing stocks from the latest record
+            existing_stocks = latest_pool_record.get('stocks', [])
+
+            # Create a mapping of existing stocks by code for easy lookup
+            existing_stock_map = {stock.get('code'): stock for stock in existing_stocks}
+
+            # Update technical analysis data for existing stocks only
+            for tech_stock in technical_stocks:
+                stock_code = tech_stock.get('code')
+                if stock_code in existing_stock_map:
+                    # Update existing stock with technical analysis data
+                    existing_stock_map[stock_code].update({
+                        'technical_analysis': tech_stock.get('technical_analysis', {}),
+                        'score': tech_stock.get('score', 0.0),
+                        'position': tech_stock.get('position', 0.0),
+                        'strategy_name': tech_stock.get('strategy_name', ''),
+                        'selection_reason': tech_stock.get('selection_reason', ''),
+                    })
+                # Skip stocks that don't exist in the pool (don't add them)
+
+            # Convert numpy types to native Python types before saving to MongoDB
+            from data.database_operations import DatabaseOperations
+            db_ops = DatabaseOperations(self.db_manager)
+            existing_stocks = db_ops._convert_numpy_types(existing_stocks)
+
+            # Update the latest pool record with modified stocks and technical analysis completion time
+            result = collection.update_one(
+                {'_id': latest_pool_record['_id']},
+                {
+                    '$set': {
+                        'stocks': existing_stocks,
+                        'technical_analysis_completed_at': datetime.now(),
+                        'updated_at': datetime.now()
+                    }
                 }
-                stocks_data.append(stock_data)
-
-            # Save selection record
-            record = {
-                '_id': date_key,  # Use date as primary key for technical analysis
-                'type': 'technical_analysis',
-                'selection_date': datetime.strptime(date, '%Y-%m-%d') if date else datetime.now(),
-                'stocks': stocks_data,
-                'count': len(stocks),
-                'created_at': datetime.now(),
-                'updated_at': datetime.now()
-            }
-
-            # Use upsert to insert or update the record
-            result = collection.replace_one(
-                {'_id': date_key},  # Filter by _id
-                record,  # Document to insert/update
-                upsert=True  # Create if doesn't exist
             )
 
-            if result.upserted_id:
-                self.log_info(f"Inserted new technical analysis record {date_key} with {len(stocks)} stocks")
+            if result.modified_count > 0:
+                self.log_info(f"Updated latest pool record with {len(technical_stocks)} technical analysis stocks")
             else:
-                self.log_info(f"Updated existing technical analysis record {date_key} with {len(stocks)} stocks")
+                self.log_info("No changes made to the latest pool record")
 
             return True
 
         except Exception as e:
-            self.log_error(f"Error saving technical analysis to pool: {e}")
+            self.log_error(f"Error updating latest pool record with technical analysis: {e}")
             return False
 
-    def run(self, *args, **kwargs) -> bool:
+    def run(self) -> bool:
         """
         Main execution method for the technical stock selector agent.
         This method is required by the BaseAgent abstract class.
