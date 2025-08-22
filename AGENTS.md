@@ -1,0 +1,162 @@
+# AGENTS.md - Quant MAS System Operations Log
+
+## System Overview
+
+The Quant MAS (Multi-Agent System) is a quantitative trading platform with multiple specialized agents working together to analyze, select, and execute trading strategies.
+
+## Agent Architecture
+
+### Core Agents
+
+1. **Technical Selector Agent** (`agents/technical_selector.py`)
+   - Responsible for technical analysis and stock selection
+   - Uses various technical indicators and strategies
+   - Generates trading signals based on technical patterns
+
+2. **Weekly Selector Agent** (`agents/weekly_selector.py`)
+   - Performs weekly stock selection and portfolio construction
+   - Integrates multiple strategy outputs
+   - Manages position sizing and risk management
+
+3. **Daily Trader Agent** (`agents/daily_trader.py`)
+   - Handles daily trading operations
+   - Executes trades based on selected strategies
+   - Manages order execution and position monitoring
+
+### Base Agent Framework (`agents/base_agent.py`)
+- Provides common functionality for all agents
+- Handles configuration, logging, and error handling
+- Implements standard agent lifecycle methods
+
+## Strategy System
+
+### Strategy Types
+- **Technical Analysis Strategies**: MACD, RSI, Bollinger Bands, Moving Average crossovers
+- **Trend Following**: Momentum, Breakout, Trend detection
+- **Mean Reversion**: Support/Resistance, Volatility-based
+- **Multi-Agent**: Combined strategy approaches
+
+### Key Strategy Files
+- `strategies/base_strategy.py` - Base strategy interface
+- `strategies/macd_strategy.py` - MACD indicator strategy
+- `strategies/rsi_strategy.py` - RSI-based strategy
+- `strategies/ma_crossover_strategy.py` - Moving average crossover
+- `strategies/multi_agent_strategy.py` - Multi-agent coordination
+
+## Data Management
+
+### Database Operations (`data/` directory)
+- MongoDB integration for strategy storage
+- Real-time market data processing
+- Historical data management
+
+### Data Sources
+- Akshare for Chinese market data
+- Technical indicator calculations
+- Real-time price feeds
+
+## Configuration System
+
+### Configuration Files
+- `config/config.yaml` - Main system configuration
+- `config/strategy_params.yaml` - Strategy parameters
+- `config/technical_strategies.yaml` - Technical strategy settings
+- `config/mongodb_config.py` - Database configuration
+
+## Testing and Debugging
+
+### Test Suite Structure
+- Unit tests for individual strategies
+- Integration tests for agent coordination
+- Performance testing for backtesting
+- Data quality validation
+
+### Key Test Files
+- `test/test_technical_selector.py` - Technical agent testing
+- `test/test_weekly_selector.py` - Weekly selection testing
+- `test/test_strategy_fields.py` - Strategy field validation
+- `test/check_mongodb.py` - Database connectivity tests
+
+## Recent Operations and Enhancements
+
+### Technical Analysis Enhancements
+- Enhanced technical indicator calculations
+- Improved signal generation algorithms
+- Better integration with market data sources
+
+### Strategy Program Field System
+- Added program field extraction and management
+- Enhanced strategy metadata handling
+- Improved strategy versioning and tracking
+
+### Database Optimization
+- MongoDB schema improvements
+- Performance optimization for large datasets
+- Better error handling and recovery
+
+## Usage Patterns
+
+### Running Agents
+```bash
+# Run technical selector
+python -m agents.technical_selector
+
+# Run weekly selector
+python -m agents.weekly_selector
+
+# Run daily trader
+python -m agents.daily_trader
+```
+
+### Testing Strategies
+```bash
+# Run specific strategy tests
+python -m test.test_macd_strategy
+
+# Run comprehensive testing
+python -m test.test_system
+```
+
+### Backtesting
+```bash
+# Run backtesting framework
+python -m backtesting.backtester
+```
+
+## Monitoring and Logging
+
+### Log Files
+- `logs/quant_system.log` - Main system log
+- `logs/app.log` - Application-level logging
+- `logs/web.log` - Web interface logging
+
+### Debugging Tools
+- Real-time strategy output monitoring
+- Performance metrics collection
+- Error tracking and reporting
+
+## Future Development Directions
+
+1. **Machine Learning Integration**
+   - Predictive modeling enhancements
+   - Pattern recognition improvements
+   - Adaptive strategy optimization
+
+2. **Risk Management**
+   - Enhanced position sizing algorithms
+   - Dynamic risk adjustment
+   - Portfolio optimization
+
+3. **Real-time Execution**
+   - Low-latency trading integration
+   - Order management system
+   - Execution quality monitoring
+
+4. **Multi-market Support**
+   - Additional market data sources
+   - Cross-market arbitrage
+   - Global portfolio management
+
+---
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-08-21*
+

@@ -12,6 +12,7 @@ import sys
 import yaml
 from bson.objectid import ObjectId
 import akshare as ak
+from datetime import datetime
 
 # Add the project root to the Python path to resolve imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -492,10 +493,14 @@ def register_routes(app: Flask):
                 ), 500
 
             data = request.get_json()
-            
+
+            # Handle field mapping: convert file/class_name to program for backward compatibility
+            if "file" in data and "class_name" in data:
+                data["program"] = {"file": data["file"], "class": data["class_name"]}
+
             # Save strategy using MongoDBManager
             strategy_id = app.config["MONGO_MANAGER"].create_strategy(data)
-            
+
             if strategy_id:
                 # Add the inserted ID to the response
                 data["_id"] = strategy_id
@@ -528,6 +533,10 @@ def register_routes(app: Flask):
                 ), 500
 
             data = request.get_json()
+
+            # Handle field mapping: convert file/class_name to program for backward compatibility
+            if "file" in data and "class_name" in data:
+                data["program"] = {"file": data["file"], "class": data["class_name"]}
 
             # Update strategy using MongoDBManager
             success = app.config["MONGO_MANAGER"].update_strategy(strategy_id, data)
@@ -644,18 +653,24 @@ def register_routes(app: Flask):
                     all_selected_stocks = []
                     selectors = []  # Keep track of all selector instances
                     last_data_date = None  # Track the latest data date
-                    
+                    all_golden_cross_flags = {}
+                    all_selected_scores = {}
+                    all_technical_analysis_data = {}
+
                     # If no strategies specified, use default parameters
                     if not strategy_ids:
                         logger.info("No strategies specified, using default parameters")
                         # Initialize selector with default parameters
                         selector = WeeklyStockSelector(db_manager, data_fetcher)
                         selectors.append(selector)
-                        
+
                         # Select stocks
-                        selected_stocks, strategy_last_data_date, golden_cross_flags = selector.select_stocks()
+                        selected_stocks, strategy_last_data_date, golden_cross_flags, selected_scores, technical_analysis_data = selector.select_stocks()
                         all_selected_stocks.extend(selected_stocks)
-                        
+                        all_golden_cross_flags.update(golden_cross_flags)
+                        all_selected_scores.update(selected_scores)
+                        all_technical_analysis_data.update(technical_analysis_data)
+
                         # Update last_data_date
                         if strategy_last_data_date and (not last_data_date or strategy_last_data_date > last_data_date):
                             last_data_date = strategy_last_data_date
@@ -667,34 +682,44 @@ def register_routes(app: Flask):
                             if not strategy:
                                 logger.warning(f"Strategy {strategy_id} not found")
                                 continue
-                                
+
                             logger.info(f"Executing strategy {strategy['name']} with parameters: {strategy.get('parameters', {})}")
-                            
-                            # Initialize selector with strategy parameters
-                            selector = WeeklyStockSelector(db_manager, data_fetcher, strategy.get('parameters', {}))
+
+                            # Initialize selector
+                            selector = WeeklyStockSelector(db_manager, data_fetcher)
                             selectors.append(selector)
-                            
+
                             # Select stocks using this strategy
-                            selected_stocks, strategy_last_data_date, golden_cross_flags = selector.select_stocks()
+                            selected_stocks, strategy_last_data_date, golden_cross_flags, selected_scores, technical_analysis_data = selector.select_stocks()
                             all_selected_stocks.extend(selected_stocks)
+                            all_golden_cross_flags.update(golden_cross_flags)
+                            all_selected_scores.update(selected_scores)
+                            all_technical_analysis_data.update(technical_analysis_data)
                             logger.info(f"Strategy {strategy['name']} selected {len(selected_stocks)} stocks")
-                            
+
                             # Update last_data_date to the latest date among all strategies
                             if strategy_last_data_date and (not last_data_date or strategy_last_data_date > last_data_date):
                                 last_data_date = strategy_last_data_date
-                    
+
                     # Remove duplicates while preserving order
                     selected_stocks = list(dict.fromkeys(all_selected_stocks))
                     logger.info(f"Total selected {len(selected_stocks)} stocks: {selected_stocks}")
-                    
+
                     # Save selection to pool collection using the first selector instance or create a default one if needed
                     if selectors:
                         selector_to_use = selectors[0]  # Use the first selector instance
                     else:
                         selector_to_use = WeeklyStockSelector(db_manager, data_fetcher)
-                    
+
                     if selected_stocks is not None:
-                        success = selector_to_use.save_selected_stocks(selected_stocks, last_data_date=last_data_date)
+                        success = selector_to_use.save_selected_stocks(
+                            stocks=selected_stocks,
+                            golden_cross_flags=all_golden_cross_flags,
+                            date=datetime.now().strftime('%Y-%m-%d'),
+                            last_data_date=last_data_date,
+                            scores=all_selected_scores,
+                            technical_analysis_data=all_technical_analysis_data
+                        )
                         if success:
                             logger.info("Successfully saved selected stocks to pool collection")
                         else:
@@ -702,7 +727,14 @@ def register_routes(app: Flask):
                     else:
                         logger.warning("No stocks selected")
                         # Still save an empty selection to pool collection
-                        success = selector_to_use.save_selected_stocks([], last_data_date=last_data_date)
+                        success = selector_to_use.save_selected_stocks(
+                            stocks=[],
+                            golden_cross_flags={},
+                            date=datetime.now().strftime('%Y-%m-%d'),
+                            last_data_date=last_data_date,
+                            scores={},
+                            technical_analysis_data={}
+                        )
                         if success:
                             logger.info("Successfully saved empty selection to pool collection")
                         else:
@@ -724,14 +756,63 @@ def register_routes(app: Flask):
                     return jsonify(
                         {"status": "error", "message": f"Failed to run weekly selector agent: {str(selector_error)}"}
                     ), 500
+            elif "技术分析" in agent_name:
+                # Handle technical analysis agents
+                logger.info(f"Running technical analysis agent {agent['name']} with strategies {strategy_ids}")
+
+                try:
+                    # Initialize components
+                    db_manager = app.config["MONGO_MANAGER"]
+                    from utils.akshare_client import AkshareClient
+                    data_fetcher = AkshareClient()
+
+                    # Initialize the technical stock selector
+                    from agents.technical_selector import TechnicalStockSelector
+                    selector = TechnicalStockSelector(db_manager, data_fetcher)
+
+                    # Execute technical analysis and update pool
+                    success = selector.update_pool_with_technical_analysis()
+
+                    if success:
+                        logger.info("Successfully executed technical analysis agent")
+                        return jsonify(
+                            {
+                                "status": "success",
+                                "message": f"Agent {agent['name']} completed successfully",
+                                "agent_id": agent_id,
+                                "result": {
+                                    "analysis_complete": True,
+                                    "stocks_updated": True
+                                }
+                            }
+                        )
+                    else:
+                        logger.error("Failed to execute technical analysis agent")
+                        return jsonify(
+                            {
+                                "status": "error",
+                                "message": f"Failed to run technical analysis agent: Execution failed",
+                                "agent_id": agent_id
+                            }
+                        ), 500
+
+                except Exception as selector_error:
+                    logger.error(f"Error running technical analysis agent: {selector_error}")
+                    return jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Failed to run technical analysis agent: {str(selector_error)}",
+                            "agent_id": agent_id
+                        }
+                    ), 500
             else:
                 # For other agents, simulate a successful run
                 logger.info(f"Running agent {agent['name']} with strategies {strategy_ids}")
-                
+
                 # Simulate some processing time
                 import time
                 time.sleep(2)
-                
+
                 return jsonify(
                     {
                         "status": "success",

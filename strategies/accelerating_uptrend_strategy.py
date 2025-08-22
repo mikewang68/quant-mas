@@ -10,6 +10,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from strategies.base_strategy import BaseStrategy
+from utils.strategy_utils import calculate_position_from_score
 import talib
 
 class AcceleratingUptrendStrategy(BaseStrategy):
@@ -214,23 +215,25 @@ class AcceleratingUptrendStrategy(BaseStrategy):
             self.log_warning(f"计算分数时出错: {e}")
             return 0.0
     
-    def execute(self, stock_data: Dict[str, pd.DataFrame], 
+    def execute(self, stock_data: Dict[str, pd.DataFrame],
                 agent_name: str, db_manager) -> List[Dict]:
         """
         Execute the strategy on provided stock data and automatically save results
-        
+
         Args:
             stock_data: Dictionary mapping stock codes to their data DataFrames
             agent_name: Name of the agent executing this strategy
             db_manager: Database manager instance
-            
+
         Returns:
             List of selected stocks with analysis results
         """
+        from datetime import datetime
+        start_time = datetime.now()
         self.log_info(f"执行 {self.name} 策略，处理 {len(stock_data)} 只股票")
-        
+
         selected_stocks = []
-        
+
         # Analyze each stock
         for code, data in stock_data.items():
             try:
@@ -242,22 +245,26 @@ class AcceleratingUptrendStrategy(BaseStrategy):
                     if not data.empty and len(data) >= 5:
                         # Calculate additional technical indicators
                         close_prices = data['close'].values
-                        
+
                         # Calculate price angles for technical analysis
                         current_angle, previous_angle = self._calculate_price_angles(data)
-                        
+
                         technical_analysis = {
                             'price': float(close_prices[-1]),
-                            'current_angle': current_angle,
-                            'previous_angle': previous_angle,
-                            'acceleration': current_angle - previous_angle,
+                            'current_angle': float(current_angle),
+                            'previous_angle': float(previous_angle),
+                            'acceleration': float(current_angle - previous_angle),
                             'volume_confirmed': self._check_volume_confirmation(data)
                         }
                     
+                    # Calculate position based on score
+                    position = calculate_position_from_score(score)
+
                     selected_stocks.append({
                         'code': code,
                         'selection_reason': reason,
                         'score': score,
+                        'position': position,  # Add position field based on score
                         'technical_analysis': technical_analysis,
                         'uptrend_accelerating': uptrend_accelerating
                     })
@@ -273,6 +280,10 @@ class AcceleratingUptrendStrategy(BaseStrategy):
             from datetime import datetime
             current_date = datetime.now().strftime('%Y-%m-%d')
             
+            # 记录策略运行结束时间
+            end_time = datetime.now()
+            execution_time = (end_time - start_time).total_seconds()
+
             save_success = self.save_to_pool(
                 db_manager=db_manager,
                 agent_name=agent_name,
@@ -280,8 +291,8 @@ class AcceleratingUptrendStrategy(BaseStrategy):
                 date=current_date,
                 strategy_params=self.params,
                 additional_metadata={
-                    'strategy_version': '1.0',
-                    'total_stocks_analyzed': len(stock_data)
+                    'strategy_execution_time': execution_time,
+                    'selected_stocks_count': len(selected_stocks)
                 }
             )
             
@@ -329,37 +340,42 @@ class AcceleratingUptrendStrategy(BaseStrategy):
                     if i < len(angles) and i < len(previous_angles):
                         current_angle = angles[i]
                         previous_angle = previous_angles[i] if i < len(previous_angles) else 0
-                        
+
+                        # Calculate score for position sizing
+                        score = self._calculate_score(current_angle, previous_angle)
+
                         # Buy signal: angle above threshold and accelerating
                         if current_angle >= self.angle_threshold and current_angle > previous_angle:
                             signals.loc[signals.index[i], 'signal'] = 'BUY'
-                            signals.loc[signals.index[i], 'position'] = 1.0
+                            signals.loc[signals.index[i], 'position'] = calculate_position_from_score(score)
                         # Sell signal: angle below threshold or not accelerating
                         elif current_angle < self.angle_threshold or current_angle <= previous_angle:
                             signals.loc[signals.index[i], 'signal'] = 'SELL'
-                            signals.loc[signals.index[i], 'position'] = -1.0
+                            signals.loc[signals.index[i], 'position'] = -calculate_position_from_score(score)
                 
             except Exception as e:
                 self.log_warning(f"生成信号时出错: {e}")
         
         return signals
     
-    def calculate_position_size(self, signal: str, portfolio_value: float, 
+    def calculate_position_size(self, signal: str, portfolio_value: float,
                               price: float) -> float:
         """
         Calculate position size based on signal and portfolio value.
-        
+
         Args:
             signal: Trading signal ('BUY', 'SELL', 'HOLD')
             portfolio_value: Current portfolio value
             price: Current asset price
-            
+
         Returns:
             Position size (number of shares/contracts)
         """
+        # For this strategy, we'll use a fixed position size based on signal strength
+        # In a real implementation, this might be based on score or other factors
         if signal == 'BUY':
-            # Allocate 10% of portfolio value
-            return (portfolio_value * 0.1) / price
+            # Use a moderate position size for buy signals
+            return 100.0
         elif signal == 'SELL':
             return -100.0  # Sell 100 shares
         else:

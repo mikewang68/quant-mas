@@ -199,8 +199,12 @@
                         <textarea class="form-control" id="strategy-description" rows="3"></textarea>
                     </div>
                     <div class="mb-3">
-                        <label for="strategy-program" class="form-label">执行程序</label>
-                        <input type="text" class="form-control" id="strategy-program" placeholder="请输入执行程序文件名，如：ma_crossover_strategy.py">
+                        <label for="strategy-file" class="form-label">文件</label>
+                        <input type="text" class="form-control" id="strategy-file" placeholder="请输入策略文件名，如：ma_crossover_strategy">
+                    </div>
+                    <div class="mb-3">
+                        <label for="strategy-class" class="form-label">类名</label>
+                        <input type="text" class="form-control" id="strategy-class" placeholder="请输入策略类名，如：MACrossoverStrategy">
                     </div>
                     <div class="mb-3">
                         <label for="strategy-parameters" class="form-label">参数 (JSON)</label>
@@ -620,7 +624,8 @@
         document.getElementById('strategy-name').value = strategy.name;
         document.getElementById('strategy-type').value = strategy.type;
         document.getElementById('strategy-description').value = strategy.description || '';
-        document.getElementById('strategy-program').value = strategy.program || '';
+        document.getElementById('strategy-file').value = strategy.file || '';
+        document.getElementById('strategy-class').value = strategy.class_name || '';
         document.getElementById('strategy-parameters').value = JSON.stringify(strategy.parameters || {}, null, 2);
 
         new bootstrap.Modal(document.getElementById('strategyModal')).show();
@@ -759,7 +764,8 @@
         const name = document.getElementById('strategy-name').value.trim();
         const type = document.getElementById('strategy-type').value;
         const description = document.getElementById('strategy-description').value.trim();
-        const program = document.getElementById('strategy-program').value.trim();
+        const file = document.getElementById('strategy-file').value.trim();
+        const class_name = document.getElementById('strategy-class').value.trim();
         const parametersText = document.getElementById('strategy-parameters').value.trim();
 
         // Validation
@@ -789,7 +795,8 @@
             name,
             type,
             description,
-            program,
+            file,
+            class_name,
             parameters
         };
 
@@ -906,11 +913,11 @@
             const globalStatus = document.getElementById('global-run-status');
             const now = new Date();
             const executionTime = now.toLocaleString('zh-CN');
-            
+
             if (data.status === 'success') {
                 globalStatus.textContent = '运行完成';
                 globalStatus.className = 'text-success';
-                
+
                 // Add execution time display below the status
                 let executionTimeElement = document.getElementById('execution-time-display');
                 if (!executionTimeElement) {
@@ -920,16 +927,27 @@
                     globalStatus.parentNode.appendChild(executionTimeElement);
                 }
                 executionTimeElement.innerHTML = `<small class="text-muted">执行时间: ${executionTime}</small>`;
-                
+
                 // Update the agent's last execution time display
                 const agentLastExecutionElement = document.getElementById(`last-execution-${agentId}`);
                 if (agentLastExecutionElement) {
                     agentLastExecutionElement.textContent = executionTime;
                 }
+
+                 // Display selected stock count
+                if (data.result && data.result.count !== undefined) {
+                    statusElement.textContent = `已完成 (股票数量: ${data.result.count})`;
+
+                     // Update agent status based on result
+                     if (statusElement) {
+                         statusElement.textContent = `已完成 (${data.result.count} 支股票)`;
+                         statusElement.className = 'agent-status text-success';
+                     }
+                }
             } else {
                 globalStatus.textContent = '运行失败: ' + data.message;
                 globalStatus.className = 'text-danger';
-                
+
                 // Add execution time display below the status
                 let executionTimeElement = document.getElementById('execution-time-display');
                 if (!executionTimeElement) {
