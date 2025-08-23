@@ -685,8 +685,8 @@ def register_routes(app: Flask):
 
                             logger.info(f"Executing strategy {strategy['name']} with parameters: {strategy.get('parameters', {})}")
 
-                            # Initialize selector
-                            selector = WeeklyStockSelector(db_manager, data_fetcher)
+                            # Initialize selector with specific strategy ID
+                            selector = WeeklyStockSelector(db_manager, data_fetcher, strategy_id)
                             selectors.append(selector)
 
                             # Select stocks using this strategy

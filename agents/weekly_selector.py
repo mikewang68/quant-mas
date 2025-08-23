@@ -26,16 +26,18 @@ class WeeklyStockSelector:
     Dynamically loads strategies from database and executes them
     """
 
-    def __init__(self, db_manager: MongoDBManager, data_fetcher: AkshareClient):
+    def __init__(self, db_manager: MongoDBManager, data_fetcher: AkshareClient, strategy_id: Optional[str] = None):
         """
         Initialize the weekly stock selector framework
 
         Args:
             db_manager: MongoDBManager instance for database operations
             data_fetcher: AkshareClient instance for data fetching
+            strategy_id: Optional strategy ID to load specific strategy instead of first one
         """
         self.db_manager = db_manager
         self.data_fetcher = data_fetcher
+        self.strategy_id = strategy_id
         self.logger = logging.getLogger(__name__)
 
         # Strategy components
@@ -58,20 +60,33 @@ class WeeklyStockSelector:
         try:
             strategies = self.db_manager.get_strategies()
             if strategies and len(strategies) > 0:
-                # Use the first strategy for now
-                first_strategy = strategies[0]
-                self.strategy_params = first_strategy.get('parameters', {})
-                self.strategy_name = first_strategy.get('name', 'Unknown')
+                # Use the specified strategy if strategy_id is provided, otherwise use the first strategy
+                if self.strategy_id:
+                    selected_strategy = None
+                    for strategy in strategies:
+                        if str(strategy.get('_id')) == self.strategy_id:
+                            selected_strategy = strategy
+                            break
+
+                    if not selected_strategy:
+                        self.logger.warning(f"Strategy with ID {self.strategy_id} not found, using first strategy")
+                        selected_strategy = strategies[0]
+                else:
+                    # Use the first strategy for now (original behavior)
+                    selected_strategy = strategies[0]
+
+                self.strategy_params = selected_strategy.get('parameters', {})
+                self.strategy_name = selected_strategy.get('name', 'Unknown')
 
                 # Extract file and class from program field if it exists
-                if 'program' in first_strategy and isinstance(first_strategy['program'], dict):
-                    self.strategy_file = first_strategy['program'].get('file', '')
-                    self.strategy_class_name = first_strategy['program'].get('class', '')
+                if 'program' in selected_strategy and isinstance(selected_strategy['program'], dict):
+                    self.strategy_file = selected_strategy['program'].get('file', '')
+                    self.strategy_class_name = selected_strategy['program'].get('class', '')
                     self.logger.info("Loaded strategy file and class from program field")
                 else:
                     # Fallback to direct file and class_name fields
-                    self.strategy_file = first_strategy.get('file', '')
-                    self.strategy_class_name = first_strategy.get('class_name', '')
+                    self.strategy_file = selected_strategy.get('file', '')
+                    self.strategy_class_name = selected_strategy.get('class_name', '')
 
                     self.logger.info("Loaded strategy from database: %s" % self.strategy_name)
             else:
@@ -413,25 +428,31 @@ class WeeklyStockSelector:
 
             # Get the actual strategy ID from database
             strategy_id = None
+            strategy_name = self.strategy_name if self.strategy_name else "Unknown Strategy"  # Use the actual strategy name
             strategies = self.db_manager.get_strategies()
+
+            # Try to find the current strategy in the database
             for strategy in strategies:
-                if strategy.get('name') == "三均线多头排列策略（基本型）":
+                if strategy.get('name') == self.strategy_name:
                     strategy_id = strategy.get('_id')
                     break
 
-            # If we couldn't find the strategy, use a default
+            # If we couldn't find the strategy, use the strategy_id that was passed in or a default
             if not strategy_id:
-                strategy_id = "three_ma_bullish_arrangement"
+                strategy_id = self.strategy_id if self.strategy_id else "unknown_strategy"
+
+            # Use strategy_id as the strategy key
+            strategy_key = strategy_id
 
             return db_ops.save_selected_stocks_to_pool(
-                strategy_key="weekly_selector_three_ma",
+                strategy_key=strategy_key,
                 agent_name="WeeklySelector",
                 strategy_id=strategy_id,
-                strategy_name="三均线多头排列策略",
+                strategy_name=strategy_name,
                 stocks=stocks_data,
                 date=date,
                 last_data_date=last_data_date,
-                strategy_params=None  # Let the database operations fetch parameters from DB
+                strategy_params=self.strategy_params  # Pass actual strategy parameters
             )
         except Exception as e:
             self.logger.error(f"Error saving selected stocks: {e}")
