@@ -6,7 +6,7 @@ A strategy that generates buy/sell signals based on trend following principles.
 import pandas as pd
 import numpy as np
 import talib
-from typing import List, Dict, Tuple, Optional
+from typing import Dict, Tuple, Optional
 import sys
 import os
 
@@ -143,6 +143,14 @@ class TrendFollowingStrategy(BaseStrategy):
             macd_condition = macd_dif_last > macd_dea_last
             breakout_condition = historical_high is not None and current_price > historical_high
 
+            # Check for golden cross pattern (MA5 crosses above MA13 and MACD DIF crosses above DEA)
+            golden_cross_condition = self._detect_golden_cross(data)
+
+            # Prepare selection reason
+            reason = f"满足趋势跟踪条件: 收盘价={current_price:.2f}, MA{self.fast_period}={ma_fast_last:.2f}, MA{self.slow_period}={ma_slow_last:.2f}, DIF={macd_dif_last:.2f}, DEA={macd_dea_last:.2f}"
+            if golden_cross_condition:
+                reason += " (检测到金叉)"
+
             # For scoring, we'll use the historical high (5-period)
             score = self._calculate_score(
                 ma_fast_last, ma_slow_last,
@@ -152,28 +160,67 @@ class TrendFollowingStrategy(BaseStrategy):
 
             # Check strength confirmation (score > 60) - revert to original strict condition
             if score <= 60:
-                return False, f"趋势强度不足，得分{score:.2f} <= 60", score, False
-
-            reason = f"趋势强度得分{score:.2f}"
-
-            if ma_condition:
-                reason += f", MA{self.fast_period}({ma_fast_last:.2f}) > MA{self.slow_period}({ma_slow_last:.2f})"
-            if macd_condition:
-                reason += f", DIF({macd_dif_last:.4f}) > DEA({macd_dea_last:.4f})"
-            if breakout_condition:
-                reason += f", 价格({current_price:.2f})创{self.new_high_period}周期新高({historical_high:.2f})"
-
-            # Check for golden cross pattern (MA5 crosses above MA13 and MACD DIF crosses above DEA)
-            golden_cross_condition = self._detect_golden_cross(data)
-
-            if golden_cross_condition:
-                reason += " (检测到金叉)"
+                return False, f"趋势强度不足，得分={score:.2f}", score, False
 
             return True, reason, score, golden_cross_condition
 
         except Exception as e:
             self.log_error(f"分析错误: {e}")
             return False, f"分析错误: {e}", None, False
+
+    def get_technical_analysis_data(self, data: pd.DataFrame) -> Dict:
+        """
+        获取技术分析数据供格式化使用
+
+        Args:
+            data: DataFrame with stock data including OHLCV columns
+
+        Returns:
+            Dict containing technical analysis data
+        """
+        if data.empty:
+            return {}
+
+        try:
+            # Convert pandas Series to numpy array for TA-Lib
+            close_prices = np.array(data["close"].values, dtype=np.float64)
+
+            # Calculate moving averages
+            ma_fast = talib.SMA(close_prices, timeperiod=self.fast_period)
+            ma_slow = talib.SMA(close_prices, timeperiod=self.slow_period)
+
+            # Calculate MACD
+            macd_dif, macd_dea, _ = talib.MACD(
+                close_prices,
+                fastperiod=self.macd_fast,
+                slowperiod=self.macd_slow,
+                signalperiod=self.macd_signal
+            )
+
+            # Current values
+            current_price = close_prices[-1]
+            ma_fast_last = ma_fast[-1] if not np.isnan(ma_fast[-1]) else None
+            ma_slow_last = ma_slow[-1] if not np.isnan(ma_slow[-1]) else None
+            macd_dif_last = macd_dif[-1] if not np.isnan(macd_dif[-1]) else None
+            macd_dea_last = macd_dea[-1] if not np.isnan(macd_dea[-1]) else None
+
+            # Prepare technical analysis data
+            technical_analysis_data = {
+                'price': float(current_price),
+                'moving_averages': {
+                    f'sma_{self.fast_period}': float(ma_fast_last) if ma_fast_last is not None else 'N/A',
+                    f'sma_{self.slow_period}': float(ma_slow_last) if ma_slow_last is not None else 'N/A',
+                },
+                'macd': {
+                    'dif': float(macd_dif_last) if macd_dif_last is not None else 'N/A',
+                    'dea': float(macd_dea_last) if macd_dea_last is not None else 'N/A',
+                }
+            }
+
+            return technical_analysis_data
+        except Exception as e:
+            self.log_error(f"获取技术分析数据错误: {e}")
+            return {}
 
     def _calculate_score(self, ma_fast, ma_slow, macd_dif, macd_dea, price, historical_high):
         """
@@ -278,7 +325,7 @@ class TrendFollowingStrategy(BaseStrategy):
 
     def execute(
         self, stock_data: Dict[str, pd.DataFrame], agent_name: str, db_manager
-    ) -> List[Dict]:
+    ) -> list[Dict]:
         """
         Execute the strategy on provided stock data and automatically save results
 
@@ -366,6 +413,18 @@ class TrendFollowingStrategy(BaseStrategy):
             from datetime import datetime
 
             current_date = datetime.now().strftime("%Y-%m-%d")
+
+            # Use the new common formatting methods
+            formatted_output = self.format_strategy_output(
+                stocks=selected_stocks,
+                agent_name=agent_name,
+                date=current_date,
+                strategy_params=self.params,
+                additional_metadata={
+                    "strategy_version": "1.0",
+                    "total_stocks_analyzed": len(stock_data),
+                }
+            )
 
             save_success = self.save_to_pool(
                 db_manager=db_manager,
