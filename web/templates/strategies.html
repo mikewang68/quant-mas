@@ -333,7 +333,7 @@
 
         agents.forEach(agent => {
             const row = document.createElement('tr');
-            const strategyNames = agent.strategies && agent.strategies.length > 0 
+            const strategyNames = agent.strategies && agent.strategies.length > 0
                 ? agent.strategies.map(id => {
                     const strategy = strategies.find(s => s._id === id);
                     return strategy ? strategy.name : id;
