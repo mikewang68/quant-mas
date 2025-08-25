@@ -118,6 +118,112 @@ class RSIStrategy(BaseStrategy):
         else:
             return 0.0
 
+    def execute(self, stock_data: Dict[str, pd.DataFrame], agent_name: str, db_manager) -> list[Dict]:
+        """
+        Execute the strategy on provided stock data and automatically save results
+
+        Args:
+            stock_data: Dictionary mapping stock codes to their data DataFrames
+            agent_name: Name of the agent executing this strategy
+            db_manager: Database manager instance
+
+        Returns:
+            List of selected stocks with analysis results
+        """
+
+        self.log_info(f"Executing {self.name} strategy on {len(stock_data)} stocks")
+
+        selected_stocks = []
+
+        # Process each stock
+        for code, data in stock_data.items():
+            try:
+                # Generate signals for this stock
+                signals = self.generate_signals(data)
+
+                # Check if we have any buy signals
+                buy_signals = signals[signals['signal'] == 'BUY']
+
+                if not buy_signals.empty:
+                    # Get the latest signal
+                    latest_signal = buy_signals.iloc[-1]
+
+                    # Calculate score based on RSI distance from oversold level
+                    rsi_value = latest_signal['rsi']
+                    # Score is higher when RSI is closer to oversold level (30)
+                    score = min(1.0, max(0.0, (self.oversold - rsi_value) / self.oversold))
+
+                    # Calculate position size
+                    position = self.calculate_position_size(
+                        latest_signal['signal'],
+                        100000,  # Default portfolio value - in practice this would be dynamic
+                        latest_signal['close']
+                    )
+
+                    # Create technical analysis data
+                    technical_analysis = {
+                        'price': float(latest_signal['close']),
+                        'rsi': float(rsi_value),
+                        'score': score,
+                        'position': position
+                    }
+
+                    # Add to selected stocks
+                    selected_stocks.append({
+                        'code': code,
+                        'selection_reason': f"RSI buy signal with value {rsi_value:.2f}",
+                        'score': score,
+                        'position': position,
+                        'technical_analysis': technical_analysis,
+                        'signals': {
+                            'signal': latest_signal['signal'],
+                            'close_price': float(latest_signal['close'])
+                        }
+                    })
+
+            except Exception as e:
+                self.log_warning(f"Error processing stock {code}: {e}")
+                continue
+
+        self.log_info(f"Selected {len(selected_stocks)} stocks")
+
+        # Automatically save results to pool collection
+        if selected_stocks:
+            from datetime import datetime
+
+            current_date = datetime.now().strftime("%Y-%m-%d")
+
+            # Use the new common formatting methods
+            formatted_output = self.format_strategy_output(
+                stocks=selected_stocks,
+                agent_name=agent_name,
+                date=current_date,
+                strategy_params=self.params,
+                additional_metadata={
+                    "strategy_version": "1.0",
+                    "total_stocks_analyzed": len(stock_data),
+                }
+            )
+
+            save_success = self.save_to_pool(
+                db_manager=db_manager,
+                agent_name=agent_name,
+                stocks=selected_stocks,
+                date=current_date,
+                strategy_params=self.params,
+                additional_metadata={
+                    "strategy_version": "1.0",
+                    "total_stocks_analyzed": len(stock_data),
+                },
+            )
+
+            if save_success:
+                self.log_info("Strategy results saved to pool successfully")
+            else:
+                self.log_error("Failed to save strategy results to pool")
+
+        return selected_stocks
+
 # Example usage
 if __name__ == "__main__":
     import logging

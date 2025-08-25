@@ -454,7 +454,8 @@ class DatabaseOperations:
             year_week_key = f"{iso_year}-{iso_week:02d}"
 
             # Prepare stocks data (already includes selection reasons)
-            stocks_data = stocks
+            # Convert any numpy types to native Python types for MongoDB compatibility
+            stocks_data = self._convert_numpy_types(stocks)
 
             # Get strategy configuration from database if not provided
             strategy_parameters = strategy_params or {}

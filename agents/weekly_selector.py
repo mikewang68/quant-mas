@@ -7,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Tuple
 from utils.akshare_client import AkshareClient
 from data.mongodb_manager import MongoDBManager
+from utils.strategy_result_formatter import StrategyResultFormatter
 import logging
 import importlib
 import sys
@@ -268,34 +269,48 @@ class WeeklyStockSelector:
                 # self.logger.info(f"Strategy {self.strategy_name} returned: {result}")
 
                 # Extract technical analysis data
+                # Instead of hardcoding three MA values, use the technical analysis data returned by the strategy
                 technical_analysis_data = {}
-                if hasattr(self.strategy_instance, 'params'):
-                    params = self.strategy_instance.params
-                    short_period = params.get('short', 5)
-                    mid_period = params.get('mid', 13)
-                    long_period = params.get('long', 34)
+                # Check if the strategy's analyze method returns technical analysis data as part of the result
+                if isinstance(result, tuple) and len(result) > 4:
+                    # If the strategy returns technical analysis data as the 5th element, use it
+                    strategy_tech_data = result[4] if len(result) > 4 else {}
+                    if isinstance(strategy_tech_data, dict):
+                        technical_analysis_data = strategy_tech_data
 
-                    # Calculate moving averages for technical analysis
-                    if len(k_data) >= max(short_period, mid_period, long_period):
-                        import numpy as np
-                        close_prices = np.array(k_data['close'].values, dtype=np.float64)
+                # If no technical analysis data from strategy result, try to get it from the strategy instance
+                if not technical_analysis_data and hasattr(self.strategy_instance, 'get_technical_analysis_data'):
+                    technical_analysis_data = self.strategy_instance.get_technical_analysis_data(k_data)
 
-                        # Calculate moving averages
-                        if len(close_prices) >= short_period:
-                            ma_short = np.mean(close_prices[-short_period:])
-                            technical_analysis_data['ma_short'] = float(ma_short)
+                # Fallback: if still no technical analysis data, calculate basic three MA values
+                if not technical_analysis_data:
+                    if hasattr(self.strategy_instance, 'params'):
+                        params = self.strategy_instance.params
+                        short_period = params.get('short', 5)
+                        mid_period = params.get('mid', 13)
+                        long_period = params.get('long', 34)
 
-                        if len(close_prices) >= mid_period:
-                            ma_mid = np.mean(close_prices[-mid_period:])
-                            technical_analysis_data['ma_mid'] = float(ma_mid)
+                        # Calculate moving averages for technical analysis
+                        if len(k_data) >= max(short_period, mid_period, long_period):
+                            import numpy as np
+                            close_prices = np.array(k_data['close'].values, dtype=np.float64)
 
-                        if len(close_prices) >= long_period:
-                            ma_long = np.mean(close_prices[-long_period:])
-                            technical_analysis_data['ma_long'] = float(ma_long)
+                            # Calculate moving averages
+                            if len(close_prices) >= short_period:
+                                ma_short = np.mean(close_prices[-short_period:])
+                                technical_analysis_data['ma_short'] = float(ma_short)
 
-                        # Add current price
-                        if len(close_prices) > 0:
-                            technical_analysis_data['price'] = float(close_prices[-1])
+                            if len(close_prices) >= mid_period:
+                                ma_mid = np.mean(close_prices[-mid_period:])
+                                technical_analysis_data['ma_mid'] = float(ma_mid)
+
+                            if len(close_prices) >= long_period:
+                                ma_long = np.mean(close_prices[-long_period:])
+                                technical_analysis_data['ma_long'] = float(ma_long)
+
+                            # Add current price
+                            if len(close_prices) > 0:
+                                technical_analysis_data['price'] = float(close_prices[-1])
 
                 # The strategy returns (meets_criteria, reason, score, golden_cross)
                 # We need to unpack correctly and return (meets_criteria, score, golden_cross, technical_analysis_data)
@@ -384,35 +399,27 @@ class WeeklyStockSelector:
                 # Get technical analysis data from strategy results if available
                 value_text = ""
                 if technical_analysis_data and stock_code in technical_analysis_data:
-                    tech_data = technical_analysis_data[stock_code]
-                    close_price = tech_data.get('price', 'N/A')
-                    ma_short = tech_data.get('ma_short', 'N/A')
-                    ma_mid = tech_data.get('ma_mid', 'N/A')
-                    ma_long = tech_data.get('ma_long', 'N/A')
-
-                    # Format the value text with actual values
-                    if all(isinstance(val, (int, float)) for val in [close_price, ma_short, ma_mid, ma_long]):
-                        value_text = f"收盘价={close_price:.2f}, MA5={ma_short:.2f}, MA13={ma_mid:.2f}, MA34={ma_long:.2f}"
-                    else:
-                        # Handle case where some values might be 'N/A'
-                        close_str = f"{close_price:.2f}" if isinstance(close_price, (int, float)) else str(close_price)
-                        ma5_str = f"{ma_short:.2f}" if isinstance(ma_short, (int, float)) else str(ma_short)
-                        ma13_str = f"{ma_mid:.2f}" if isinstance(ma_mid, (int, float)) else str(ma_mid)
-                        ma34_str = f"{ma_long:.2f}" if isinstance(ma_long, (int, float)) else str(ma_long)
-                        value_text = f"收盘价={close_str}, MA5={ma5_str}, MA13={ma13_str}, MA34={ma34_str}"
+                    # Use the new unified formatter
+                    value_text = StrategyResultFormatter.format_value_field(
+                        stock_code=stock_code,
+                        technical_analysis_data=technical_analysis_data[stock_code],
+                        strategy_name=self.strategy_name
+                    )
                 elif scores and stock_code in scores:
                     # Extract technical data from score reason text
                     score_text = scores[stock_code]
-                    # Convert to string if it's not already
-                    if not isinstance(score_text, str):
-                        score_text = str(score_text)
-                    # Remove the "满足多头排列: " prefix if present
-                    if score_text.startswith("满足多头排列: "):
-                        value_text = score_text.replace("满足多头排列: ", "")
-                    else:
-                        value_text = score_text
+                    # Use the new unified formatter with reason text
+                    value_text = StrategyResultFormatter.format_value_field(
+                        stock_code=stock_code,
+                        strategy_reason=str(score_text),
+                        strategy_name=self.strategy_name
+                    )
                 else:
-                    value_text = "收盘价=N/A, MA5=N/A, MA13=N/A, MA34=N/A"
+                    # Default fallback using the new formatter
+                    value_text = StrategyResultFormatter.format_value_field(
+                        stock_code=stock_code,
+                        strategy_name=self.strategy_name
+                    )
 
                 stock_info = {
                     'code': stock_code,

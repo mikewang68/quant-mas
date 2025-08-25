@@ -205,6 +205,7 @@ score = max(
 量化趋势强度，实现动态仓位管理
 明确的止损止盈机制，控制风险
 适合中长线趋势跟踪，避免频繁交易
+
 此策略通过均线、MACD、价格突破三大维度的综合评分，实现了对趋势强度的量化评估，同时保留了原策略的核心风控规则，是一个完整的趋势跟随系统。
 
 ## 12. BreakoutStrategy (突破策略)
@@ -265,7 +266,7 @@ score = max(
 - `signal`: 交易信号 ('BUY', 'SELL', 'HOLD')
 - `position`: 仓位大小
 
-16. ThreeMABullishArrangementStrategy(三均线多头排列策略)
+## 16. ThreeMABullishArrangementStrategy(三均线多头排列策略)
 
 策略思想:
 利用短期、中期和长期移动平均线的多头排列 (short > mid > long) 来识别趋势性上涨行情。当价格高于三条均线，且三条均线均呈上升趋势时，产生买入信号；否则持有或卖出。通过引入 score 衡量趋势强度。同时检测短期均线与中期均线的金叉信号，作为辅助确认信号。
@@ -303,6 +304,162 @@ score = max(
 
 金叉检测：
 当短期均线向上穿越中期均线时，产生金叉信号，作为趋势确认的辅助指标。
+
+## 17. VolumeBreakoutStrategy (放量突破策略)
+
+策略思想:
+利用价格突破前期高点、成交量显著放大和动量指标确认三者共振，识别强势龙头股的启动信号。当价格创周期新高、量能放大达到阈值且MACD维持多头格局时，产生买入信号；否则观望或卖出。通过引入score衡量突破强度，辅助决策。
+
+参数设置:
+- breakout_period: 突破周期 (默认: 13天)
+- volume_ma_period: 量能均线周期 (默认: 5天)
+- volume_multiplier: 量能放大倍数 (默认: 1.8倍)
+- macd_fast: MACD快线周期 (默认: 12)
+- macd_slow: MACD慢线周期 (默认: 26)
+- macd_signal: MACD信号线周期 (默认: 9)
+
+输出含义:
+- price: 当前收盘价
+- breakout_high: 突破的前期高点值
+- current_volume: 当前成交量
+- avg_volume: 平均成交量值
+- volume_ratio: 量比 (当前量/平均量)
+- macd: MACD指标值 (包含dif和dea)
+- score: 突破强度评分 (0 ~ 100)
+- breakout_signal: 突破信号 (布尔值，True表示有效突破)
+- position: 仓位大小 (0 ~ 1, 满仓=1)
+
+Score 计算公式:
+```
+score = max(
+    0,
+    min(
+        100,
+        40 * min(2.0, (volume_ratio - 1)) / 1.0  # 量能放大强度
+      + 35 * (price - breakout_high) / breakout_high  # 突破幅度强度
+      + 25 * max(0, macd_dif) / max(0.01, abs(macd_dif))  # 动量确认强度
+    )
+)
+```
+
+解释：
+第一项 (40%)：量能放大程度，反映资金进场力度。1倍得0分，2倍得40分。
+第二项 (35%)：突破前期高点的幅度，体现价格强度。突破幅度越大得分越高。
+第三项 (25%)：MACD多头动量强度，DIF为正值且越大得分越高。
+
+结果归一化到 [0, 100]，越高表示突破信号越可靠。
+
+突破信号检测：
+当同时满足以下三个条件时，产生有效突破信号：
+
+1. 收盘价 > 前期最高价 × (1 + 1.5%) （有效突破过滤）
+2. 成交量 > 平均成交量 × volume_multiplier
+3. MACD的DIF线 > 0 且方向向上
+
+仓位管理规则：
+- score ≥ 80: position = 1.0 （满仓）
+- 70 ≤ score < 80: position = 0.7 （7成仓）
+- 60 ≤ score < 70: position = 0.4 （4成仓）
+- score < 60: position = 0.0 （不参与）
+
+风险控制：
+- 止损：跌破突破K线最低价立即止损
+- 止盈：采用移动止盈，最高点回撤5%止盈一半，回撤8%全部清仓
+- 单只个股最大仓位不超过25%
+
+18. PullbackBuyingStrategy (回踩低吸型策略)
+
+策略思想:
+在长期趋势向上的背景下，寻找价格有效回踩重要支撑位的机会进行低吸买入。通过趋势、超卖和支撑三重确认，在相对低位布局。
+
+参数设置:
+
+ma_period: 趋势均线周期 (默认: 13天)
+
+kdj_n: KDJ周期参数N (默认: 9)
+
+rsi_period: RSI周期 (默认: 14)
+
+oversold_threshold: 超卖阈值 (默认: 30)
+
+support_band_pct: 支撑带宽 (默认: 0.03) # ±3%
+
+输出含义:
+
+ma_value: 当前均线值
+
+ma_trend: 均线趋势方向 (1:向上, 0:走平, -1:向下)
+
+kdj_j: 当前KDJ的J值
+
+rsi_value: 当前RSI值
+
+is_valid_pullback: 有效回踩信号 (布尔值)
+
+score: 低吸机会评分 (0 ~ 100)
+
+position: 仓位大小 (0 ~ 1, 满仓=1)
+
+Score 计算公式:
+
+python
+score = max(
+    0,
+    min(
+        100,
+        40 * max(0, (oversold_threshold - kdj_j)) / oversold_threshold  # KDJ超卖程度
+      + 30 * max(0, (oversold_threshold - rsi_value)) / oversold_threshold  # RSI超卖程度
+      + 30 * max(0, (ma_value - close)) / ma_value  # 回踩深度
+    )
+)
+解释：
+第一项 (40%)：KDJ的J值超卖程度，J值越低得分越高
+第二项 (30%)：RSI超卖程度，RSI越低得分越高
+第三项 (30%)：价格回踩均线的深度，回踩越深得分越高
+
+结果归一化到 [0, 100]，越高表示低吸机会越好。
+
+有效回踩判断条件:
+
+python
+def is_valid_pullback(close, ma_value, kdj_j, rsi_value, ma_trend):
+    """判断是否为有效回踩"""
+    # 基础条件
+    price_condition = abs(close - ma_value) / ma_value <= 0.03  # 价格在均线±3%内
+    oversold_condition = (kdj_j < 20) or (rsi_value < 30)      # 超卖状态
+    trend_condition = ma_trend > 0                             # 趋势向上
+    
+    return price_condition and oversold_condition and trend_condition
+买入信号检测：
+当 is_valid_pullback 为 True 且 score ≥ 60 时，产生买入信号
+
+仓位管理规则：
+
+score ≥ 80: position = 0.8 （8成仓）
+
+70 ≤ score < 80: position = 0.6 （6成仓）
+
+60 ≤ score < 70: position = 0.4 （4成仓）
+
+score < 60: position = 0.0 （不参与）
+
+风险控制：
+
+止损：收盘价跌破13均线立即止损
+
+止盈：反弹至前高压力位或涨幅20%开始分批止盈
+
+单笔风险：最大亏损不超过总资金2%
+
+策略优势：
+
+简单明了，易于执行
+
+三重条件确认，避免盲目抄底
+
+明确的止损机制，风险可控
+
+适合趋势行情中的回调买入
 ---
 *注: 所有策略的position_size计算方法都遵循相同的逻辑，根据信号类型、投资组合价值和当前价格计算仓位大小，并根据中国市场习惯四舍五入到100股的整数倍。*
 

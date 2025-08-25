@@ -304,6 +304,18 @@ class ThreeMABullishArrangementStrategy(BaseStrategy):
 
             current_date = datetime.now().strftime("%Y-%m-%d")
 
+            # Use the new common formatting methods
+            formatted_output = self.format_strategy_output(
+                stocks=selected_stocks,
+                agent_name=agent_name,
+                date=current_date,
+                strategy_params=self.params,
+                additional_metadata={
+                    "strategy_version": "1.0",
+                    "total_stocks_analyzed": len(stock_data),
+                }
+            )
+
             save_success = self.save_to_pool(
                 db_manager=db_manager,
                 agent_name=agent_name,

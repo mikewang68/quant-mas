@@ -138,6 +138,85 @@ class BaseStrategy(ABC):
             self.log_error(f"Error saving strategy results to pool: {e}")
             return False
 
+    def format_stock_data_for_pool(self, stock_data: Dict) -> Dict:
+        """
+        Format stock data for consistent storage in pool collection.
+
+        This method ensures all strategies structure their output data in a
+        consistent format for the pool collection.
+
+        Args:
+            stock_data: Dictionary containing stock analysis data
+
+        Returns:
+            Formatted stock data dictionary
+        """
+        formatted_data = {
+            'code': stock_data.get('code', ''),
+            'selection_reason': stock_data.get('selection_reason', ''),
+            'score': float(stock_data.get('score', 0.0)),
+            'position': float(stock_data.get('position', 0.0)),
+            'strategy_name': self.name,
+            'strategy_key': f"{self.name}_{self.__class__.__name__}".lower().replace(' ', '_'),
+            'technical_analysis': stock_data.get('technical_analysis', {}),
+            'signals': stock_data.get('signals', {}),
+            'metadata': stock_data.get('metadata', {})
+        }
+
+        # Add any additional fields that might be present
+        for key, value in stock_data.items():
+            if key not in formatted_data:
+                formatted_data[key] = value
+
+        return formatted_data
+
+    def format_strategy_output(self, stocks: List[Dict], agent_name: str,
+                             date: str, strategy_params: Optional[Dict] = None,
+                             additional_metadata: Optional[Dict] = None) -> Dict:
+        """
+        Format strategy output for consistent database storage.
+
+        Args:
+            stocks: List of selected stocks with analysis data
+            agent_name: Name of the agent executing this strategy
+            date: Selection date (YYYY-MM-DD)
+            strategy_params: Strategy parameters used
+            additional_metadata: Additional metadata
+
+        Returns:
+            Formatted strategy output dictionary
+        """
+        from datetime import datetime
+
+        # Format all stock data
+        formatted_stocks = [self.format_stock_data_for_pool(stock) for stock in stocks]
+
+        # Create strategy key
+        strategy_key = f"{agent_name}_{self.name}_{datetime.now().strftime('%Y-%W')}"
+
+        # Prepare output structure
+        output = {
+            'strategy_key': strategy_key,
+            'agent_name': agent_name,
+            'strategy_id': self.name.lower().replace(' ', '_'),
+            'strategy_name': self.name,
+            'stocks': formatted_stocks,
+            'date': date,
+            'count': len(formatted_stocks),
+            'strategy_params': strategy_params or self.params,
+            'metadata': {
+                'created_at': datetime.now(),
+                'updated_at': datetime.now(),
+                'total_stocks_analyzed': len(stocks)
+            }
+        }
+
+        # Add additional metadata if provided
+        if additional_metadata:
+            output['metadata'].update(additional_metadata)
+
+        return output
+
 # Example usage
 if __name__ == "__main__":
     # This is an abstract class, so we can't instantiate it directly
