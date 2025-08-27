@@ -265,6 +265,7 @@ class AcceleratingUptrendStrategy(BaseStrategy):
                         'selection_reason': reason,
                         'score': score,
                         'position': position,  # Add position field based on score
+                        'strategy_name': self.name,  # Add strategy name
                         'technical_analysis': technical_analysis,
                         'uptrend_accelerating': uptrend_accelerating
                     })

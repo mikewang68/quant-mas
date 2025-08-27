@@ -470,7 +470,7 @@ class DatabaseOperations:
                 '_id': year_week_key,  # Use year-week as primary key
                 'strategy_key': strategy_key,
                 'strategy_name': strategy_name,
-                'strategy_parameters': strategy_parameters,
+                # 'strategy_parameters': strategy_parameters,  # 注释掉strategy_parameters字段
                 'stocks': stocks_data,
                 'count': len(stocks),
                 'created_at': datetime.now(),
