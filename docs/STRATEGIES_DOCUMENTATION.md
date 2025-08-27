@@ -265,6 +265,11 @@ score = max(
 - `volume_confirmed`: 成交量确认
 - `signal`: 交易信号 ('BUY', 'SELL', 'HOLD')
 - `position`: 仓位大小
+- `strategy_name`: 策略名称 (用于标识策略来源)
+
+**最近更新**:
+- 添加了 `strategy_name` 字段到选中的股票中，以标识策略来源
+- 该更新是整体池数据结构修复的一部分，确保只写入标准字段到池中
 
 ## 16. ThreeMABullishArrangementStrategy(三均线多头排列策略)
 

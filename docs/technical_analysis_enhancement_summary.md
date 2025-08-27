@@ -136,7 +136,15 @@ All enhancements have been successfully implemented and verified:
 4. **Enhanced Visualization**: Use detailed selection reasons for better UI displays
 5. **Strategy Comparison**: Leverage stored parameters for strategy comparison tools
 
+## Recent Updates
+
+### Pool Data Structure Fix
+- **Issue**: Extra fields (selection_reason, position, strategy_name, technical_analysis, uptrend_accelerating) were being written to pool data
+- **Solution**: Updated Technical Selector agent to filter extra fields and only write standard fields (code, score, golden_cross, value, tech)
+- **Cleanup**: Created script to remove existing extra fields from database
+- **Verification**: Confirmed that pool data structure is now consistent and follows expected format
+
 ## Conclusion
 
-The technical analysis system has been successfully enhanced with detailed selection reasons, strategy parameter tracking, and improved database record structure. These improvements provide better clarity, easier debugging, and enhanced reporting capabilities while maintaining backward compatibility with existing systems.
+The technical analysis system has been successfully enhanced with detailed selection reasons, strategy parameter tracking, and improved database record structure. These improvements provide better clarity, easier debugging, and enhanced reporting capabilities while maintaining backward compatibility with existing systems. Recent updates have also fixed issues with pool data structure consistency.
 

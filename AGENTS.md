@@ -120,6 +120,12 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Enhanced StrategyResultFormatter to support Pullback Buying strategy specific data format
 - Verified strategy functionality and integration with the Weekly Selector agent framework
 
+### Pool Data Structure Fix
+- Identified and fixed issue where extra fields (selection_reason, position, strategy_name, technical_analysis, uptrend_accelerating) were being written to pool data
+- Updated Technical Selector agent to filter extra fields and only write standard fields (code, score, golden_cross, value, tech)
+- Created cleanup script to remove existing extra fields from database
+- Verified that pool data structure is now consistent and follows expected format
+
 ## Usage Patterns
 
 ### Running Agents
