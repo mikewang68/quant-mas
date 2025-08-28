@@ -108,17 +108,31 @@
 
 ## 8. MomentumStrategy (动量策略)
 
-**策略思想**: 当动量指标转正时产生买入信号，转负时产生卖出信号。
+**策略思想**: 基于动量指标选择股票的策略，当动量值超过阈值时产生买入信号，当动量值低于阈值时产生卖出信号。该策略使用分数机制来评估股票的强度，并根据分数计算仓位大小。策略执行后会自动将结果保存到数据库中。
 
 **参数设置**:
 - `period`: 动量计算周期 (默认: 14)
 - `threshold`: 动量阈值 (默认: 0)
-- `max_position_ratio`: 最大仓位比例 (默认: 0.1)
+- `lookback_period`: 数据完整性检查周期 (默认: 20)
 
 **输出含义**:
-- `momentum`: 动量指标
-- `signal`: 交易信号 ('BUY', 'SELL', 'HOLD')
-- `position`: 仓位大小
+- `code`: 股票代码
+- `selection_reason`: 选股理由
+- `score`: 选股分数 (0-1之间)
+- `position`: 基于分数计算的仓位大小
+- `strategy_name`: 策略名称
+- `technical_analysis`: 技术分析数据
+  - `price`: 当前价格
+  - `momentum`: 动量指标值
+  - `volume`: 成交量
+- `momentum_positive`: 动量是否为正
+
+**功能特性**:
+- 支持基于动量指标的选股分析
+- 采用分数机制评估股票强度
+- 自动生成交易信号 (BUY/SELL/HOLD)
+- 根据分数动态计算仓位大小
+- 自动保存策略执行结果到数据库
 
 ## 9. VolatilityStrategy (波动率策略)
 
