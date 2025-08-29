@@ -142,9 +142,11 @@ class AkshareClient:
 
             k_data = k_data.rename(columns=column_mapping)
 
-            # Select only needed columns
-            needed_columns = ['date', 'open', 'close', 'high', 'low', 'volume', 'amount']
-            k_data = k_data[needed_columns]
+            # Select only needed columns (including additional financial metrics)
+            needed_columns = ['date', 'open', 'close', 'high', 'low', 'volume', 'amount', 'amplitude', 'pct_change', 'change_amount', 'turnover_rate']
+            # Only select columns that actually exist in the data
+            available_columns = [col for col in needed_columns if col in k_data.columns]
+            k_data = k_data[available_columns]
 
             # Convert date column to datetime
             k_data['date'] = pd.to_datetime(k_data['date'])

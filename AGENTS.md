@@ -83,6 +83,7 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Enhanced technical indicator calculations
 - Improved signal generation algorithms
 - Better integration with market data sources
+- **System-wide Adjustment Setting Consistency**: Technical selector now properly retrieves and uses the system adjustment setting from database configuration, ensuring consistency with other agents
 
 ### Strategy Program Field System
 - Added program field extraction and management

@@ -340,8 +340,19 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
 
                     time.sleep(1.0)  # 1 second delay between requests
 
+                    # Get adjustment setting from system configuration
+                    adjust_setting = self.db_manager.get_adjustment_setting()
+                    # Map database config values to Akshare client parameters
+                    adjust_mapping = {
+                        'qfq': 'q',      # 前复权 -> 'q'
+                        'hfq': 'h',      # 后复权 -> 'h'
+                        '': 'none'       # 不复权 -> 'none'
+                    }
+                    adjust_type = adjust_mapping.get(adjust_setting, 'q')  # Default to 前复权
+
+                    # Fetch data with the configured adjustment type
                     k_data = self.data_fetcher.get_daily_k_data(
-                        code, start_date, end_date
+                        code, start_date, end_date, adjust_type
                     )
 
                     # Save each day's data to buf_data with _id as date:code
@@ -356,10 +367,12 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                                 record_date = row["date"]
                             else:
                                 # Convert to datetime if needed and then format
-                                if hasattr(row["date"], 'strftime'):
-                                    record_date = row["date"].strftime("%Y-%m-%d")
-                                else:
+                                try:
+                                    # Try to convert using pandas to_datetime which handles various formats
                                     record_date = pd.to_datetime(row["date"]).strftime("%Y-%m-%d")
+                                except Exception:
+                                    # Fallback to string conversion
+                                    record_date = str(row["date"])
 
                             record_id = f"{record_date}:{code}"
 
@@ -368,6 +381,7 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                                 {"_id": record_id}
                             )
                             if not existing_record:
+                                # Include additional fields: amount, amplitude, pct_change, change_amount, turnover_rate
                                 record = {
                                     "_id": record_id,
                                     "code": code,
@@ -378,6 +392,21 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                                     "close": float(row["close"]),
                                     "volume": float(row["volume"])
                                     if "volume" in row
+                                    else 0,
+                                    "amount": float(row["amount"])
+                                    if "amount" in row
+                                    else 0,
+                                    "amplitude": float(row["amplitude"])
+                                    if "amplitude" in row
+                                    else 0,
+                                    "pct_change": float(row["pct_change"])
+                                    if "pct_change" in row
+                                    else 0,
+                                    "change_amount": float(row["change_amount"])
+                                    if "change_amount" in row
+                                    else 0,
+                                    "turnover_rate": float(row["turnover_rate"])
+                                    if "turnover_rate" in row
                                     else 0,
                                 }
                                 records_to_insert.append(record)

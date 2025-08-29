@@ -47,7 +47,7 @@ When retrieving data, the system automatically selects the appropriate columns b
 
 ## Usage in Strategies
 
-Strategies and backtesting modules automatically use the configured adjustment setting when retrieving data from MongoDB. No changes are needed in existing strategy code.
+Strategies and backtesting modules automatically use the configured adjustment setting when retrieving data from MongoDB. The technical selector agent has been updated to explicitly retrieve and use the system adjustment setting when fetching data from akshare, ensuring consistency across all system components.
 
 ## API Endpoints
 
