@@ -53,21 +53,21 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
         self.logger = logging.getLogger(__name__)
 
         # Strategy components
-        self.strategy_name = None
-        self.strategy_file = None
-        self.strategy_class_name = None
-        self.strategy_params = {}
-        self.strategy_instance = None
+        self.strategy_names = []
+        self.strategy_files = []
+        self.strategy_class_names = []
+        self.strategy_params_list = []
+        self.strategy_instances = []
 
-        # Load strategy from database
-        self._load_strategy_from_db()
+        # Load strategies from database
+        self._load_strategies_from_db()
 
-        # Load and initialize the dynamic strategy
-        self._load_dynamic_strategy()
+        # Load and initialize the dynamic strategies
+        self._load_dynamic_strategies()
 
-    def _load_strategy_from_db(self):
+    def _load_strategies_from_db(self):
         """
-        Load strategy configuration from database
+        Load all strategy configurations from database
         """
         try:
             # Get the technical analysis agent from database
@@ -84,78 +84,149 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                 self.log_warning("No strategies assigned to technical分析 agent")
                 return
 
-            # Use the specified strategy if strategy_id is provided, otherwise use the first strategy
-            if self.strategy_id:
-                selected_strategy = None
-                for strategy_id in strategy_ids:
-                    from bson import ObjectId
-
-                    strategy = self.db_manager.strategies_collection.find_one(
-                        {"_id": ObjectId(strategy_id)}
-                    )
-                    if strategy and str(strategy.get("_id")) == self.strategy_id:
-                        selected_strategy = strategy
-                        break
-
-                if not selected_strategy:
-                    self.log_warning(
-                        f"Strategy with ID {self.strategy_id} not found, using first strategy"
-                    )
-                    from bson import ObjectId
-
-                    selected_strategy = self.db_manager.strategies_collection.find_one(
-                        {"_id": ObjectId(strategy_ids[0])}
-                    )
-            else:
-                # Use the first strategy for now (original behavior)
-                from bson import ObjectId
-
+            # Load all strategies
+            from bson import ObjectId
+            for strategy_id in strategy_ids:
                 selected_strategy = self.db_manager.strategies_collection.find_one(
-                    {"_id": ObjectId(strategy_ids[0])}
+                    {"_id": ObjectId(strategy_id)}
                 )
 
-            if selected_strategy:
-                self.strategy_params = selected_strategy.get("parameters", {})
-                self.strategy_name = selected_strategy.get("name", "Unknown")
+                if not selected_strategy:
+                    self.log_warning(f"Strategy {strategy_id} not found in database")
+                    continue
+
+                # Extract strategy information
+                self.strategy_params_list.append(selected_strategy.get("parameters", {}))
+                self.strategy_names.append(selected_strategy.get("name", "Unknown"))
 
                 # Extract file and class from program field if it exists
                 if "program" in selected_strategy and isinstance(
                     selected_strategy["program"], dict
                 ):
-                    self.strategy_file = selected_strategy["program"].get("file", "")
-                    self.strategy_class_name = selected_strategy["program"].get(
+                    self.strategy_files.append(selected_strategy["program"].get("file", ""))
+                    self.strategy_class_names.append(selected_strategy["program"].get(
                         "class", ""
-                    )
+                    ))
                     self.log_info("Loaded strategy file and class from program field")
                 else:
                     # Fallback to direct file and class_name fields
-                    self.strategy_file = selected_strategy.get("file", "")
-                    self.strategy_class_name = selected_strategy.get("class_name", "")
+                    self.strategy_files.append(selected_strategy.get("file", ""))
+                    self.strategy_class_names.append(selected_strategy.get("class_name", ""))
 
-                self.log_info("Loaded strategy from database: %s" % self.strategy_name)
-            else:
-                self.log_warning("No strategies found in database")
+                self.log_info("Loaded strategy from database: %s" % selected_strategy.get("name", "Unknown"))
 
         except Exception as e:
-            self.log_error(f"Error loading strategy from database: {e}")
+            self.log_error(f"Error loading strategies from database: {e}")
+
+    def _load_dynamic_strategies(self):
+        """
+        Dynamically load all strategies from files and instantiate the strategy classes
+        """
+        try:
+            # Clear existing instances
+            self.strategy_instances = []
+
+            # Load each strategy
+            for i in range(len(self.strategy_files)):
+                strategy_file = self.strategy_files[i]
+                strategy_class_name = self.strategy_class_names[i]
+                strategy_name = self.strategy_names[i]
+                strategy_params = self.strategy_params_list[i] if i < len(self.strategy_params_list) else {}
+
+                if not strategy_file or not strategy_class_name:
+                    self.log_warning(f"Strategy file or class not specified for strategy {i}")
+                    continue
+
+                # Dynamically import the strategy module
+                # Handle both direct file names and package.module format
+                module_name = strategy_file
+
+                # Handle different formats of strategy file specification
+                if isinstance(strategy_file, dict):
+                    # Handle the case where program is a dict with file and class fields
+                    file_name = strategy_file.get("file", "")
+                    if file_name:
+                        if not file_name.endswith(".py"):
+                            if "." not in file_name and not file_name.startswith(
+                                "strategies."
+                            ):
+                                module_name = f"strategies.{file_name}"
+                        else:
+                            module_name = file_name[:-3]
+                            if "." not in module_name and not module_name.startswith(
+                                "strategies."
+                            ):
+                                module_name = f"strategies.{module_name}"
+                    else:
+                        self.log_error("Invalid program field format")
+                        continue
+                elif isinstance(strategy_file, str):
+                    # If it's just a filename without .py extension and without package prefix, add the strategies prefix
+                    if not strategy_file.endswith(".py"):
+                        if (
+                            "." not in strategy_file
+                            and not strategy_file.startswith("strategies.")
+                        ):
+                            module_name = f"strategies.{strategy_file}"
+                    else:
+                        # If it has .py extension, remove it for import
+                        module_name = strategy_file[:-3]
+                        # Add strategies prefix if needed
+                        if "." not in module_name and not module_name.startswith(
+                            "strategies."
+                        ):
+                            module_name = f"strategies.{module_name}"
+
+                strategy_module = importlib.import_module(module_name)
+
+                # Get the strategy class
+                strategy_class = getattr(
+                    strategy_module, strategy_class_name
+                )
+
+                # Instantiate the strategy with parameters
+                strategy_instance = strategy_class(
+                    name=strategy_name, params=strategy_params
+                )
+
+                # Add to instances list
+                self.strategy_instances.append(strategy_instance)
+
+                self.log_info(
+                    "Successfully loaded dynamic strategy: %s" % strategy_name
+                )
+        except Exception as e:
+            self.log_error(f"Error loading dynamic strategies: {e}")
+            raise
 
     def _load_dynamic_strategy(self):
         """
         Dynamically load strategy from file and instantiate the strategy class
+        (Deprecated - kept for backward compatibility)
         """
         try:
-            if not self.strategy_file or not self.strategy_class_name:
+            if not self.strategy_files or not self.strategy_class_names:
+                self.log_warning("Strategy files or classes not specified")
+                return
+
+            # Load first strategy for backward compatibility
+            strategy_file = self.strategy_files[0] if self.strategy_files else None
+            strategy_class_name = self.strategy_class_names[0] if self.strategy_class_names else None
+            strategy_name = self.strategy_names[0] if self.strategy_names else "Unknown"
+            strategy_params = self.strategy_params_list[0] if self.strategy_params_list else {}
+
+            if not strategy_file or not strategy_class_name:
                 self.log_warning("Strategy file or class not specified")
                 return
 
             # Dynamically import the strategy module
             # Handle both direct file names and package.module format
-            module_name = self.strategy_file
+            module_name = strategy_file
 
             # Handle different formats of strategy file specification
-            if isinstance(self.strategy_file, dict):
+            if isinstance(strategy_file, dict):
                 # Handle the case where program is a dict with file and class fields
-                file_name = self.strategy_file.get("file", "")
+                file_name = strategy_file.get("file", "")
                 if file_name:
                     if not file_name.endswith(".py"):
                         if "." not in file_name and not file_name.startswith(
@@ -171,17 +242,17 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                 else:
                     self.log_error("Invalid program field format")
                     return
-            elif isinstance(self.strategy_file, str):
+            elif isinstance(strategy_file, str):
                 # If it's just a filename without .py extension and without package prefix, add the strategies prefix
-                if not self.strategy_file.endswith(".py"):
+                if not strategy_file.endswith(".py"):
                     if (
-                        "." not in self.strategy_file
-                        and not self.strategy_file.startswith("strategies.")
+                        "." not in strategy_file
+                        and not strategy_file.startswith("strategies.")
                     ):
-                        module_name = f"strategies.{self.strategy_file}"
+                        module_name = f"strategies.{strategy_file}"
                 else:
                     # If it has .py extension, remove it for import
-                    module_name = self.strategy_file[:-3]
+                    module_name = strategy_file[:-3]
                     # Add strategies prefix if needed
                     if "." not in module_name and not module_name.startswith(
                         "strategies."
@@ -192,16 +263,16 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
 
             # Get the strategy class
             self.strategy_class = getattr(
-                self.strategy_module, self.strategy_class_name
+                self.strategy_module, strategy_class_name
             )
 
             # Instantiate the strategy with parameters
             self.strategy_instance = self.strategy_class(
-                name=self.strategy_name, params=self.strategy_params
+                name=strategy_name, params=strategy_params
             )
 
             self.log_info(
-                "Successfully loaded dynamic strategy: %s" % self.strategy_name
+                "Successfully loaded dynamic strategy: %s" % strategy_name
             )
         except Exception as e:
             self.log_error(f"Error loading dynamic strategy: {e}")
@@ -281,10 +352,14 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                         records_to_insert = []
                         for _, row in k_data.iterrows():
                             # Handle date conversion properly
-                            if hasattr(row["date"], "strftime"):
-                                record_date = row["date"].strftime("%Y-%m-%d")
+                            if isinstance(row["date"], str):
+                                record_date = row["date"]
                             else:
-                                record_date = str(row["date"])
+                                # Convert to datetime if needed and then format
+                                if hasattr(row["date"], 'strftime'):
+                                    record_date = row["date"].strftime("%Y-%m-%d")
+                                else:
+                                    record_date = pd.to_datetime(row["date"]).strftime("%Y-%m-%d")
 
                             record_id = f"{record_date}:{code}"
 
@@ -388,48 +463,29 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                 self.log_error("No stock data available for analysis")
                 return False
 
-            # Execute the dynamically loaded strategy
+            # Execute all dynamically loaded strategies
             all_selected_stocks = []
-            if self.strategy_instance:
+            for i, strategy_instance in enumerate(self.strategy_instances):
                 try:
+                    strategy_name = self.strategy_names[i] if i < len(self.strategy_names) else f"Strategy_{i}"
                     # Execute the strategy
-                    self.log_info(f"Executing strategy: {self.strategy_name}")
-                    selected_stocks = self.strategy_instance.execute(
+                    self.log_info(f"Executing strategy: {strategy_name}")
+                    selected_stocks = strategy_instance.execute(
                         stock_data, "技术分析Agent", self.db_manager
                     )
 
-                    # Calculate positions for selected stocks using position_calculator
-                    # Create new stock objects without extra fields
-                    from utils.position_calculator import calculate_position_from_score
-
+                    # Add strategy identifier to each selected stock
                     for stock in selected_stocks:
-                        # Create a new stock object with only necessary fields
-                        clean_stock = {
-                            'code': stock.get('code'),
-                            'score': stock.get('score', 0.0),
-                            'selection_reason': stock.get('selection_reason', ''),
-                            'value': stock.get('selection_reason', stock.get('value', '')),
-                        }
+                        stock['strategy_name'] = strategy_name
+                        all_selected_stocks.append(stock)
 
-                        # Calculate position for the clean stock object
-                        if "score" in stock:
-                            try:
-                                clean_stock["position"] = calculate_position_from_score(
-                                    stock["score"]
-                                )
-                            except Exception as pos_error:
-                                self.log_warning(
-                                    f"Error calculating position for stock {stock.get('code', 'unknown')}: {pos_error}"
-                                )
-                                clean_stock["position"] = 0.0
-
-                        all_selected_stocks.append(clean_stock)
                     self.log_info(
-                        f"Strategy {self.strategy_name} selected {len(selected_stocks)} stocks"
+                        f"Strategy {strategy_name} selected {len(selected_stocks)} stocks"
                     )
 
                 except Exception as e:
-                    self.log_error(f"Error executing strategy: {e}")
+                    strategy_name = self.strategy_names[i] if i < len(self.strategy_names) else f"Strategy_{i}"
+                    self.log_error(f"Error executing strategy {strategy_name}: {e}")
 
             self.log_info(
                 f"Technical analysis completed. Total selected stocks: {len(all_selected_stocks)}"
@@ -471,56 +527,46 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
             existing_stock_map = {stock.get("code"): stock for stock in existing_stocks}
 
             # Update technical analysis data for existing stocks only
-            # Filter out extra fields and only keep necessary data
-            filtered_tech_stocks = []
             for tech_stock in technical_stocks:
-                # Create a new dict with only the necessary fields
-                filtered_stock = {
-                    'code': tech_stock.get('code'),
-                    'score': tech_stock.get('score', 0.0),
-                    'selection_reason': tech_stock.get('selection_reason', ''),
-                    'value': tech_stock.get('selection_reason', tech_stock.get('value', '')),
-                }
-                filtered_tech_stocks.append(filtered_stock)
+                code = tech_stock.get('code')
+                strategy_name = tech_stock.get('strategy_name', 'unknown_strategy')
 
-            for tech_stock in filtered_tech_stocks:
-                stock_code = tech_stock.get("code")
-                if stock_code in existing_stock_map:
-                    # Get strategy name
-                    strategy_name = self.strategy_name or "unknown_strategy"
+                if code in existing_stock_map:
+                    # Normalize score to 0-1 range and round to 2 decimal places
+                    # Handle different score ranges:
+                    # - Some strategies return scores in 0-1 range
+                    # - Some strategies return scores in 0-100 range
+                    score = tech_stock.get('score', 0.0)
+                    if score is not None:
+                        score_float = float(score)
+                        # If score is greater than 1, assume it's in 0-100 range and normalize it
+                        if score_float > 1.0:
+                            normalized_score = max(0.0, min(1.0, score_float / 100.0))
+                        else:
+                            # Score is already in 0-1 range
+                            normalized_score = max(0.0, min(1.0, score_float))
+                    else:
+                        normalized_score = 0.0
 
-                    # Get or create tech object for the stock
-                    if "tech" not in existing_stock_map[stock_code]:
-                        existing_stock_map[stock_code]["tech"] = {}
+                    rounded_score = round(normalized_score, 2)
 
-                    # Add strategy data to tech object
-                    existing_stock_map[stock_code]["tech"][strategy_name] = {
-                        "score": tech_stock.get("score", 0.0),
-                        "value": tech_stock.get(
-                            "selection_reason", tech_stock.get("value", "")
-                        ),  # value is the selection reason or value field
+                    # Update the tech field for the existing stock
+                    if 'tech' not in existing_stock_map[code]:
+                        existing_stock_map[code]['tech'] = {}
+                    existing_stock_map[code]['tech'][strategy_name] = {
+                        'score': rounded_score,
+                        'value': tech_stock.get('selection_reason', tech_stock.get('value', '')),
                     }
-                # Skip stocks that don't exist in the pool (don't add them)
 
-            # Rebuild existing_stocks to ensure only standard fields are saved
-            # Remove extra fields like selection_reason, position, strategy_name, technical_analysis, uptrend_accelerating
+            # Prepare cleaned stocks for database update
             cleaned_stocks = []
             for stock in existing_stocks:
-                # Create a new stock object with only standard fields
                 clean_stock = {
                     'code': stock.get('code', ''),
+                    'score': round(float(stock.get('score', 0.0)), 2),
+                    'value': stock.get('value', ''),
+                    'tech': stock.get('tech', {})
                 }
-
-                # Copy standard fields if they exist
-                standard_fields = ['score', 'golden_cross', 'value']
-                for field in standard_fields:
-                    if field in stock:
-                        clean_stock[field] = stock[field]
-
-                # Preserve the tech field if it exists
-                if 'tech' in stock:
-                    clean_stock['tech'] = stock['tech']
-
                 cleaned_stocks.append(clean_stock)
 
             # Convert numpy types to native Python types before saving to MongoDB
@@ -530,13 +576,12 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
             cleaned_stocks = db_ops._convert_numpy_types(cleaned_stocks)
 
             # Update the latest pool record with modified stocks and only tech_at timestamp
-            # Also remove any unwanted fields that might exist from previous runs
             result = collection.update_one(
                 {"_id": latest_pool_record["_id"]},
                 {
                     "$set": {
                         "stocks": cleaned_stocks,
-                        "tech_at": datetime.now(),  # Only tech_at field at the top level
+                        "tech_at": datetime.now(),
                     },
                     "$unset": {
                         "selected_stocks_count": "",

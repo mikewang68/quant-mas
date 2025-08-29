@@ -288,7 +288,10 @@
             })
             .then(data => {
                 agents = data;
-                renderAgentsTable();
+                // Only render agents table if strategies are already loaded
+                if (strategies.length > 0) {
+                    renderAgentsTable();
+                }
                 updateAgentSelector();
                 hideLoading();
             })
@@ -313,6 +316,8 @@
                 strategies = data;
                 renderStrategiesTable();
                 updateStrategySelectors();
+                // Also re-render agents table since strategies are now loaded
+                renderAgentsTable();
                 hideLoading();
             })
             .catch(error => {
@@ -331,12 +336,34 @@
         }
         tbody.innerHTML = '';
 
+        // Debug: Log the data we're working with
+        console.log('Agents data:', agents);
+        console.log('Strategies data:', strategies);
+
         agents.forEach(agent => {
             const row = document.createElement('tr');
+
+            // Debug: Log each agent
+            console.log('Processing agent:', agent);
+
+            // Map strategy IDs to strategy names
             const strategyNames = agent.strategies && agent.strategies.length > 0
-                ? agent.strategies.map(id => {
-                    const strategy = strategies.find(s => s._id === id);
-                    return strategy ? strategy.name : id;
+                ? agent.strategies.map(strategyId => {
+                    // Debug: Log the strategy ID we're looking for
+                    console.log('Looking for strategy ID:', strategyId);
+
+                    // Find strategy by ID
+                    const strategy = strategies.find(s => {
+                        const match = s._id === strategyId;
+                        // Debug: Log comparison result
+                        console.log(`Comparing strategy._id (${s._id}) with strategyId (${strategyId}): ${match}`);
+                        return match;
+                    });
+
+                    // Debug: Log found strategy
+                    console.log('Found strategy:', strategy);
+
+                    return strategy ? strategy.name : strategyId;
                 }).join(', ')
                 : '无关联策略';
 
@@ -371,7 +398,7 @@
                 deleteAgent(agentId);
             });
         });
-        
+
         // Update the available agents table for running
         renderAvailableAgentsTable();
     }

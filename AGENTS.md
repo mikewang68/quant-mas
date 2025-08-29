@@ -126,6 +126,18 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Created cleanup script to remove existing extra fields from database
 - Verified that pool data structure is now consistent and follows expected format
 
+### Score Normalization Enhancement
+- Implemented score normalization in Technical Selector agent to ensure consistency across strategies
+- Added logic to normalize scores from 0-100 range to 0-1 range for strategies that output scores in different ranges
+- Verified that both 0-1 range strategies (MACD, RSI) and 0-100 range strategies (三均线多头排列, 趋势跟踪, 回踩低吸, 放量突破) work correctly with the normalization
+- Updated Technical Selector to properly handle scores from all strategies and maintain consistent 0-1 range output
+- Confirmed that Weekly Selector already had proper score normalization implementation
+
+### Golden Cross Output Standardization
+- Modified Weekly Selector to ensure golden_cross values are output as 1 or 0 instead of True/False
+- Updated the save_selected_stocks method to convert boolean values to integer format
+- Ensured consistency in data storage format across the system
+
 ## Usage Patterns
 
 ### Running Agents
@@ -190,5 +202,5 @@ python -m backtesting.backtester
    - Global portfolio management
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-08-25*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-08-29*
 

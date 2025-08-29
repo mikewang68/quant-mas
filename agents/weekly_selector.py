@@ -1,7 +1,12 @@
 """
 Weekly Stock Selector Agent
-A clean framework that dynamically loads strategies from database
+A clean framework that dynamically loads strategies from database with new architecture
 """
+
+import sys
+import os
+# Add project root to path for relative imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Tuple
@@ -10,20 +15,20 @@ from data.mongodb_manager import MongoDBManager
 from utils.strategy_result_formatter import StrategyResultFormatter
 import logging
 import importlib
-import sys
-import os
 import pandas as pd
 
-# Add the project root to the path for importing strategies
+# Add project root to path for relative imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from interfaces.data_interface import DataProviderInterface, StandardDataFormat
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 
-class WeeklyStockSelector:
+class WeeklyStockSelector(DataProviderInterface):
     """
-    Weekly Stock Selector Agent - Clean framework
+    Weekly Stock Selector Agent - Clean framework with new architecture
     Dynamically loads strategies from database and executes them
     """
 
@@ -53,6 +58,69 @@ class WeeklyStockSelector:
 
         # Load and initialize the dynamic strategy
         self._load_dynamic_strategy()
+
+    def get_standard_data(self, stock_codes: List[str]) -> Dict[str, pd.DataFrame]:
+        """
+        Get standard format data for the given stock codes (365 days of daily data converted to weekly).
+
+        Args:
+            stock_codes: List of stock codes to get data for
+
+        Returns:
+            Dictionary mapping stock codes to standard format DataFrames (weekly data)
+        """
+        self.logger.info(f"Getting standard weekly data for {len(stock_codes)} stocks")
+
+        # Prepare stock data for all stocks (1 year of daily data converted to weekly)
+        stock_data = {}
+        end_date = datetime.now().strftime('%Y-%m-%d')
+        start_date = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+
+        for i, code in enumerate(stock_codes):
+            try:
+                if i % 500 == 0:  # Log progress every 500 stocks
+                    self.logger.info(f"Processing stock {i+1}/{len(stock_codes)}: {code}")
+
+                # Get adjusted daily K-line data
+                daily_k_data = self.db_manager.get_adjusted_k_data(code, start_date, end_date, frequency='daily')
+
+                # If no data in DB, fetch from data source
+                if daily_k_data.empty:
+                    daily_k_data = self.data_fetcher.get_daily_k_data(code, start_date, end_date)
+                    # Save to DB for future use
+                    if not daily_k_data.empty:
+                        self.db_manager.save_k_data(code, daily_k_data, frequency='daily')
+
+                # Convert to weekly data
+                if not daily_k_data.empty:
+                    weekly_data = self._convert_daily_to_weekly(daily_k_data)
+
+                    # Validate and store data for this stock
+                    if not weekly_data.empty and StandardDataFormat.validate_data(weekly_data):
+                        stock_data[code] = weekly_data
+                    else:
+                        self.logger.warning(f"Invalid or no weekly data available for {code}")
+
+            except Exception as e:
+                self.logger.warning(f"Error processing stock {code}: {e}")
+                continue
+
+        self.logger.info(f"Prepared standard weekly data for {len(stock_data)} stocks")
+        return stock_data
+
+    def get_data_for_stock(self, stock_code: str) -> pd.DataFrame:
+        """
+        Get standard format data for a single stock (weekly data).
+
+        Args:
+            stock_code: Stock code to get data for
+
+        Returns:
+            Standard format DataFrame with weekly stock data
+        """
+        stock_data = self.get_standard_data([stock_code])
+        df = stock_data.get(stock_code, StandardDataFormat.create_empty_dataframe())
+        return df if df is not None else StandardDataFormat.create_empty_dataframe()
 
     def _load_strategy_from_db(self):
         """
@@ -171,6 +239,9 @@ class WeeklyStockSelector:
             # Save to DB for future use
             self.db_manager.save_stock_codes(all_codes)
 
+        # Get standard format data using the new interface
+        stock_data = self.get_standard_data(all_codes)
+
         # Filter stocks based on criteria
         selected_stocks = []
         selected_scores = {}  # Store scores for each selected stock
@@ -178,65 +249,45 @@ class WeeklyStockSelector:
         technical_analysis_data = {}  # Store technical analysis data for each selected stock
         last_data_date = None
 
-        # Calculate date range (1 year of data)
-        end_date = date
-        start_date = (datetime.strptime(date, '%Y-%m-%d') - timedelta(days=365)).strftime('%Y-%m-%d')
-
-        for i, code in enumerate(all_codes):
+        # Process each stock's data
+        for code, k_data in stock_data.items():
             try:
-                if i % 500 == 0:  # Log progress every 500 stocks
-                    self.logger.info(f"Processing stock {i+1}/{len(all_codes)}: {code}")
+                # Update last_data_date
+                if not k_data.empty and 'date' in k_data.columns:
+                    stock_last_date = k_data['date'].iloc[-1]
+                    if hasattr(stock_last_date, 'strftime'):
+                        stock_last_date = stock_last_date.strftime('%Y-%m-%d')
+                    else:
+                        stock_last_date = str(stock_last_date)
 
-                # Get adjusted daily K-line data
-                daily_k_data = self.db_manager.get_adjusted_k_data(code, start_date, end_date, frequency='daily')
+                    # Update last_data_date to the latest date among all selected stocks
+                    if stock_last_date and (not last_data_date or stock_last_date > last_data_date):
+                        last_data_date = stock_last_date
 
-                # If no data in DB, fetch from data source
-                if daily_k_data.empty:
-                    daily_k_data = self.data_fetcher.get_daily_k_data(code, start_date, end_date)
-                    # Save to DB for future use
-                    if not daily_k_data.empty:
-                        self.db_manager.save_k_data(code, daily_k_data, frequency='daily')
-
-                # Convert to weekly data
-                if not daily_k_data.empty:
-                    k_data = self._convert_daily_to_weekly(daily_k_data)
-
-                    # Update last_data_date
-                    if not k_data.empty and 'date' in k_data.columns:
-                        stock_last_date = k_data['date'].iloc[-1]
-                        if hasattr(stock_last_date, 'strftime'):
-                            stock_last_date = stock_last_date.strftime('%Y-%m-%d')
-                        else:
-                            stock_last_date = str(stock_last_date)
-
-                        # Update last_data_date to the latest date among all selected stocks
-                        if stock_last_date and (not last_data_date or stock_last_date > last_data_date):
-                            last_data_date = stock_last_date
-
-                    # Execute strategy
-                    if self.strategy_instance and not k_data.empty:
-                        result = self._execute_strategy(code, k_data)
-                        if result and len(result) >= 4:
-                            meets_criteria, score, golden_cross, technical_analysis = result
-                            if meets_criteria:
-                                selected_stocks.append(code)
-                                selected_scores[code] = score if score is not None else 1.0
-                                # Check for golden cross from strategy result
-                                golden_cross_flags[code] = golden_cross
-                                # Store technical analysis data
-                                technical_analysis_data[code] = technical_analysis
-                        elif result and len(result) >= 3:
-                            meets_criteria = result[0]
-                            score = result[1]
-                            golden_cross = result[2]
-                            technical_analysis = {}
-                            if meets_criteria:
-                                selected_stocks.append(code)
-                                selected_scores[code] = score if score is not None else 1.0
-                                # Check for golden cross from strategy result
-                                golden_cross_flags[code] = golden_cross
-                                # Store empty technical analysis data
-                                technical_analysis_data[code] = technical_analysis
+                # Execute strategy
+                if self.strategy_instance and not k_data.empty:
+                    result = self._execute_strategy(code, k_data)
+                    if result and len(result) >= 4:
+                        meets_criteria, score, golden_cross, technical_analysis = result
+                        if meets_criteria:
+                            selected_stocks.append(code)
+                            selected_scores[code] = score if score is not None else 1.0
+                            # Check for golden cross from strategy result
+                            golden_cross_flags[code] = golden_cross
+                            # Store technical analysis data
+                            technical_analysis_data[code] = technical_analysis
+                    elif result and len(result) >= 3:
+                        meets_criteria = result[0]
+                        score = result[1]
+                        golden_cross = result[2]
+                        technical_analysis = {}
+                        if meets_criteria:
+                            selected_stocks.append(code)
+                            selected_scores[code] = score if score is not None else 1.0
+                            # Check for golden cross from strategy result
+                            golden_cross_flags[code] = golden_cross
+                            # Store empty technical analysis data
+                            technical_analysis_data[code] = technical_analysis
 
             except Exception as e:
                 self.logger.warning(f"Error processing stock {code}: {e}")
@@ -411,7 +462,6 @@ class WeeklyStockSelector:
                     # Use the new unified formatter with reason text
                     value_text = StrategyResultFormatter.format_value_field(
                         stock_code=stock_code,
-                        strategy_reason=str(score_text),
                         strategy_name=self.strategy_name
                     )
                 else:
@@ -421,10 +471,27 @@ class WeeklyStockSelector:
                         strategy_name=self.strategy_name
                     )
 
+                # Normalize score to 0-1 range and round to 2 decimal places
+                # Handle different score ranges:
+                # - Some strategies return scores in 0-1 range
+                # - Some strategies return scores in 0-100 range
+                if score is not None:
+                    score_float = float(score)
+                    # If score is greater than 1, assume it's in 0-100 range and normalize it
+                    if score_float > 1.0:
+                        normalized_score = max(0.0, min(1.0, score_float / 100.0))
+                    else:
+                        # Score is already in 0-1 range
+                        normalized_score = max(0.0, min(1.0, score_float))
+                else:
+                    normalized_score = 0.0
+
+                rounded_score = round(normalized_score, 2)
+
                 stock_info = {
                     'code': stock_code,
-                    'score': score,
-                    'golden_cross': bool(golden_cross),  # Convert numpy bool to Python bool
+                    'score': rounded_score,
+                    'golden_cross': 1 if golden_cross else 0,  # Convert to 1 or 0
                     'value': value_text
                 }
                 stocks_data.append(stock_info)
@@ -451,7 +518,8 @@ class WeeklyStockSelector:
             # Use strategy_id as the strategy key
             strategy_key = strategy_id
 
-            return db_ops.save_selected_stocks_to_pool(
+            # Save the selected stocks to pool
+            save_result = db_ops.save_selected_stocks_to_pool(
                 strategy_key=strategy_key,
                 agent_name="WeeklySelector",
                 strategy_id=strategy_id,
@@ -461,6 +529,17 @@ class WeeklyStockSelector:
                 last_data_date=last_data_date,
                 strategy_params=self.strategy_params  # Pass actual strategy parameters
             )
+
+            # Clear buf_data after saving pool
+            if save_result:
+                try:
+                    buf_data_collection = self.db_manager.db['buf_data']
+                    deleted_count = buf_data_collection.delete_many({}).deleted_count
+                    self.logger.info(f"Cleared buf_data collection, removed {deleted_count} records")
+                except Exception as clear_error:
+                    self.logger.error(f"Error clearing buf_data: {clear_error}")
+
+            return save_result
         except Exception as e:
             self.logger.error(f"Error saving selected stocks: {e}")
             return False
