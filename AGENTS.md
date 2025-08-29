@@ -139,6 +139,13 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Updated the save_selected_stocks method to convert boolean values to integer format
 - Ensured consistency in data storage format across the system
 
+### HMA Turnover Strategy Fix
+- Fixed critical error in HMATurnoverStrategy where code was calling non-existent `talib.hma` function
+- Implemented correct HMA (Hull Moving Average) calculation using the formula: `HMA = WMA(2*WMA(n/2) - WMA(n)), sqrt(n))`
+- Added proper data type conversion for TA-Lib compatibility (pandas Series to numpy arrays)
+- Verified strategy functionality with test scripts and confirmed successful execution
+- Strategy now properly analyzes stock data based on HMA price acceleration with turnover rate filtering
+
 ## Usage Patterns
 
 ### Running Agents
