@@ -804,6 +804,55 @@ def register_routes(app: Flask):
                             "agent_id": agent_id
                         }
                     ), 500
+            elif "基本面分析" in agent_name:
+                # Handle fundamental analysis agents
+                logger.info(f"Running fundamental analysis agent {agent['name']} with strategies {strategy_ids}")
+
+                try:
+                    # Initialize components
+                    db_manager = app.config["MONGO_MANAGER"]
+                    from utils.akshare_client import AkshareClient
+                    data_fetcher = AkshareClient()
+
+                    # Initialize the fundamental stock selector
+                    from agents.fundamental_selector import FundamentalStockSelector
+                    selector = FundamentalStockSelector(db_manager, data_fetcher)
+
+                    # Execute fundamental analysis and update pool
+                    success = selector.update_pool_with_fundamental_analysis()
+
+                    if success:
+                        logger.info("Successfully executed fundamental analysis agent")
+                        return jsonify(
+                            {
+                                "status": "success",
+                                "message": f"Agent {agent['name']} completed successfully",
+                                "agent_id": agent_id,
+                                "result": {
+                                    "analysis_complete": True,
+                                    "stocks_updated": True
+                                }
+                            }
+                        )
+                    else:
+                        logger.error("Failed to execute fundamental analysis agent")
+                        return jsonify(
+                            {
+                                "status": "error",
+                                "message": f"Failed to run fundamental analysis agent: Execution failed",
+                                "agent_id": agent_id
+                            }
+                        ), 500
+
+                except Exception as selector_error:
+                    logger.error(f"Error running fundamental analysis agent: {selector_error}")
+                    return jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Failed to run fundamental analysis agent: {str(selector_error)}",
+                            "agent_id": agent_id
+                        }
+                    ), 500
             else:
                 # For other agents, get strategies from agent configuration and execute dynamically
                 strategy_ids = agent.get('strategies', [])

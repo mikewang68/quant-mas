@@ -180,6 +180,12 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Verified strategy functionality with test scripts and confirmed successful execution
 - Strategy now properly analyzes stock data based on HMA price acceleration with turnover rate filtering
 
+### Web Application Enhancement for Fundamental Analysis Agents
+- Added proper handling for fundamental analysis agents in the web application
+- Fundamental analysis agents (with "基本面分析" in their name) are now properly executed instead of being simulated
+- Added specific code path to initialize and run FundamentalStockSelector when fundamental analysis agents are triggered
+- Ensured consistent execution pattern across all agent types (technical, fundamental, weekly selector)
+
 ## Usage Patterns
 
 ### Running Agents
