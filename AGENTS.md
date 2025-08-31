@@ -23,6 +23,11 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
    - Executes trades based on selected strategies
    - Manages order execution and position monitoring
 
+4. **Public Opinion Selector Agent** (`agents/public_opinion_selector.py`)
+   - Analyzes public opinion and sentiment for stock selection
+   - Uses various public opinion analysis strategies
+   - Generates trading signals based on market sentiment and news analysis
+
 ### Base Agent Framework (`agents/base_agent.py`)
 - Provides common functionality for all agents
 - Handles configuration, logging, and error handling
@@ -35,6 +40,7 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **Trend Following**: Momentum, Breakout, Trend detection
 - **Mean Reversion**: Support/Resistance, Volatility-based
 - **Multi-Agent**: Combined strategy approaches
+- **Fundamental Analysis**: Traditional financial ratio analysis and LLM-based analysis
 
 ### Key Strategy Files
 - `strategies/base_strategy.py` - Base strategy interface
@@ -42,6 +48,8 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - `strategies/rsi_strategy.py` - RSI-based strategy
 - `strategies/ma_crossover_strategy.py` - Moving average crossover
 - `strategies/multi_agent_strategy.py` - Multi-agent coordination
+- `strategies/fundamental_strategy.py` - Traditional fundamental analysis strategy
+- `strategies/llm_fundamental_strategy.py` - LLM-based fundamental analysis strategy
 
 ## Data Management
 
@@ -79,6 +87,15 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 
 ## Recent Operations and Enhancements
 
+### Public Opinion Selector Framework Creation
+- Created new Public Opinion Selector agent framework based on Technical Selector pattern
+- Added support for dynamically loading strategies assigned to "舆情分析Agent" from database
+- Implemented pool dataset integration with "pub" field for public opinion analysis results
+- Created runner script for executing public opinion analysis strategies
+- Updated documentation to include new agent and usage patterns
+- Added example strategy and database insertion scripts to help users get started
+- Created utility script to initialize and configure the 舆情分析Agent in MongoDB database with proper Chinese description
+
 ### Technical Analysis Enhancements
 - Enhanced technical indicator calculations
 - Improved signal generation algorithms
@@ -105,6 +122,23 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Confirmed existing strategy patterns are correct and don't require modification
 - Validated consistent update pattern across all strategies
 - Verified standard document structure maintenance across all strategy files
+
+### Fundamental Analysis Strategies Implementation
+- Added two fundamental analysis strategies to the system:
+  - **Traditional Fundamental Strategy**: Standard financial ratio analysis with configurable parameters
+  - **LLM Fundamental Strategy**: AI-powered analysis using large language models
+- Both strategies are fully configurable through database parameters
+- LLM strategy supports flexible provider configuration with dynamic API key environment variable handling
+- Created configuration files and database insertion scripts for both strategies
+- Assigned strategies to the Fundamental Analysis Agent for proper execution
+
+### LLM Configuration Flexibility Enhancement
+- Improved LLM fundamental strategy to support different LLM providers
+- Added configurable API key environment variable name in database configuration
+- Strategy now reads API key from dynamically specified environment variable
+- Supports switching between providers (Google Gemini, OpenAI, Anthropic, etc.) without code changes
+- Configuration fully dynamic from database with no hardcoded values
+- Updated both database configuration and strategy implementation
 
 ### Volume Breakout Strategy Implementation
 - Successfully implemented new Volume Breakout strategy following established patterns
@@ -158,6 +192,9 @@ python -m agents.weekly_selector
 
 # Run daily trader
 python -m agents.daily_trader
+
+# Run public opinion selector
+python -m utils.run_public_opinion_selector
 ```
 
 ### Testing Strategies
@@ -210,5 +247,5 @@ python -m backtesting.backtester
    - Global portfolio management
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-08-29*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-08-30*
 

@@ -613,8 +613,7 @@ def register_routes(app: Flask):
                 ), 400
                 
             agent_id = data.get("agent_id")
-            strategy_ids = data.get("strategy_ids", [])
-            
+
             if not agent_id:
                 return jsonify(
                     {"status": "error", "message": "Agent ID is required"}
@@ -806,7 +805,8 @@ def register_routes(app: Flask):
                         }
                     ), 500
             else:
-                # For other agents, simulate a successful run
+                # For other agents, get strategies from agent configuration and execute dynamically
+                strategy_ids = agent.get('strategies', [])
                 logger.info(f"Running agent {agent['name']} with strategies {strategy_ids}")
 
                 # Simulate some processing time
