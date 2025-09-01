@@ -186,6 +186,13 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Added specific code path to initialize and run FundamentalStockSelector when fundamental analysis agents are triggered
 - Ensured consistent execution pattern across all agent types (technical, fundamental, weekly selector)
 
+### Technical Selector Score Field Protection
+- **IMPORTANT FIX**: Resolved critical issue where Technical Selector was overwriting original `stocks.score` values with strategy-specific technical analysis scores
+- Modified `update_pool_with_technical_analysis` method to exclude `score` field from `tech_stock` objects passed to database operations
+- Technical Selector now properly preserves original score values while only updating technical analysis data in the `tech` field
+- This ensures score consistency across all agents and prevents unintended data corruption
+- **CRITICAL**: Technical Selector should only update technical analysis metadata, not fundamental stock scores assigned by Weekly Selector
+
 ## Usage Patterns
 
 ### Running Agents

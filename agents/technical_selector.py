@@ -505,8 +505,13 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
 
                     # Add strategy identifier to each selected stock
                     for stock in selected_stocks:
-                        stock['strategy_name'] = strategy_name
-                        all_selected_stocks.append(stock)
+                        # Only pass necessary fields to update_latest_pool_record
+                        tech_stock = {
+                            'code': stock.get('code'),
+                            'selection_reason': stock.get('selection_reason', stock.get('value', '')),
+                            'strategy_name': strategy_name
+                        }
+                        all_selected_stocks.append(tech_stock)
 
                     self.log_info(
                         f"Strategy {strategy_name} selected {len(selected_stocks)} stocks"
@@ -566,18 +571,28 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                     # - Some strategies return scores in 0-1 range
                     # - Some strategies return scores in 0-100 range
                     score = tech_stock.get('score', 0.0)
-                    if score is not None:
-                        score_float = float(score)
-                        # If score is greater than 1, assume it's in 0-100 range and normalize it
-                        if score_float > 1.0:
-                            normalized_score = max(0.0, min(1.0, score_float / 100.0))
+                    try:
+                        if score is not None:
+                            score_float = float(score)
+                            # If score is greater than 1, assume it's in 0-100 range and normalize it
+                            if score_float > 1.0:
+                                normalized_score = max(0.0, min(1.0, score_float / 100.0))
+                            else:
+                                # Score is already in 0-1 range
+                                normalized_score = max(0.0, min(1.0, score_float))
                         else:
-                            # Score is already in 0-1 range
-                            normalized_score = max(0.0, min(1.0, score_float))
-                    else:
+                            normalized_score = 0.0
+                    except (ValueError, TypeError):
+                        # If score conversion fails, default to 0.0
+                        self.log_warning(f"Invalid score value for stock {code}: {score}")
                         normalized_score = 0.0
 
                     rounded_score = round(normalized_score, 2)
+
+                    # Get strategy name and validate it
+                    strategy_name = tech_stock.get('strategy_name', 'unknown_strategy')
+                    if not strategy_name or not isinstance(strategy_name, str):
+                        strategy_name = 'unknown_strategy'
 
                     # Update the tech field for the existing stock
                     if 'tech' not in existing_stock_map[code]:
@@ -588,21 +603,28 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                     }
 
             # Prepare cleaned stocks for database update
+            # Preserve only the essential fields and update only the tech field
             cleaned_stocks = []
             for stock in existing_stocks:
+                # Create a new stock object with only essential fields
                 clean_stock = {
-                    'code': stock.get('code', ''),
-                    'score': round(float(stock.get('score', 0.0)), 2),
-                    'value': stock.get('value', ''),
-                    'tech': stock.get('tech', {})
+                    'code': stock.get('code'),
+                    'score': stock.get('score'),
+                    'golden_cross': stock.get('golden_cross', 0),
+                    'value': stock.get('value', '')
                 }
+
+                # Add tech field if it exists in the updated stock
+                updated_stock = existing_stock_map.get(stock.get('code'))
+                if updated_stock and 'tech' in updated_stock:
+                    clean_stock['tech'] = updated_stock['tech']
+
+                # Convert numpy types to native Python types for MongoDB compatibility
+                from data.database_operations import DatabaseOperations
+                db_ops = DatabaseOperations(self.db_manager)
+                clean_stock = db_ops._convert_numpy_types(clean_stock)
+
                 cleaned_stocks.append(clean_stock)
-
-            # Convert numpy types to native Python types before saving to MongoDB
-            from data.database_operations import DatabaseOperations
-
-            db_ops = DatabaseOperations(self.db_manager)
-            cleaned_stocks = db_ops._convert_numpy_types(cleaned_stocks)
 
             # Update the latest pool record with modified stocks and only tech_at timestamp
             result = collection.update_one(
@@ -614,7 +636,9 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                     },
                     "$unset": {
                         "selected_stocks_count": "",
-                        "strategy_execution_time": ""
+                        "strategy_execution_time": "",
+                        "strategy_version": "",
+                        "total_stocks_analyzed": ""
                     }
                 },
             )
