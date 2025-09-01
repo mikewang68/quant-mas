@@ -186,23 +186,11 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Added specific code path to initialize and run FundamentalStockSelector when fundamental analysis agents are triggered
 - Ensured consistent execution pattern across all agent types (technical, fundamental, weekly selector)
 
-### Technical Selector Pool Data Structure Preservation
-- **IMPORTANT FIX**: Resolved critical issue where Technical Selector was incorrectly flattening pool data structure instead of preserving the nested 'trend' field
-- Modified `update_latest_pool_record` method to preserve original stock structure including 'trend' field
-- Technical Selector now properly maintains data structure integrity while only updating technical analysis data in the `tech` field
-- This ensures consistency with the Weekly Selector's nested data structure approach
-- **CRITICAL**: Technical Selector should preserve all original stock fields and only add/update the `tech` field
-- Added proper handling for fundamental analysis agents in the web application
-- Fundamental analysis agents (with "基本面分析" in their name) are now properly executed instead of being simulated
-- Added specific code path to initialize and run FundamentalStockSelector when fundamental analysis agents are triggered
-- Ensured consistent execution pattern across all agent types (technical, fundamental, weekly selector)
-
-### Technical Selector Pool Data Structure Preservation
-- **IMPORTANT FIX**: Resolved critical issue where Technical Selector was incorrectly flattening pool data structure instead of preserving the nested 'trend' field
-- Modified `update_latest_pool_record` method to preserve original stock structure including 'trend' field
-- Technical Selector now properly maintains data structure integrity while only updating technical analysis data in the `tech` field
-- This ensures consistency with the Weekly Selector's nested data structure approach
-- **CRITICAL**: Technical Selector should preserve all original stock fields and only add/update the `tech` field
+### Technical Selector Score Field Fix
+- **FIXED**: Resolved issue where Technical Selector was not properly writing strategy score values to pool data
+- Modified `update_latest_pool_record` method to include `score` field from strategy results
+- Technical Selector now correctly writes actual strategy scores (e.g., 0.85) instead of default 0 values
+- Ensures accurate score representation in `tech.策略名称.score` fields
 
 ## Usage Patterns
 

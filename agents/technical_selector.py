@@ -509,6 +509,7 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                         tech_stock = {
                             'code': stock.get('code'),
                             'selection_reason': stock.get('selection_reason', stock.get('value', '')),
+                            'score': stock.get('score', 0),  # Include the actual score from strategy
                             'strategy_name': strategy_name
                         }
                         all_selected_stocks.append(tech_stock)
