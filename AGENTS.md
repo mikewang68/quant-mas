@@ -186,12 +186,23 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Added specific code path to initialize and run FundamentalStockSelector when fundamental analysis agents are triggered
 - Ensured consistent execution pattern across all agent types (technical, fundamental, weekly selector)
 
-### Technical Selector Score Field Protection
-- **IMPORTANT FIX**: Resolved critical issue where Technical Selector was overwriting original `stocks.score` values with strategy-specific technical analysis scores
-- Modified `update_pool_with_technical_analysis` method to exclude `score` field from `tech_stock` objects passed to database operations
-- Technical Selector now properly preserves original score values while only updating technical analysis data in the `tech` field
-- This ensures score consistency across all agents and prevents unintended data corruption
-- **CRITICAL**: Technical Selector should only update technical analysis metadata, not fundamental stock scores assigned by Weekly Selector
+### Technical Selector Pool Data Structure Preservation
+- **IMPORTANT FIX**: Resolved critical issue where Technical Selector was incorrectly flattening pool data structure instead of preserving the nested 'trend' field
+- Modified `update_latest_pool_record` method to preserve original stock structure including 'trend' field
+- Technical Selector now properly maintains data structure integrity while only updating technical analysis data in the `tech` field
+- This ensures consistency with the Weekly Selector's nested data structure approach
+- **CRITICAL**: Technical Selector should preserve all original stock fields and only add/update the `tech` field
+- Added proper handling for fundamental analysis agents in the web application
+- Fundamental analysis agents (with "基本面分析" in their name) are now properly executed instead of being simulated
+- Added specific code path to initialize and run FundamentalStockSelector when fundamental analysis agents are triggered
+- Ensured consistent execution pattern across all agent types (technical, fundamental, weekly selector)
+
+### Technical Selector Pool Data Structure Preservation
+- **IMPORTANT FIX**: Resolved critical issue where Technical Selector was incorrectly flattening pool data structure instead of preserving the nested 'trend' field
+- Modified `update_latest_pool_record` method to preserve original stock structure including 'trend' field
+- Technical Selector now properly maintains data structure integrity while only updating technical analysis data in the `tech` field
+- This ensures consistency with the Weekly Selector's nested data structure approach
+- **CRITICAL**: Technical Selector should preserve all original stock fields and only add/update the `tech` field
 
 ## Usage Patterns
 

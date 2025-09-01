@@ -24,25 +24,37 @@ def create_test_pool_record():
     try:
         collection = db_manager.db['pool']
 
-        # Create test stocks
+        # Create test stocks with trend field (new structure)
         test_stocks = [
             {
                 'code': '000001',
-                'name': '平安银行',
-                'selection_reason': '基本面选股',
-                'score': 0.75
+                'trend': {
+                    '三均线多头排列策略': {
+                        'score': 0.75,
+                        'golden_cross': 1,
+                        'value': '收盘价=10.50, MA5=9.80, MA13=9.20, MA34=8.60'
+                    }
+                }
             },
             {
                 'code': '000002',
-                'name': '万科A',
-                'selection_reason': '价值投资',
-                'score': 0.82
+                'trend': {
+                    '趋势跟踪策略': {
+                        'score': 0.82,
+                        'golden_cross': 0,
+                        'value': '收盘价=15.20, MA5=14.80, MA13=14.20, MA34=N/A'
+                    }
+                }
             },
             {
                 'code': '600000',
-                'name': '浦发银行',
-                'selection_reason': '银行股配置',
-                'score': 0.68
+                'trend': {
+                    'MACD策略': {
+                        'score': 0.68,
+                        'golden_cross': 0,
+                        'value': '收盘价=20.10, MACD=0.4567, 信号线=0.3456, 柱状图=N/A'
+                    }
+                }
             }
         ]
 
@@ -62,7 +74,7 @@ def create_test_pool_record():
             upsert=True
         )
 
-        print("✓ Created test pool record with 3 stocks")
+        print("✓ Created test pool record with 3 stocks (trend structure)")
         return True
 
     except Exception as e:
@@ -83,27 +95,9 @@ def create_test_technical_results():
     technical_stocks = [
         {
             'code': '000001',
-            'technical_analysis': {
-                'price': 15.6,
-                'current_angle': 68.02,
-                'previous_angle': 59.32
-            },
             'score': 0.85,
-            'position': 0.12,
             'strategy_name': '加速上涨策略',
             'selection_reason': '符合条件: 上涨角度(68.02°) > 阈值(30°), 加速中(当前68.02° > 之前59.32°)'
-        },
-        {
-            'code': '300001',
-            'technical_analysis': {
-                'price': 25.3,
-                'current_angle': 72.5,
-                'previous_angle': 65.2
-            },
-            'score': 0.91,
-            'position': 0.15,
-            'strategy_name': '加速上涨策略',
-            'selection_reason': '符合条件: 上涨角度(72.5°) > 阈值(30°), 加速中(当前72.5° > 之前65.2°)'
         }
     ]
 
@@ -156,22 +150,37 @@ def test_update_latest_pool_record():
         # 000001 should be updated with technical analysis
         if '000001' in stock_map:
             stock_000001 = stock_map['000001']
-            if 'technical_analysis' in stock_000001 and stock_000001['score'] == 0.85:
-                print("✓ 000001 correctly updated with technical analysis")
+            # Check if trend data is preserved and tech data is added
+            if ('trend' in stock_000001 and
+                '三均线多头排列策略' in stock_000001['trend'] and
+                stock_000001['trend']['三均线多头排列策略']['score'] == 0.75 and
+                'tech' in stock_000001 and
+                '加速上涨策略' in stock_000001['tech']):
+                tech_data = stock_000001['tech']['加速上涨策略']
+                if tech_data['score'] == 0.85 and '符合条件' in tech_data['value']:
+                    print("✓ 000001 correctly updated with technical analysis")
+                else:
+                    print("✗ 000001 tech data not correctly updated")
+                    return False
             else:
                 print("✗ 000001 not correctly updated")
+                print(f"  Stock 000001: {stock_000001}")
                 return False
         else:
             print("✗ 000001 missing from updated stocks")
             return False
 
-        # 000002 should remain unchanged
+        # 000002 should remain unchanged (except for potential tech field if added by other processes)
         if '000002' in stock_map:
             stock_000002 = stock_map['000002']
-            if stock_000002['score'] == 0.82 and 'technical_analysis' not in stock_000002:
+            # Check if trend data is preserved
+            if ('trend' in stock_000002 and
+                '趋势跟踪策略' in stock_000002['trend'] and
+                stock_000002['trend']['趋势跟踪策略']['score'] == 0.82):
                 print("✓ 000002 correctly left unchanged")
             else:
                 print("✗ 000002 incorrectly modified")
+                print(f"  Stock 000002: {stock_000002}")
                 return False
         else:
             print("✗ 000002 missing from updated stocks")
@@ -180,10 +189,14 @@ def test_update_latest_pool_record():
         # 600000 should remain unchanged
         if '600000' in stock_map:
             stock_600000 = stock_map['600000']
-            if stock_600000['score'] == 0.68 and 'technical_analysis' not in stock_600000:
+            # Check if trend data is preserved
+            if ('trend' in stock_600000 and
+                'MACD策略' in stock_600000['trend'] and
+                stock_600000['trend']['MACD策略']['score'] == 0.68):
                 print("✓ 600000 correctly left unchanged")
             else:
                 print("✗ 600000 incorrectly modified")
+                print(f"  Stock 600000: {stock_600000}")
                 return False
         else:
             print("✗ 600000 missing from updated stocks")

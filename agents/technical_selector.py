@@ -603,18 +603,16 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                     }
 
             # Prepare cleaned stocks for database update
-            # Preserve only the essential fields and update only the tech field
+            # Only preserve essential fields: code, trend, and tech
             cleaned_stocks = []
             for stock in existing_stocks:
-                # Create a new stock object with only essential fields
+                # Create a clean stock with only essential fields
                 clean_stock = {
                     'code': stock.get('code'),
-                    'score': stock.get('score'),
-                    'golden_cross': stock.get('golden_cross', 0),
-                    'value': stock.get('value', '')
+                    'trend': stock.get('trend', {})  # Preserve trend field if it exists
                 }
 
-                # Add tech field if it exists in the updated stock
+                # Update the tech field if it exists in the updated stock
                 updated_stock = existing_stock_map.get(stock.get('code'))
                 if updated_stock and 'tech' in updated_stock:
                     clean_stock['tech'] = updated_stock['tech']
