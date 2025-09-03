@@ -84,6 +84,7 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - `test/test_weekly_selector.py` - Weekly selection testing
 - `test/test_strategy_fields.py` - Strategy field validation
 - `test/check_mongodb.py` - Database connectivity tests
+- `test/test_fundamental_selector.py` - Fundamental selector testing
 
 ## Recent Operations and Enhancements
 
@@ -140,6 +141,13 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Configuration fully dynamic from database with no hardcoded values
 - Updated both database configuration and strategy implementation
 
+### LLM Strategy Retry Mechanism Enhancement
+- Enhanced LLM Fundamental Strategy with retry mechanisms for improved reliability
+- Added automatic retry logic for JSON parsing failures and LLM API call failures
+- Implemented exponential backoff (1s, 2s, 4s delays) to prevent overwhelming LLM services
+- When all retries fail, return default score of 0.0 to ensure continuity
+- Updated documentation to reflect the new retry logic and error handling
+
 ### Volume Breakout Strategy Implementation
 - Successfully implemented new Volume Breakout strategy following established patterns
 - Created comprehensive documentation for the strategy
@@ -192,6 +200,16 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Technical Selector now correctly writes actual strategy scores (e.g., 0.85) instead of default 0 values
 - Ensures accurate score representation in `tech.策略名称.score` fields
 
+### Fundamental Selector Implementation
+- **COMPLETED**: Created runner script for the Fundamental Stock Selector agent
+- Implemented `utils/run_fundamental_selector.py` to execute fundamental analysis strategies
+- Added test script `test/test_fundamental_selector.py` to verify proper initialization and execution
+- Created verification script `test/verify_fundamental_scores.py` to check pool data integrity
+- Updated documentation to include fundamental selector in usage patterns
+- Fundamental selector properly loads strategies from database and executes LLM-based fundamental analysis
+- Results are correctly written to the pool collection with fund field containing strategy scores and analysis
+- **OPTIMIZED**: Added logic to skip stock analysis when valid scores already exist in pool data, reducing unnecessary LLM calls during network issues
+
 ## Usage Patterns
 
 ### Running Agents
@@ -207,6 +225,9 @@ python -m agents.daily_trader
 
 # Run public opinion selector
 python -m utils.run_public_opinion_selector
+
+# Run fundamental selector
+python -m utils.run_fundamental_selector
 ```
 
 ### Testing Strategies
@@ -258,6 +279,12 @@ python -m backtesting.backtester
    - Cross-market arbitrage
    - Global portfolio management
 
+5. **Fundamental Analysis Enhancement**
+   - Advanced LLM-based financial analysis
+   - Multi-source data integration for fundamental metrics
+   - Dynamic industry comparison benchmarks
+   - Enhanced financial ratio calculation and analysis
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-08-30*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-03*
 

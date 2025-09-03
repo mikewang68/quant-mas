@@ -490,9 +490,13 @@ class WeeklyStockSelector(DataProviderInterface):
 
                 stock_info = {
                     'code': stock_code,
-                    'score': rounded_score,
-                    'golden_cross': 1 if golden_cross else 0,  # Convert to 1 or 0
-                    'value': value_text
+                    'trend': {
+                        self.strategy_name: {
+                            'score': rounded_score,
+                            'golden_cross': 1 if golden_cross else 0,
+                            'value': value_text
+                        }
+                    }
                 }
                 stocks_data.append(stock_info)
 

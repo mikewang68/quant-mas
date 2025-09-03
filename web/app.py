@@ -3,19 +3,26 @@ Web interface for the quant trading system.
 Provides REST API and web UI for system monitoring and control.
 """
 
+import os
+import sys
+
+# Add the project root to the Python path to resolve imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS
 import logging
-from typing import Dict, Any
-import os
-import sys
+from typing import Dict, Any, Optional, List
 import yaml
 from bson.objectid import ObjectId
 import akshare as ak
 from datetime import datetime
 
-# Add the project root to the Python path to resolve imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Import additional modules for agent execution
+from utils.akshare_client import AkshareClient
+from agents.fundamental_selector import FundamentalStockSelector
+from agents.technical_selector import TechnicalStockSelector
+from agents.weekly_selector import WeeklyStockSelector
 
 from data.mongodb_manager import MongoDBManager
 
@@ -757,6 +764,7 @@ def register_routes(app: Flask):
                     ), 500
             elif "技术分析" in agent_name:
                 # Handle technical analysis agents
+                strategy_ids = agent.get('strategies', [])
                 logger.info(f"Running technical analysis agent {agent['name']} with strategies {strategy_ids}")
 
                 try:
@@ -806,7 +814,8 @@ def register_routes(app: Flask):
                     ), 500
             elif "基本面分析" in agent_name:
                 # Handle fundamental analysis agents
-                logger.info(f"Running fundamental analysis agent {agent['name']} with strategies {strategy_ids}")
+                strategy_ids = agent.get('strategies', [])
+                logger.info("Running fundamental analysis agent %s with strategies %s", agent['name'], strategy_ids)
 
                 try:
                     # Initialize components
@@ -815,7 +824,6 @@ def register_routes(app: Flask):
                     data_fetcher = AkshareClient()
 
                     # Initialize the fundamental stock selector
-                    from agents.fundamental_selector import FundamentalStockSelector
                     selector = FundamentalStockSelector(db_manager, data_fetcher)
 
                     # Execute fundamental analysis and update pool
@@ -839,13 +847,13 @@ def register_routes(app: Flask):
                         return jsonify(
                             {
                                 "status": "error",
-                                "message": f"Failed to run fundamental analysis agent: Execution failed",
+                                "message": "Failed to run fundamental analysis agent: Execution failed",
                                 "agent_id": agent_id
                             }
                         ), 500
 
                 except Exception as selector_error:
-                    logger.error(f"Error running fundamental analysis agent: {selector_error}")
+                    logger.error("Error running fundamental analysis agent: %s", selector_error)
                     return jsonify(
                         {
                             "status": "error",
@@ -898,7 +906,7 @@ def register_routes(app: Flask):
 
             # Fetch config from MongoDB
             config_record = app.config["MONGO_DB"].config.find_one()
-            
+
             if config_record:
                 # Remove the MongoDB _id field
                 config_record.pop("_id", None)
@@ -922,12 +930,12 @@ def register_routes(app: Flask):
                 ), 500
 
             data = request.get_json()
-            
+
             # Update or insert config in MongoDB
             result = app.config["MONGO_DB"].config.update_one(
                 {}, {"$set": data}, upsert=True
             )
-            
+
             return jsonify(
                 {
                     "status": "success",
@@ -938,6 +946,109 @@ def register_routes(app: Flask):
             logger.error(f"Error saving config: {e}")
             return jsonify(
                 {"status": "error", "message": f"Failed to save configuration: {str(e)}"}
+            ), 500
+
+    @app.route("/api/llm-config", methods=["POST"])
+    def save_llm_config():
+        """Save LLM configuration"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify(
+                    {"status": "error", "message": "Database connection not available"}
+                ), 500
+
+            data = request.get_json()
+
+            # Update or insert LLM config in MongoDB
+            # We'll store LLM config as a sub-document in the config collection
+            result = app.config["MONGO_DB"].config.update_one(
+                {}, {"$set": {"llm": data}}, upsert=True
+            )
+
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": "LLM configuration saved successfully",
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error saving LLM config: {e}")
+            return jsonify(
+                {"status": "error", "message": f"Failed to save LLM configuration: {str(e)}"}
+            ), 500
+
+    @app.route("/api/llm-config", methods=["GET"])
+    def get_llm_config():
+        """Get LLM configuration"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({}), 200
+
+            # Fetch config from MongoDB
+            config_record = app.config["MONGO_DB"].config.find_one()
+
+            if config_record and "llm" in config_record:
+                return jsonify(config_record["llm"]), 200
+            else:
+                # Return default LLM config if none exists
+                return jsonify({}), 200
+        except Exception as e:
+            logger.error(f"Error fetching LLM config: {e}")
+            return jsonify({}), 200
+
+    @app.route("/api/llm-configs", methods=["GET"])
+    def list_llm_configs():
+        """List all LLM configurations"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify([]), 200
+
+            # Fetch config from MongoDB
+            config_record = app.config["MONGO_DB"].config.find_one()
+
+            if config_record and "llm_configs" in config_record:
+                return jsonify(config_record["llm_configs"]), 200
+            else:
+                # Return empty array if no LLM configs exist
+                return jsonify([]), 200
+        except Exception as e:
+            logger.error(f"Error fetching LLM configs: {e}")
+            return jsonify([]), 200
+
+    @app.route("/api/llm-configs", methods=["POST"])
+    def save_llm_configs():
+        """Save all LLM configurations"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify(
+                    {"status": "error", "message": "Database connection not available"}
+                ), 500
+
+            data = request.get_json()
+
+            # Update or insert LLM configs in MongoDB
+            result = app.config["MONGO_DB"].config.update_one(
+                {}, {"$set": {"llm_configs": data}}, upsert=True
+            )
+
+            return jsonify(
+                {
+                    "status": "success",
+                    "message": "LLM configurations saved successfully",
+                }
+            )
+        except Exception as e:
+            logger.error(f"Error saving LLM configs: {e}")
+            return jsonify(
+                {"status": "error", "message": f"Failed to save LLM configurations: {str(e)}"}
             ), 500
 
 
