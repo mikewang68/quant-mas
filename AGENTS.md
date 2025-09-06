@@ -41,6 +41,7 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **Mean Reversion**: Support/Resistance, Volatility-based
 - **Multi-Agent**: Combined strategy approaches
 - **Fundamental Analysis**: Traditional financial ratio analysis and LLM-based analysis
+- **Public Opinion Analysis**: Sentiment analysis based on news and social media data
 
 ### Key Strategy Files
 - `strategies/base_strategy.py` - Base strategy interface
@@ -50,6 +51,7 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - `strategies/multi_agent_strategy.py` - Multi-agent coordination
 - `strategies/fundamental_strategy.py` - Traditional fundamental analysis strategy
 - `strategies/llm_fundamental_strategy.py` - LLM-based fundamental analysis strategy
+- `strategies/enhanced_public_opinion_analysis_strategy_v2.py` - Enhanced public opinion analysis strategy with expanded data sources
 
 ## Data Management
 
@@ -96,6 +98,18 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Updated documentation to include new agent and usage patterns
 - Added example strategy and database insertion scripts to help users get started
 - Created utility script to initialize and configure the 舆情分析Agent in MongoDB database with proper Chinese description
+
+### Enhanced Public Opinion Analysis Strategy V2 Implementation
+- Successfully implemented new Enhanced Public Opinion Analysis Strategy V2 with expanded data sources
+- Added support for Eastmoney Guba (股吧) data collection including user focus index, institutional ratings, and participation data
+- Enhanced AkShare data collection with 5-day news window and industry information
+- Improved FireCrawl integration with batch processing and availability checking
+- Implemented robust error handling with graceful degradation when data sources are unavailable
+- Added support for multiple LLM providers (Google Gemini, DeepSeek, etc.) with dynamic API key configuration
+- Created comprehensive documentation for the strategy in `docs/enhanced_public_opinion_analysis_strategy_v2.md`
+- Added strategy configuration to MongoDB database with proper parameter mapping
+- Verified strategy functionality with test scripts and confirmed successful execution
+- Integrated strategy with existing Public Opinion Selector agent framework
 
 ### Technical Analysis Enhancements
 - Enhanced technical indicator calculations
@@ -286,5 +300,5 @@ python -m backtesting.backtester
    - Enhanced financial ratio calculation and analysis
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-03*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-06*
 

@@ -1,6 +1,6 @@
 """
-Technical Stock Selector Agent
-Selects stocks based on technical analysis strategies with new architecture.
+Fundamental Stock Selector Agent
+Selects stocks based on fundamental analysis strategies with new architecture.
 """
 
 import sys
@@ -24,9 +24,9 @@ from interfaces.data_interface import DataProviderInterface, StandardDataFormat
 logger = logging.getLogger(__name__)
 
 
-class TechnicalStockSelector(BaseAgent, DataProviderInterface):
+class FundamentalStockSelector(BaseAgent, DataProviderInterface):
     """
-    Technical Stock Selector Agent - Clean framework with new architecture
+    Fundamental Stock Selector Agent - Clean framework with new architecture
     Dynamically loads strategies from database and executes them
     """
 
@@ -34,11 +34,11 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
         self,
         db_manager: MongoDBManager,
         data_fetcher: AkshareClient,
-        name: str = "TechnicalStockSelector",
+        name: str = "FundamentalStockSelector",
         strategy_id: Optional[str] = None,
     ):
         """
-        Initialize the technical stock selector framework
+        Initialize the fundamental stock selector framework
 
         Args:
             db_manager: MongoDBManager instance for database operations
@@ -70,18 +70,18 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
         Load all strategy configurations from database
         """
         try:
-            # Get the technical analysis agent from database
+            # Get the fundamental analysis agent from database
             agent = self.db_manager.agents_collection.find_one(
-                {"name": "技术分析Agent"}
+                {"name": "基本面分析Agent"}
             )
             if not agent:
-                self.log_error("Technical analysis agent not found in database")
+                self.log_error("Fundamental analysis agent not found in database")
                 return
 
             # Get strategy IDs assigned to this agent
             strategy_ids = agent.get("strategies", [])
             if not strategy_ids:
-                self.log_warning("No strategies assigned to technical分析 agent")
+                self.log_warning("No strategies assigned to fundamental分析 agent")
                 return
 
             # Load all strategies
@@ -451,15 +451,15 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
         stock_data = self.get_standard_data([stock_code])
         return stock_data.get(stock_code, StandardDataFormat.create_empty_dataframe())
 
-    def update_pool_with_technical_analysis(self) -> bool:
+    def update_pool_with_fundamental_analysis(self) -> bool:
         """
-        Update pool with technical analysis results by executing assigned strategies
+        Update pool with fundamental analysis results by executing assigned strategies
 
         Returns:
             True if successful, False otherwise
         """
         self.log_info(
-            "Updating pool with technical analysis using dynamic strategy loading"
+            "Updating pool with fundamental analysis using dynamic strategy loading"
         )
 
         try:
@@ -492,30 +492,67 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                 self.log_error("No stock data available for analysis")
                 return False
 
-            # Execute all dynamically loaded strategies
+            # Execute all dynamically loaded strategies with optimization
             all_selected_stocks = []
             for i, strategy_instance in enumerate(self.strategy_instances):
                 try:
                     strategy_name = self.strategy_names[i] if i < len(self.strategy_names) else f"Strategy_{i}"
-                    # Execute the strategy
-                    self.log_info(f"Executing strategy: {strategy_name}")
-                    selected_stocks = strategy_instance.execute(
-                        stock_data, "技术分析Agent", self.db_manager
-                    )
+                    self.log_info(f"Processing strategy: {strategy_name}")
 
-                    # Add strategy identifier to each selected stock
-                    for stock in selected_stocks:
-                        # Only pass necessary fields to update_latest_pool_record
-                        tech_stock = {
-                            'code': stock.get('code'),
-                            'selection_reason': stock.get('selection_reason', stock.get('value', '')),
-                            'score': stock.get('score', 0),  # Include the actual score from strategy
-                            'strategy_name': strategy_name
-                        }
-                        all_selected_stocks.append(tech_stock)
+                    # Filter stocks that need analysis (skip those with existing valid scores)
+                    stocks_needing_analysis = []
+                    stocks_with_existing_data = []
+
+                    for stock in pool_stocks:
+                        code = stock.get("code")
+                        if not code:
+                            continue
+
+                        # Check if this stock already has a valid score for this strategy
+                        fund_data = stock.get("fund", {})
+                        strategy_fund_data = fund_data.get(strategy_name, {})
+                        existing_score = strategy_fund_data.get("score", None)
+
+                        # If score exists and is valid (not 0 and not None), skip analysis
+                        if existing_score is not None and existing_score != 0 and existing_score != 0.0:
+                            self.log_info(f"Stock {code} already has valid score {existing_score} for {strategy_name}, skipping analysis")
+                            stocks_with_existing_data.append({
+                                "code": code,
+                                "score": existing_score,
+                                "value": strategy_fund_data.get("value", ""),
+                                "strategy_name": strategy_name
+                            })
+                        else:
+                            # Need to analyze this stock
+                            stocks_needing_analysis.append(code)
+
+                    self.log_info(f"Found {len(stocks_with_existing_data)} stocks with existing valid scores, {len(stocks_needing_analysis)} stocks need analysis")
+
+                    # Execute strategy only for stocks that need analysis
+                    if stocks_needing_analysis:
+                        # Filter stock_data to only include stocks needing analysis
+                        filtered_stock_data = {code: data for code, data in stock_data.items() if code in stocks_needing_analysis}
+
+                        if filtered_stock_data:
+                            self.log_info(f"Executing strategy {strategy_name} for {len(stocks_needing_analysis)} stocks")
+                            selected_stocks = strategy_instance.execute(
+                                filtered_stock_data, "基本面分析Agent", self.db_manager
+                            )
+
+                            # Add strategy identifier to each selected stock
+                            for stock in selected_stocks:
+                                stock['strategy_name'] = strategy_name
+                                all_selected_stocks.append(stock)
+                        else:
+                            self.log_info(f"No stock data available for analysis in {strategy_name}")
+                    else:
+                        self.log_info(f"No stocks need analysis for {strategy_name}")
+
+                    # Add existing data to results
+                    all_selected_stocks.extend(stocks_with_existing_data)
 
                     self.log_info(
-                        f"Strategy {strategy_name} selected {len(selected_stocks)} stocks"
+                        f"Strategy {strategy_name} processed {len(stocks_with_existing_data) + len([s for s in stocks_with_existing_data if s.get('strategy_name') == strategy_name])} stocks total"
                     )
 
                 except Exception as e:
@@ -523,23 +560,23 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
                     self.log_error(f"Error executing strategy {strategy_name}: {e}")
 
             self.log_info(
-                f"Technical analysis completed. Total selected stocks: {len(all_selected_stocks)}"
+                f"Fundamental analysis completed. Total selected stocks: {len(all_selected_stocks)}"
             )
 
-            # Update the latest pool record with technical analysis results
+            # Update the latest pool record with fundamental analysis results
             success = self.update_latest_pool_record(all_selected_stocks)
             return success
 
         except Exception as e:
-            self.log_error(f"Error updating pool with technical analysis: {e}")
+            self.log_error(f"Error updating pool with fundamental analysis: {e}")
             return False
 
-    def update_latest_pool_record(self, technical_stocks: List[Dict]) -> bool:
+    def update_latest_pool_record(self, fundamental_stocks: List[Dict]) -> bool:
         """
-        Update the latest pool record with technical analysis results
+        Update the latest pool record with fundamental analysis results
 
         Args:
-            technical_stocks: List of stocks with technical analysis data
+            fundamental_stocks: List of stocks with fundamental analysis data
 
         Returns:
             True if updated successfully, False otherwise
@@ -549,7 +586,6 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
             collection = self.db_manager.db["pool"]
 
             # Find the latest pool record
-            # Using _id field for sorting
             latest_pool_record = collection.find_one(sort=[("_id", -1)])
 
             if not latest_pool_record:
@@ -562,90 +598,66 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
             # Create a mapping of existing stocks by code for easy lookup
             existing_stock_map = {stock.get("code"): stock for stock in existing_stocks}
 
-            # Update technical analysis data for existing stocks only
-            for tech_stock in technical_stocks:
-                code = tech_stock.get('code')
-                strategy_name = tech_stock.get('strategy_name', 'unknown_strategy')
+            # Update fundamental analysis data for existing stocks only
+            for fund_stock in fundamental_stocks:
+                code = fund_stock.get('code')
+                strategy_name = fund_stock.get('strategy_name', 'unknown_strategy')
 
                 if code in existing_stock_map:
-                    # Normalize score to 0-1 range and round to 2 decimal places
-                    # Handle different score ranges:
-                    # - Some strategies return scores in 0-1 range
-                    # - Some strategies return scores in 0-100 range
-                    score = tech_stock.get('score', 0.0)
-                    try:
-                        if score is not None:
-                            score_float = float(score)
-                            # If score is greater than 1, assume it's in 0-100 range and normalize it
-                            if score_float > 1.0:
-                                normalized_score = max(0.0, min(1.0, score_float / 100.0))
-                            else:
-                                # Score is already in 0-1 range
-                                normalized_score = max(0.0, min(1.0, score_float))
-                        else:
-                            normalized_score = 0.0
-                    except (ValueError, TypeError):
-                        # If score conversion fails, default to 0.0
-                        self.log_warning(f"Invalid score value for stock {code}: {score}")
-                        normalized_score = 0.0
+                    # Use score directly since LLM strategies already return scores in 0-1 range
+                    # Round to 2 decimal places for consistency
+                    score = fund_stock.get('score', 0.0)
+                    if score is not None:
+                        score_float = float(score)
+                        # Ensure score is within valid range [0, 1]
+                        validated_score = max(0.0, min(1.0, score_float))
+                        rounded_score = round(validated_score, 2)
+                    else:
+                        rounded_score = 0.0
 
-                    rounded_score = round(normalized_score, 2)
-
-                    # Get strategy name and validate it
-                    strategy_name = tech_stock.get('strategy_name', 'unknown_strategy')
-                    if not strategy_name or not isinstance(strategy_name, str):
-                        strategy_name = 'unknown_strategy'
-
-                    # Update the tech field for the existing stock
-                    if 'tech' not in existing_stock_map[code]:
-                        existing_stock_map[code]['tech'] = {}
-                    existing_stock_map[code]['tech'][strategy_name] = {
+                    # Update the fund field for the existing stock
+                    if 'fund' not in existing_stock_map[code]:
+                        existing_stock_map[code]['fund'] = {}
+                    existing_stock_map[code]['fund'][strategy_name] = {
                         'score': rounded_score,
-                        'value': tech_stock.get('selection_reason', tech_stock.get('value', '')),
+                        'value': fund_stock.get('value', fund_stock.get('selection_reason', '')),
                     }
 
             # Prepare cleaned stocks for database update
-            # Only preserve essential fields: code, trend, and tech
             cleaned_stocks = []
             for stock in existing_stocks:
-                # Create a clean stock with only essential fields
-                clean_stock = {
-                    'code': stock.get('code'),
-                    'trend': stock.get('trend', {})  # Preserve trend field if it exists
-                }
-
-                # Update the tech field if it exists in the updated stock
-                updated_stock = existing_stock_map.get(stock.get('code'))
-                if updated_stock and 'tech' in updated_stock:
-                    clean_stock['tech'] = updated_stock['tech']
+                # Preserve all existing fields and only update the fund field
+                clean_stock = stock.copy()
 
                 # Convert numpy types to native Python types for MongoDB compatibility
                 from data.database_operations import DatabaseOperations
                 db_ops = DatabaseOperations(self.db_manager)
                 clean_stock = db_ops._convert_numpy_types(clean_stock)
 
+                # Ensure score is properly formatted
+                if 'score' in clean_stock:
+                    clean_stock['score'] = round(float(clean_stock['score']), 2)
+
                 cleaned_stocks.append(clean_stock)
 
-            # Update the latest pool record with modified stocks and only tech_at timestamp
+            # Update the latest pool record with modified stocks and only fund_at timestamp
             result = collection.update_one(
                 {"_id": latest_pool_record["_id"]},
                 {
                     "$set": {
                         "stocks": cleaned_stocks,
-                        "tech_at": datetime.now(),
+                        "fund_at": datetime.now(),
                     },
                     "$unset": {
                         "selected_stocks_count": "",
-                        "strategy_execution_time": "",
-                        "strategy_version": "",
-                        "total_stocks_analyzed": ""
+                        "strategy_execution_time": ""
                     }
                 },
             )
 
             if result.modified_count > 0:
                 self.log_info(
-                    f"Updated latest pool record with {len(technical_stocks)} technical analysis stocks"
+                    f"Updated latest pool record with {len(fundamental_stocks)} fundamental analysis stocks"
                 )
             else:
                 self.log_info("No changes made to the latest pool record")
@@ -654,22 +666,23 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
 
         except Exception as e:
             self.log_error(
-                f"Error updating latest pool record with technical analysis: {e}"
+                f"Error updating latest pool record with fundamental analysis: {e}"
             )
             return False
 
     def run(self) -> bool:
         """
-        Main execution method for the technical stock selector agent.
+        Main execution method for the fundamental stock selector agent.
         This method is required by the BaseAgent abstract class.
 
         Returns:
             True if successful, False otherwise
         """
-        return self.update_pool_with_technical_analysis()
+        return self.update_pool_with_fundamental_analysis()
 
 
 # Example usage
 if __name__ == "__main__":
     # This is just a placeholder to make the file importable
     pass
+
