@@ -138,6 +138,12 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Validated consistent update pattern across all strategies
 - Verified standard document structure maintenance across all strategy files
 
+### Pool Record Sorting Fix
+- **FIXED**: Resolved issue where Technical Selector and Fundamental Selector were using non-existent `selection_date` field for sorting
+- Modified both selectors to use `_id` field for finding and updating the latest pool record
+- Ensured consistency in pool record operations across all selector agents
+- Verified that sorting now works correctly with the proper field
+
 ### Fundamental Analysis Strategies Implementation
 - Added two fundamental analysis strategies to the system:
   - **Traditional Fundamental Strategy**: Standard financial ratio analysis with configurable parameters
