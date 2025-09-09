@@ -1797,6 +1797,11 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                     self.analyze_public_opinion(code, stock_name)
                 )
 
+                # Get all_data from the analysis for detailed information
+                # Note: analyze_public_opinion doesn't directly return all_data, so we need to collect it again
+                # This is a bit inefficient but necessary for the detailed analysis
+                all_data = self.collect_all_data(code, stock_name)
+
                 if meets_criteria:
                     # Calculate normalized score
                     normalized_score = (
@@ -1805,12 +1810,18 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                         else 0.0
                     )
 
+                    # Create detailed value string with all analysis information
+                    detailed_value = self._create_detailed_value(
+                        reason, sentiment_score, full_analysis, all_data
+                    )
+
                     # Format the result according to requirements
+                    # Pool only accepts score and value in pub field
                     selected_stocks.append(
                         {
                             "code": code,
                             "score": normalized_score,  # Score between 0 and 1
-                            "value": reason,  # Reason for the score
+                            "value": detailed_value,  # Detailed analysis information
                         }
                     )
 
@@ -1900,6 +1911,93 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
         if self.qian_gu_qian_ping_data and stock_code in self.qian_gu_qian_ping_data:
             return self.qian_gu_qian_ping_data[stock_code]
         return None
+
+    def _create_detailed_value(self, basic_reason: str, sentiment_score: float, full_analysis: Dict, all_data: Dict) -> str:
+        """
+        Create a detailed value string with all analysis information for storage in the database.
+
+        Args:
+            basic_reason: Basic reason string
+            sentiment_score: Sentiment score from LLM analysis
+            full_analysis: Full analysis results from LLM
+            all_data: All collected data
+
+        Returns:
+            Detailed value string with all analysis information
+        """
+        try:
+            # Start with the basic reason
+            detailed_value = f"{basic_reason}\n\n"
+
+            # Add LLM analysis details
+            detailed_value += "=== LLM分析详情 ===\n"
+            detailed_value += f"情感趋势: {full_analysis.get('sentiment_trend', 'N/A')}\n"
+            detailed_value += f"市场影响: {full_analysis.get('market_impact', 'N/A')}\n"
+            detailed_value += f"置信度: {full_analysis.get('confidence_level', 'N/A')}\n"
+            detailed_value += f"投资建议: {full_analysis.get('recommendation', 'N/A')}\n"
+
+            # Add key events if available
+            key_events = full_analysis.get('key_events', [])
+            if key_events:
+                detailed_value += f"关键事件: {', '.join(key_events[:10])}\n"  # Limit to first 10 events
+
+            # Add risk factors if available
+            risk_factors = full_analysis.get('risk_factors', [])
+            if risk_factors:
+                detailed_value += f"风险因素: {', '.join(risk_factors[:10])}\n"  # Limit to first 10 factors
+
+            # Add analysis summary
+            analysis_summary = full_analysis.get('analysis_summary', '')
+            if analysis_summary:
+                # Limit summary length to prevent extremely long strings
+                if len(analysis_summary) > 1000:
+                    analysis_summary = analysis_summary[:1000] + "..."
+                detailed_value += f"分析摘要: {analysis_summary}\n"
+
+            # Add data source information
+            detailed_value += "\n=== 数据源详情 ===\n"
+            detailed_value += f"AkShare新闻数量: {len(all_data.get('akshare_news', []))}条\n"
+            detailed_value += f"行业信息: {'已获取' if all_data.get('industry_info') else '未获取'}\n"
+            detailed_value += f"千股千评数据: {'已获取' if all_data.get('qian_gu_qian_ping_data') else '未获取'}\n"
+
+            # Add Guba data details
+            guba_data = all_data.get('guba_data', {})
+            guba_total = sum([
+                len(guba_data.get('consultations', [])),
+                len(guba_data.get('research_reports', [])),
+                len(guba_data.get('announcements', [])),
+                len(guba_data.get('hot_posts', []))
+            ])
+            detailed_value += f"Guba数据: {guba_total}条\n"
+
+            # Add professional sites data
+            detailed_value += f"专业网站数据: {len(all_data.get('professional_sites_data', []))}条\n"
+
+            # Add FireCrawl data
+            detailed_value += f"网络搜索数据: {len(all_data.get('firecrawl_data', []))}条\n"
+
+            # Add detailed Guba data
+            detailed_guba = all_data.get('detailed_guba_data', {})
+            if detailed_guba:
+                detailed_value += "\n=== 东方财富股吧详细数据 ===\n"
+                if detailed_guba.get('user_focus'):
+                    detailed_value += f"用户关注指数: {len(detailed_guba['user_focus'])}条记录\n"
+                if detailed_guba.get('institutional_participation'):
+                    detailed_value += f"机构参与度: {len(detailed_guba['institutional_participation'])}条记录\n"
+                if detailed_guba.get('historical_rating'):
+                    detailed_value += f"历史评分: {len(detailed_guba['historical_rating'])}条记录\n"
+                if detailed_guba.get('daily_participation'):
+                    detailed_value += f"日度市场参与意愿: {len(detailed_guba['daily_participation'])}条记录\n"
+
+            # Truncate if too long (MongoDB has limits on string size)
+            if len(detailed_value) > 5000:
+                detailed_value = detailed_value[:4997] + "..."
+
+            return detailed_value
+
+        except Exception as e:
+            self.log_error(f"创建详细值时出错: {e}")
+            return basic_reason
 
     def get_detailed_guba_data(self, stock_code: str) -> Dict:
         """
