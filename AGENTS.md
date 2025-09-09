@@ -111,6 +111,13 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Verified strategy functionality with test scripts and confirmed successful execution
 - Integrated strategy with existing Public Opinion Selector agent framework
 
+### FireCrawl Integration Enhancement and Fix
+- **FIXED**: Resolved FireCrawl availability detection issue where custom "SCRAPERS-JS" deployments were incorrectly identified as incompatible
+- **FIXED**: Corrected FireCrawl API request format to properly work with v1 endpoints
+- **ENHANCED**: Updated FireCrawl availability checking logic to actually test endpoint functionality rather than assuming based on deployment type
+- **VERIFIED**: FireCrawl integration now works correctly with local deployments, properly detecting and utilizing available endpoints
+- **DOCUMENTED**: Created comprehensive FireCrawl configuration guide explaining the integration and troubleshooting steps
+
 ### Technical Analysis Enhancements
 - Enhanced technical indicator calculations
 - Improved signal generation algorithms
@@ -144,22 +151,25 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Ensured consistency in pool record operations across all selector agents
 - Verified that sorting now works correctly with the proper field
 
-### Fundamental Analysis Strategies Implementation
-- Added two fundamental analysis strategies to the system:
-  - **Traditional Fundamental Strategy**: Standard financial ratio analysis with configurable parameters
-  - **LLM Fundamental Strategy**: AI-powered analysis using large language models
-- Both strategies are fully configurable through database parameters
-- LLM strategy supports flexible provider configuration with dynamic API key environment variable handling
-- Created configuration files and database insertion scripts for both strategies
-- Assigned strategies to the Fundamental Analysis Agent for proper execution
+### Enhanced Public Opinion Analysis Strategy V2 with Qian Gu Qian Ping Data Integration
+- Added support for qian gu qian ping (千股千评) data collection using `stock_comment_em()` function
+- Implemented one-time loading of overall market sentiment data for all stocks at strategy initialization
+- Added detailed Guba data collection for specific stocks using:
+  - `stock_comment_detail_scrd_focus_em()`: 用户关注指数 (User focus index)
+  - `stock_comment_detail_zlkp_jgcyd_em()`: 机构参与度 (Institutional participation)
+  - `stock_comment_detail_zhpj_lspf_em()`: 历史评分 (Historical rating)
+  - `stock_comment_detail_scrd_desire_daily_em()`: 日度市场参与意愿 (Daily market participation desire)
+- Integrated qian gu qian ping data into LLM analysis for enhanced public opinion assessment
+- Updated strategy to collect and format qian gu qian ping data for comprehensive stock evaluation
+- Verified functionality with comprehensive testing including data loading, lookup, and LLM integration
+- Confirmed successful implementation with final integration testing
 
-### LLM Configuration Flexibility Enhancement
-- Improved LLM fundamental strategy to support different LLM providers
-- Added configurable API key environment variable name in database configuration
-- Strategy now reads API key from dynamically specified environment variable
-- Supports switching between providers (Google Gemini, OpenAI, Anthropic, etc.) without code changes
-- Configuration fully dynamic from database with no hardcoded values
-- Updated both database configuration and strategy implementation
+### FireCrawl Integration Enhancement and Fix
+- **FIXED**: Resolved FireCrawl availability detection issue where custom "SCRAPERS-JS" deployments were incorrectly identified as incompatible
+- **FIXED**: Corrected FireCrawl API request format to properly work with v1 endpoints
+- **ENHANCED**: Updated FireCrawl availability checking logic to actually test endpoint functionality rather than assuming based on deployment type
+- **VERIFIED**: FireCrawl integration now works correctly with local deployments, properly detecting and utilizing available endpoints
+- **DOCUMENTED**: Created comprehensive FireCrawl configuration guide explaining the integration and troubleshooting steps
 
 ### LLM Strategy Retry Mechanism Enhancement
 - Enhanced LLM Fundamental Strategy with retry mechanisms for improved reliability
@@ -306,5 +316,5 @@ python -m backtesting.backtester
    - Enhanced financial ratio calculation and analysis
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-06*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-07*
 
