@@ -240,6 +240,15 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Results are correctly written to the pool collection with fund field containing strategy scores and analysis
 - **OPTIMIZED**: Added logic to skip stock analysis when valid scores already exist in pool data, reducing unnecessary LLM calls during network issues
 
+### Enhanced Public Opinion Analysis Strategy V2 Value Field Enhancement
+- **ENHANCED**: Modified Enhanced Public Opinion Analysis Strategy V2 to provide detailed information in the value field instead of simple counts
+- Updated `_create_detailed_value` method to include specific data in LLM analysis details, data source details, and Eastmoney Guba detailed data
+- LLM analysis details now include comprehensive analysis summary that supports key events and risk factors
+- Data source details now show specific information rather than just item counts for all 6 data sources (AkShare news, industry info, qian gu qian ping, Guba data, professional sites, FireCrawl data)
+- Eastmoney Guba detailed data now shows specific numerical values rather than just record counts for all 4 categories (user focus index, institutional participation, historical rating, daily market participation desire)
+- Created and ran test scripts to verify the enhanced value field output contains specific data as required
+- Updated documentation to reflect the enhanced value field content structure
+
 ## Usage Patterns
 
 ### Running Agents

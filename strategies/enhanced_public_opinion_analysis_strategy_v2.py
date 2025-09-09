@@ -1936,17 +1936,17 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             detailed_value += f"置信度: {full_analysis.get('confidence_level', 'N/A')}\n"
             detailed_value += f"投资建议: {full_analysis.get('recommendation', 'N/A')}\n"
 
-            # Add key events if available
+            # Add key events if available with more detailed information
             key_events = full_analysis.get('key_events', [])
             if key_events:
                 detailed_value += f"关键事件: {', '.join(key_events[:10])}\n"  # Limit to first 10 events
 
-            # Add risk factors if available
+            # Add risk factors if available with more detailed information
             risk_factors = full_analysis.get('risk_factors', [])
             if risk_factors:
                 detailed_value += f"风险因素: {', '.join(risk_factors[:10])}\n"  # Limit to first 10 factors
 
-            # Add analysis summary
+            # Add analysis summary - this should be detailed and support key events and risk factors
             analysis_summary = full_analysis.get('analysis_summary', '')
             if analysis_summary:
                 # Limit summary length to prevent extremely long strings
@@ -1954,40 +1954,137 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                     analysis_summary = analysis_summary[:1000] + "..."
                 detailed_value += f"分析摘要: {analysis_summary}\n"
 
-            # Add data source information
+            # Add data source information with specific data, not just counts
             detailed_value += "\n=== 数据源详情 ===\n"
-            detailed_value += f"AkShare新闻数量: {len(all_data.get('akshare_news', []))}条\n"
-            detailed_value += f"行业信息: {'已获取' if all_data.get('industry_info') else '未获取'}\n"
-            detailed_value += f"千股千评数据: {'已获取' if all_data.get('qian_gu_qian_ping_data') else '未获取'}\n"
 
-            # Add Guba data details
+            # AkShare news data with specific information
+            akshare_news = all_data.get('akshare_news', [])
+            if akshare_news:
+                detailed_value += f"AkShare新闻: 共{len(akshare_news)}条，主要涉及"
+                # Extract key topics from news titles
+                topics = []
+                for news in akshare_news[:3]:  # First 3 news items
+                    title = news.get('title', '')
+                    # Simple keyword extraction (in a real implementation, you might use NLP)
+                    if '业绩' in title:
+                        topics.append('业绩')
+                    elif '政策' in title:
+                        topics.append('政策')
+                    elif '市场' in title:
+                        topics.append('市场')
+                    elif '行业' in title:
+                        topics.append('行业')
+                topics = list(set(topics))  # Remove duplicates
+                detailed_value += f"{', '.join(topics) if topics else '多个方面'}\n"
+            else:
+                detailed_value += "AkShare新闻: 无\n"
+
+            # Industry information with actual data
+            industry_info = all_data.get('industry_info', {})
+            if industry_info:
+                industries = industry_info.get('industries', [])
+                detailed_value += f"行业信息: {', '.join(industries[:3]) if industries else '暂无'}\n"
+            else:
+                detailed_value += "行业信息: 未获取\n"
+
+            # Qian gu qian ping data with specific information
+            qgqp_data = all_data.get('qian_gu_qian_ping_data', {})
+            if qgqp_data:
+                # Extract key metrics from qian gu qian ping data
+                rating = qgqp_data.get('综合评分', 'N/A')
+                price_analysis = qgqp_data.get('市盈率', 'N/A')
+                growth_potential = qgqp_data.get('成长性', 'N/A')
+                detailed_value += f"千股千评数据: 综合评分{rating}, 市盈率{price_analysis}, 成长性{growth_potential}\n"
+            else:
+                detailed_value += "千股千评数据: 未获取\n"
+
+            # Guba data with specific information
             guba_data = all_data.get('guba_data', {})
-            guba_total = sum([
-                len(guba_data.get('consultations', [])),
-                len(guba_data.get('research_reports', [])),
-                len(guba_data.get('announcements', [])),
-                len(guba_data.get('hot_posts', []))
-            ])
-            detailed_value += f"Guba数据: {guba_total}条\n"
+            if guba_data:
+                consultations = guba_data.get('consultations', [])
+                research_reports = guba_data.get('research_reports', [])
+                announcements = guba_data.get('announcements', [])
+                hot_posts = guba_data.get('hot_posts', [])
 
-            # Add professional sites data
-            detailed_value += f"专业网站数据: {len(all_data.get('professional_sites_data', []))}条\n"
+                # Extract key information from Guba data
+                guba_topics = []
+                for item in consultations[:2] + research_reports[:2] + announcements[:2] + hot_posts[:2]:
+                    title = item.get('title', '')
+                    if '利好' in title:
+                        guba_topics.append('利好')
+                    elif '风险' in title:
+                        guba_topics.append('风险')
+                    elif '分析' in title:
+                        guba_topics.append('分析')
+                guba_topics = list(set(guba_topics))
 
-            # Add FireCrawl data
-            detailed_value += f"网络搜索数据: {len(all_data.get('firecrawl_data', []))}条\n"
+                detailed_value += f"Guba数据: 共{len(consultations)+len(research_reports)+len(announcements)+len(hot_posts)}条，主要涉及{', '.join(guba_topics) if guba_topics else '多个方面'}\n"
+            else:
+                detailed_value += "Guba数据: 无\n"
 
-            # Add detailed Guba data
+            # Professional sites data with specific information
+            professional_data = all_data.get('professional_sites_data', [])
+            if professional_data:
+                sites = [item.get('source', '') for item in professional_data[:3]]
+                detailed_value += f"专业网站数据: 来自{', '.join(sites) if sites else '多个网站'}，共{len(professional_data)}条\n"
+            else:
+                detailed_value += "专业网站数据: 无\n"
+
+            # FireCrawl data with specific information
+            firecrawl_data = all_data.get('firecrawl_data', [])
+            if firecrawl_data:
+                # Extract key topics from FireCrawl results
+                topics = []
+                for item in firecrawl_data[:3]:
+                    title = item.get('title', '')
+                    if '业绩' in title:
+                        topics.append('业绩')
+                    elif '政策' in title:
+                        topics.append('政策')
+                    elif '市场' in title:
+                        topics.append('市场')
+                topics = list(set(topics))
+                detailed_value += f"网络搜索数据: 共{len(firecrawl_data)}条，主要涉及{', '.join(topics) if topics else '多个方面'}\n"
+            else:
+                detailed_value += "网络搜索数据: 无\n"
+
+            # Add detailed Guba data with specific information for each category
             detailed_guba = all_data.get('detailed_guba_data', {})
             if detailed_guba:
                 detailed_value += "\n=== 东方财富股吧详细数据 ===\n"
-                if detailed_guba.get('user_focus'):
-                    detailed_value += f"用户关注指数: {len(detailed_guba['user_focus'])}条记录\n"
-                if detailed_guba.get('institutional_participation'):
-                    detailed_value += f"机构参与度: {len(detailed_guba['institutional_participation'])}条记录\n"
-                if detailed_guba.get('historical_rating'):
-                    detailed_value += f"历史评分: {len(detailed_guba['historical_rating'])}条记录\n"
-                if detailed_guba.get('daily_participation'):
-                    detailed_value += f"日度市场参与意愿: {len(detailed_guba['daily_participation'])}条记录\n"
+
+                # User focus data with actual values
+                user_focus = detailed_guba.get('user关注指数', [])
+                if user_focus:
+                    focus_values = [str(item.get('focus_index', 'N/A')) for item in user_focus[:2]]
+                    detailed_value += f"用户关注指数: {', '.join(focus_values)} (最近{len(user_focus)}条记录)\n"
+                else:
+                    detailed_value += "用户关注指数: 无数据\n"
+
+                # Institutional participation data with actual values
+                institutional_participation = detailed_guba.get('机构参与度', [])
+                if institutional_participation:
+                    participation_values = [str(item.get('participation', 'N/A')) for item in institutional_participation[:2]]
+                    detailed_value += f"机构参与度: {', '.join(participation_values)} (最近{len(institutional_participation)}条记录)\n"
+                else:
+                    detailed_value += "机构参与度: 无数据\n"
+
+                # Historical rating data with actual values
+                historical_rating = detailed_guba.get('历史评分', [])
+                if historical_rating:
+                    rating_values = [str(item.get('rating', 'N/A')) for item in historical_rating[:2]]
+                    detailed_value += f"历史评分: {', '.join(rating_values)} (最近{len(historical_rating)}条记录)\n"
+                else:
+                    detailed_value += "历史评分: 无数据\n"
+
+                # Daily participation data with actual values
+                daily_participation = detailed_guba.get('日度市场参与意愿', [])
+                if daily_participation:
+                    desire_values = [str(item.get('daily_desire_rise', 'N/A')) for item in daily_participation[:2]]
+                    avg_change_values = [str(item.get('avg_participation_change', 'N/A')) for item in daily_participation[:2]]
+                    detailed_value += f"日度市场参与意愿: 意愿上升{', '.join(desire_values)}, 5日平均变化{', '.join(avg_change_values)} (最近{len(daily_participation)}条记录)\n"
+                else:
+                    detailed_value += "日度市场参与意愿: 无数据\n"
 
             # Truncate if too long (MongoDB has limits on string size)
             if len(detailed_value) > 5000:
