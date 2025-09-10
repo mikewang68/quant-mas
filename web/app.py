@@ -861,27 +861,106 @@ def register_routes(app: Flask):
                             "agent_id": agent_id
                         }
                     ), 500
-            else:
-                # For other agents, get strategies from agent configuration and execute dynamically
+            elif "舆情分析" in agent_name:
+                # Handle public opinion analysis agents
                 strategy_ids = agent.get('strategies', [])
-                logger.info(f"Running agent {agent['name']} with strategies {strategy_ids}")
+                logger.info(f"Running public opinion analysis agent {agent['name']} with strategies {strategy_ids}")
 
-                # Simulate some processing time
-                import time
-                time.sleep(2)
+                try:
+                    # Initialize components
+                    db_manager = app.config["MONGO_MANAGER"]
+                    from utils.akshare_client import AkshareClient
+                    data_fetcher = AkshareClient()
 
-                return jsonify(
-                    {
-                        "status": "success",
-                        "message": f"Agent {agent['name']} completed successfully",
-                        "agent_id": agent_id,
-                        "result": {
-                            "profit": 1500.50,
-                            "trades": 5,
-                            "win_rate": 0.6
+                    # Initialize the public opinion stock selector
+                    from agents.public_opinion_selector import PublicOpinionStockSelector
+                    selector = PublicOpinionStockSelector(db_manager, data_fetcher)
+
+                    # Execute public opinion analysis and update pool
+                    success = selector.update_pool_with_public_opinion_analysis()
+
+                    if success:
+                        logger.info("Successfully executed public opinion analysis agent")
+                        return jsonify(
+                            {
+                                "status": "success",
+                                "message": f"Agent {agent['name']} completed successfully",
+                                "agent_id": agent_id,
+                                "result": {
+                                    "analysis_complete": True,
+                                    "stocks_updated": True
+                                }
+                            }
+                        )
+                    else:
+                        logger.error("Failed to execute public opinion analysis agent")
+                        return jsonify(
+                            {
+                                "status": "error",
+                                "message": "Failed to run public opinion analysis agent: Execution failed",
+                                "agent_id": agent_id
+                            }
+                        ), 500
+
+                except Exception as selector_error:
+                    logger.error(f"Error running public opinion analysis agent: {selector_error}")
+                    return jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Failed to run public opinion analysis agent: {str(selector_error)}",
+                            "agent_id": agent_id
                         }
-                    }
-                )
+                    ), 500
+            elif "信号生成" in agent_name:
+                # Handle signal generator agents
+                strategy_ids = agent.get('strategies', [])
+                logger.info(f"Running signal generator agent {agent['name']} with strategies {strategy_ids}")
+
+                try:
+                    # Initialize components
+                    db_manager = app.config["MONGO_MANAGER"]
+                    from utils.akshare_client import AkshareClient
+                    data_fetcher = AkshareClient()
+
+                    # Initialize the signal generator
+                    from agents.signal_generator import SignalGenerator
+                    signal_generator = SignalGenerator(db_manager, data_fetcher)
+
+                    # Execute signal generation
+                    success = signal_generator.run()
+
+                    if success:
+                        logger.info("Successfully executed signal generator agent")
+                        return jsonify(
+                            {
+                                "status": "success",
+                                "message": f"Agent {agent['name']} completed successfully",
+                                "agent_id": agent_id,
+                                "result": {
+                                    "generation_complete": True,
+                                    "signals_updated": True
+                                }
+                            }
+                        )
+                    else:
+                        logger.error("Failed to execute signal generator agent")
+                        return jsonify(
+                            {
+                                "status": "error",
+                                "message": "Failed to run signal generator agent: Execution failed",
+                                "agent_id": agent_id
+                            }
+                        ), 500
+
+                except Exception as generator_error:
+                    logger.error(f"Error running signal generator agent: {generator_error}")
+                    return jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Failed to run signal generator agent: {str(generator_error)}",
+                            "agent_id": agent_id
+                        }
+                    ), 500
         except Exception as e:
             # Handle case where agent_id might not be defined
             agent_id = data.get("agent_id") if 'data' in locals() and data else "unknown"

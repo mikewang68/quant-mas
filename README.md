@@ -78,7 +78,12 @@ This system implements a multi-agent architecture where different agents handle 
 - Implements technical analysis using indicators like MA, MACD, RSI, Bollinger Bands
 - Manages position sizing, stop-loss, and take-profit mechanisms
 
-### 6. Base Agent (`agents/base_agent.py`)
+### 6. Signal Generator Agent (`agents/signal_generator.py`)
+- Generates trading signals by executing strategies and writing results to database
+- Analyzes existing strategy results in pool data to generate composite signals
+- Provides AI-enhanced analysis of strategy scores and values
+
+### 7. Base Agent (`agents/base_agent.py`)
 - Abstract base class defining the agent interface
 - Provides common functionality like logging
 

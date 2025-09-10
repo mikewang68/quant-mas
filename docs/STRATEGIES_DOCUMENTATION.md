@@ -541,3 +541,49 @@ score = max(
 - 换手率过滤避免过高或过低流动性的股票
 - 量化评分体系便于参数优化和策略组合
 
+## 21. SignalGenerationV1Strategy (信号生成V1策略)
+
+**策略思想**:
+统计pool数据集中每只股票满足的策略数量，计算平均分，并根据平均分和AI分析生成买卖信号。
+
+**参数设置**:
+- `min_strategies`: 最小满足策略数 (默认: 1)
+- `score_threshold_buy`: 买入信号阈值 (默认: 0.7)
+- `score_threshold_sell`: 卖出信号阈值 (默认: 0.4)
+
+**输出含义**:
+- `count`: 满足的策略数量
+- `score_calc`: 计算的平均分
+- `signal_calc`: 根据平均分计算的信号 (买入/持有/卖出)
+- `score_ai`: AI分析得分
+- `signal_ai`: AI分析信号 (买入/持有/卖出)
+
+**功能特性**:
+- 综合分析技术面(tech)、基本面(fund)和舆情面(pub)的策略结果
+- 智能信号生成：基于多维度数据生成统一的买卖信号
+- AI增强：提供AI驱动的分析结果作为参考
+- 实时更新：自动更新pool数据中的信号信息
+
+**信号逻辑**:
+- **平均分计算**: 遍历股票在tech、fund、pub字段中的所有策略结果，收集每个策略的score值，计算所有score的平均值作为score_calc
+- **信号判定规则**:
+  - 买入信号: score_calc > 0.7
+  - 持有信号: 0.4 ≤ score_calc ≤ 0.7
+  - 卖出信号: score_calc < 0.4
+- **AI增强分析**: 对所有策略的score和value进行综合分析，生成AI评分(score_ai)和AI信号(signal_ai)
+
+**数据结构**:
+策略分析结果存储在每个股票的`signals.信号生成V1`字段中:
+```json
+{
+  "score": 0.71,
+  "value": {
+    "count": 3,
+    "score_calc": 0.71,
+    "signal_calc": "买入",
+    "score_ai": 0.7129,
+    "signal_ai": "买入"
+  }
+}
+```
+
