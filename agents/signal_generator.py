@@ -519,10 +519,12 @@ class SignalGenerator(BaseAgent, DataProviderInterface):
                     # Update the signals field for the existing stock
                     if 'signals' not in existing_stock_map[code]:
                         existing_stock_map[code]['signals'] = {}
-                    existing_stock_map[code]['signals'][strategy_name] = {
-                        'score': rounded_score,
-                        'value': signal_stock.get('selection_reason', signal_stock.get('value', '')),
-                    }
+
+                    # Get the signal data from the strategy result
+                    signal_data = signal_stock.get('signals', {})
+                    strategy_name = self.name  # Use the agent name as strategy name
+
+                    existing_stock_map[code]['signals'][strategy_name] = signal_data
 
             # Prepare cleaned stocks for database update
             # Only preserve essential fields: code, trend, tech, fund, pub, and signals

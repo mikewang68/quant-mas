@@ -33,16 +33,24 @@
 
 ```json
 {
-  "score": 0.71,
-  "value": {
-    "count": 3,
-    "score_calc": 0.71,
-    "signal_calc": "买入",
-    "score_ai": 0.7129,
-    "signal_ai": "买入"
-  }
+  "count": 3,
+  "action": "买入",
+  "score_calc": 0.71,
+  "signal_calc": "买入",
+  "score_ai": 0.7129,
+  "signal_ai": "买入",
+  "reason_ai": "通过各种策略分析，AI给出的详细理由..."
 }
 ```
+
+字段说明：
+- `count`: 满足策略的数量（得分非零的策略数）
+- `action`: 当signal_calc和signal_ai相同时填入对应信号，不同时为空
+- `score_calc`: 计算得出的平均分
+- `signal_calc`: 基于平均分计算出的信号（买入/持有/卖出）
+- `score_ai`: AI分析得出的分数
+- `signal_ai`: AI分析得出的信号（买入/持有/卖出）
+- `reason_ai`: AI给出的分析理由
 
 ## 使用方法
 

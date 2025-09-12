@@ -45,9 +45,9 @@ def analyze_nested_structure(data, path="", level=0):
     else:
         print(f"{indent}{data}")
 
-def check_latest_pool_stocks_detailed():
+def check_latest_pool_stocks_detailed(stock_code="603381"):
     """Detailed check of stocks in the latest pool record"""
-    print("Checking stocks in the latest pool record with detailed nested structure analysis...")
+    print(f"Checking stocks in the latest pool record with detailed nested structure analysis for stock {stock_code}...")
 
     try:
         # Initialize database manager
@@ -76,21 +76,59 @@ def check_latest_pool_stocks_detailed():
         print(f"\nStocks array analysis:")
         analyze_nested_structure(stocks, "stocks")
 
-        # Look for any deeply nested technical analysis data
-        print(f"\nAnalyzing technical analysis data in first few stocks:")
-        for i, stock in enumerate(stocks[:3]):
-            print(f"\n--- Stock {i+1} ({stock.get('code', 'N/A')}) ---")
+        # Look for the specific stock
+        target_stock = None
+        for stock in stocks:
+            if stock.get('code') == stock_code:
+                target_stock = stock
+                break
 
-            # Check for any nested technical analysis fields
-            for key, value in stock.items():
-                if key in ['tech_analysis', 'technical_analysis', 'technical_indicators', 'indicators']:
-                    print(f"Found technical analysis field '{key}':")
-                    analyze_nested_structure(value, key)
-                elif isinstance(value, dict) and len(value) > 0:
-                    # Check if this dict might be technical analysis data
-                    if any(k in str(value.keys()).lower() for k in ['macd', 'rsi', 'ma', 'moving', 'average', 'trend']):
-                        print(f"Potential technical analysis field '{key}':")
-                        analyze_nested_structure(value, key)
+        if target_stock:
+            print(f"\n--- Target Stock {stock_code} ---")
+            analyze_nested_structure(target_stock, f"stock_{stock_code}")
+
+            # Check for fundamental analysis data
+            if 'fund' in target_stock:
+                print(f"\nFundamental analysis data for {stock_code}:")
+                fund_data = target_stock['fund']
+                print(json.dumps(fund_data, indent=2, ensure_ascii=False))
+
+                # Check for LLM基本面分析 data specifically
+                for strategy_name, strategy_data in fund_data.items():
+                    if 'LLM' in strategy_name or '基本面' in strategy_name:
+                        score = strategy_data.get('score', 'N/A')
+                        value = strategy_data.get('value', 'N/A')
+                        print(f"\n{strategy_name}:")
+                        print(f"  Score in DB: {score}")
+                        print(f"  Value: {str(value)[:200]}...")
+
+                        # Try to extract score from value
+                        import re
+                        if isinstance(value, str):
+                            # Look for patterns like "评分: 0.65" or "score: 0.65"
+                            score_matches = re.findall(r'[评评分分][:：]?\s*(\d+\.?\d*)', value)
+                            if score_matches:
+                                extracted_score = float(score_matches[0])
+                                print(f"  Score extracted from value: {extracted_score}")
+                                if isinstance(score, (int, float)) and abs(score - extracted_score) > 0.001:
+                                    print(f"  ⚠️  SCORE MISMATCH: DB score={score}, Extracted score={extracted_score}")
+                            else:
+                                # Try general pattern for any decimal number
+                                general_matches = re.findall(r'\b(\d\.\d+)\b', value)
+                                for match in general_matches:
+                                    try:
+                                        general_score = float(match)
+                                        if 0 <= general_score <= 1:  # Check if it's in 0-1 range
+                                            print(f"  Potential score found in value: {general_score}")
+                                            if isinstance(score, (int, float)) and abs(score - general_score) > 0.001:
+                                                print(f"  ⚠️  POSSIBLE SCORE MISMATCH: DB score={score}, Found score={general_score}")
+                                            break
+                                    except ValueError:
+                                        continue
+            else:
+                print(f"\nNo fundamental analysis data found for {stock_code}")
+        else:
+            print(f"\nTarget stock {stock_code} not found in latest pool record")
 
         db_manager.close_connection()
         print("\n✓ Detailed analysis of latest pool stocks completed successfully")
@@ -103,6 +141,10 @@ def check_latest_pool_stocks_detailed():
         return False
 
 if __name__ == "__main__":
-    success = check_latest_pool_stocks_detailed()
+    stock_code = "603381"
+    if len(sys.argv) > 1:
+        stock_code = sys.argv[1]
+
+    success = check_latest_pool_stocks_detailed(stock_code)
     sys.exit(0 if success else 1)
 

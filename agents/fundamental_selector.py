@@ -513,8 +513,8 @@ class FundamentalStockSelector(BaseAgent, DataProviderInterface):
                         strategy_fund_data = fund_data.get(strategy_name, {})
                         existing_score = strategy_fund_data.get("score", None)
 
-                        # If score exists and is valid (not 0 and not None), skip analysis
-                        if existing_score is not None and existing_score != 0 and existing_score != 0.0:
+                        # If score exists and is valid (>= 0.1), skip analysis
+                        if existing_score is not None and existing_score >= 0.1:
                             self.log_info(f"Stock {code} already has valid score {existing_score} for {strategy_name}, skipping analysis")
                             stocks_with_existing_data.append({
                                 "code": code,
