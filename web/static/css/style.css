@@ -173,11 +173,37 @@ body {
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(0, 102, 204, 0.1);
+    background-color: rgba(0, 102, 204, 0.3) !important;
+    transform: scale(1.01);
+    transition: all 0.2s ease;
 }
 
 .table-striped tbody tr:nth-of-type(odd) {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: rgba(42, 42, 74, 0.7); /* Dark blue tone */
+}
+
+.table-striped tbody tr:nth-of-type(even) {
+    background-color: rgba(30, 30, 58, 0.5); /* Slightly lighter dark tone */
+}
+
+/* Enhanced table row styling for better visibility */
+#pool-stocks-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+#pool-stocks-table tbody tr:hover {
+    background-color: rgba(0, 102, 204, 0.4) !important;
+    transform: scale(1.01);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+
+#pool-stocks-table tbody tr:nth-of-type(odd) {
+    background-color: rgba(42, 42, 74, 0.7); /* Dark blue tone */
+}
+
+#pool-stocks-table tbody tr:nth-of-type(even) {
+    background-color: rgba(30, 30, 58, 0.5); /* Slightly lighter dark tone */
 }
 
 /* Forms */

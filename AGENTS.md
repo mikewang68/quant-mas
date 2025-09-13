@@ -344,6 +344,14 @@ python -m backtesting.backtester
    - Dynamic industry comparison benchmarks
    - Enhanced financial ratio calculation and analysis
 
+6. **Web Interface Enhancement**
+   - Improved stock display with alternating row colors for better readability
+   - Added 涨跌幅 (change percentage) and 换手率 (turnover rate) columns to latest stock selection results
+   - Removed ¥ symbol from current price display for cleaner presentation
+   - Enhanced hover effects with color change, scaling, and shadow for improved user interaction
+   - Added double-click functionality to open K-line charts for stocks
+   - Implemented dynamic data loading from the pool collection with real-time stock information
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-07*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-14*
 

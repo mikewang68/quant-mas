@@ -65,88 +65,123 @@
         <div class="card">
             <div class="card-header">
                 <h5>
-                    <i class="fas fa-table"></i> 股票数据
+                    <i class="fas fa-table"></i> 最新选股结果
                 </h5>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover">
+                    <table class="table table-striped table-hover" id="pool-stocks-table">
                         <thead>
                             <tr>
                                 <th>代码</th>
                                 <th>名称</th>
                                 <th>当前价格</th>
                                 <th>涨跌幅</th>
-                                <th>成交量</th>
-                                <th>成交额</th>
+                                <th>换手率</th>
+                                <th>Action</th>
+                                <th>Counts</th>
+                                <th>Score_Calc</th>
+                                <th>Score_AI</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>000001</td>
-                                <td>平安银行</td>
-                                <td>¥15.23</td>
-                                <td class="text-success">+1.2%</td>
-                                <td>12,500,000</td>
-                                <td>¥190,000,000</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary">交易</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>000002</td>
-                                <td>万科A</td>
-                                <td>¥22.45</td>
-                                <td class="text-danger">-0.8%</td>
-                                <td>8,300,000</td>
-                                <td>¥186,000,000</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary">交易</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>600000</td>
-                                <td>浦发银行</td>
-                                <td>¥9.87</td>
-                                <td class="text-success">+0.5%</td>
-                                <td>15,200,000</td>
-                                <td>¥150,000,000</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary">交易</button>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>600036</td>
-                                <td>招商银行</td>
-                                <td>¥38.65</td>
-                                <td class="text-success">+2.1%</td>
-                                <td>6,800,000</td>
-                                <td>¥263,000,000</td>
-                                <td>
-                                    <button class="btn btn-sm btn-outline-primary">交易</button>
-                                </td>
-                            </tr>
+                        <tbody id="pool-stocks-body">
+                            <!-- Data will be loaded dynamically -->
                         </tbody>
                     </table>
                 </div>
-                
-                <nav aria-label="股票列表分页">
-                    <ul class="pagination justify-content-center">
-                        <li class="page-item disabled">
-                            <a class="page-link" href="#" tabindex="-1">上一页</a>
-                        </li>
-                        <li class="page-item active"><a class="page-link" href="#">1</a></li>
-                        <li class="page-item"><a class="page-link" href="#">2</a></li>
-                        <li class="page-item"><a class="page-link" href="#">3</a></li>
-                        <li class="page-item">
-                            <a class="page-link" href="#">下一页</a>
-                        </li>
-                    </ul>
-                </nav>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    // Function to load latest pool stocks data
+    function loadLatestPoolStocks() {
+        fetch('/api/latest-pool-stocks')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('pool-stocks-body');
+                tbody.innerHTML = '';
+
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan=\"10\" class=\"text-center\">暂无数据</td></tr>';
+                    return;
+                }
+
+                data.forEach(stock => {
+                    // Extract signals data - this is the actual signals field from the database
+                    const signals = stock.signal || {};
+
+                    // Initialize variables to store values
+                    let action = '';
+                    let counts = 0;
+                    let score_calc = 0;
+                    let score_ai = 0;
+
+                    // Extract values directly from the specific strategy
+                    // The structure is: signals."信号生成V1".各项值
+                    const strategyName = "信号生成V1";
+                    if (signals[strategyName]) {
+                        const strategyData = signals[strategyName];
+
+                        // Extract the specific values as requested
+                        action = strategyData.action || '';
+                        counts = strategyData.counts !== undefined ? Math.floor(strategyData.counts) : 0;
+                        score_calc = strategyData.score_calc !== undefined ? strategyData.score_calc : 0;
+                        score_ai = strategyData.score_ai !== undefined ? strategyData.score_ai : 0;
+                    }
+
+                        // Format change percentage with % symbol and color coding
+                        let changePercentDisplay = '';
+                        if (stock.change_percent !== undefined && stock.change_percent !== null) {
+                            const changePercent = parseFloat(stock.change_percent);
+                            const formattedChange = changePercent.toFixed(2);
+                            const sign = changePercent >= 0 ? '+' : '';
+                            const colorClass = changePercent >= 0 ? 'text-success' : 'text-danger';
+                            changePercentDisplay = `<span class="${colorClass}">${sign}${formattedChange}%</span>`;
+                        }
+    
+                        // Format turnover rate with % symbol
+                        let turnoverRateDisplay = '';
+                        if (stock.turnover_rate !== undefined && stock.turnover_rate !== null) {
+                            const turnoverRate = parseFloat(stock.turnover_rate);
+                            turnoverRateDisplay = `${turnoverRate.toFixed(2)}%`;
+                        }
+    
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${stock.code}</td>
+                            <td>${stock.name || ''}</td>
+                            <td>${stock.price.toFixed(2)}</td>
+                            <td>${changePercentDisplay}</td>
+                            <td>${turnoverRateDisplay}</td>
+                        <td>${action}</td>
+                        <td>${counts}</td>
+                        <td>${score_calc.toFixed(2)}</td>
+                        <td>${score_ai.toFixed(2)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary">详情</button>
+                        </td>
+                    `;
+                    // Add double-click event to open K-line chart
+                    row.addEventListener('dblclick', function() {
+                        window.open(`/stock-kline?code=${stock.code}&name=${encodeURIComponent(stock.name || stock.code)}`, '_blank');
+                    });
+                    tbody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading pool stocks:', error);
+                const tbody = document.getElementById('pool-stocks-body');
+                tbody.innerHTML = '<tr><td colspan=\"10\" class=\"text-center text-danger\">加载数据失败</td></tr>';
+            });
+    }
+
+    // Load data when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        loadLatestPoolStocks();
+    });
+</script>
 {% endblock %}
 
