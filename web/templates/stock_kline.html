@@ -1,0 +1,537 @@
+{% extends "base.html" %}
+
+{% block title %}股票K线图 - 量化交易系统{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1>
+            <i class="fas fa-chart-line"></i> 股票K线图 - <span id="stock-name">{{ name }}</span> (<span id="stock-code">{{ code }}</span>)
+        </h1>
+        <hr>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-chart-bar"></i> 日K线图
+                </h5>
+            </div>
+            <div class="card-body">
+                <div id="kline-chart" style="height: 500px;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>
+                    <i class="fas fa-table"></i> 技术指标
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="technical-indicators-table">
+                        <thead>
+                            <tr>
+                                <th>指标名称</th>
+                                <th>当前值</th>
+                                <th>状态</th>
+                            </tr>
+                        </thead>
+                        <tbody id="technical-indicators-body">
+                            <!-- Technical indicators will be loaded dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+    <script>
+        // Template variables passed from Flask
+        const stockCodeFromTemplate = "{{ code }}";
+        const stockNameFromTemplate = "{{ name }}";
+    </script>
+<script>
+    // Global variables
+    let stockCode = '';
+    let stockName = '';
+    let klineData = [];
+
+    // Function to initialize the page with stock data
+    function initializeStockKline(code, name) {
+        stockCode = code;
+        stockName = name;
+
+        // Update page title
+        document.getElementById('stock-name').textContent = name;
+        document.getElementById('stock-code').textContent = code;
+
+        // Load K-line data
+        loadStockKlineData(code);
+    }
+
+    // Function to load K-line data for a stock
+    function loadStockKlineData(code) {
+        // First fetch the K-line data
+        fetch(`/api/stock-kline/${code}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error loading K-line data:', data.error);
+                    return;
+                }
+
+                klineData = data;
+
+                // Then fetch moving average parameters from strategies
+                fetch('/api/strategies')
+                    .then(response => response.json())
+                    .then(strategies => {
+                        // Look for moving average strategies and extract parameters
+                        const maParameters = extractMAParameters(strategies);
+                        renderKlineChart(maParameters);
+                        calculateTechnicalIndicators();
+                    })
+                    .catch(error => {
+                        console.error('Error loading strategy data:', error);
+                        // Render chart without MA lines if strategy data fails
+                        renderKlineChart();
+                        calculateTechnicalIndicators();
+                    });
+            })
+            .catch(error => {
+                console.error('Error loading K-line data:', error);
+            });
+    }
+
+    // Function to extract moving average parameters from strategies
+    function extractMAParameters(strategies) {
+        const maParams = [];
+
+        // Look for common moving average strategies
+        strategies.forEach(strategy => {
+            if (strategy.parameters) {
+                // Check for short_period and long_period parameters (MA Crossover strategy)
+                if (strategy.parameters.short_period && strategy.parameters.long_period) {
+                    maParams.push({
+                        name: `${strategy.parameters.short_period}日均线`,
+                        period: strategy.parameters.short_period
+                    });
+                    maParams.push({
+                        name: `${strategy.parameters.long_period}日均线`,
+                        period: strategy.parameters.long_period
+                    });
+                }
+                // Check for other common MA parameters
+                else if (strategy.parameters.ma_period) {
+                    maParams.push({
+                        name: `${strategy.parameters.ma_period}日均线`,
+                        period: strategy.parameters.ma_period
+                    });
+                }
+                else if (strategy.parameters.period) {
+                    maParams.push({
+                        name: `${strategy.parameters.period}日均线`,
+                        period: strategy.parameters.period
+                    });
+                }
+            }
+        });
+
+        // If no strategies found, use default parameters
+        if (maParams.length === 0) {
+            maParams.push({name: '5日均线', period: 5});
+            maParams.push({name: '10日均线', period: 10});
+            maParams.push({name: '20日均线', period: 20});
+        }
+
+        // Remove duplicates
+        const uniqueParams = [];
+        const seenPeriods = new Set();
+        maParams.forEach(param => {
+            if (!seenPeriods.has(param.period)) {
+                seenPeriods.add(param.period);
+                uniqueParams.push(param);
+            }
+        });
+
+        return uniqueParams;
+    }
+
+    // Function to render K-line chart
+    function renderKlineChart(maParameters = []) {
+        const chartDom = document.getElementById('kline-chart');
+        const myChart = echarts.init(chartDom);
+
+        // Prepare data for ECharts
+        const dates = klineData.map(item => new Date(item.date));
+        const ohlcData = klineData.map(item => [
+            item.open,
+            item.close,
+            item.low,
+            item.high
+        ]);
+        const volumeData = klineData.map(item => item.volume);
+
+        // Calculate moving averages
+        const maSeries = [];
+        const legendData = ['日K线', '成交量'];
+
+        // Add moving average series for each parameter
+        maParameters.forEach(param => {
+            const maValues = calculateMA(klineData.map(item => item.close), param.period);
+            maSeries.push({
+                name: param.name,
+                type: 'line',
+                data: maValues,
+                smooth: true,
+                lineStyle: {
+                    width: 2
+                },
+                showSymbol: false
+            });
+            legendData.push(param.name);
+        });
+
+        const option = {
+            title: {
+                text: `${stockName} (${stockCode}) 日K线图`,
+                left: 'center'
+            },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                }
+            },
+            legend: {
+                data: legendData,
+                top: 30
+            },
+            grid: [
+                {
+                    left: '10%',
+                    right: '10%',
+                    height: '60%'
+                },
+                {
+                    left: '10%',
+                    right: '10%',
+                    top: '75%',
+                    height: '15%'
+                }
+            ],
+            xAxis: [
+                {
+                    type: 'category',
+                    data: dates,
+                    scale: true,
+                    boundaryGap: false,
+                    axisLine: { onZero: false },
+                    splitLine: { show: false },
+                    splitNumber: 20,
+                    min: 'dataMin',
+                    max: 'dataMax',
+                    axisPointer: {
+                        z: 100
+                    }
+                },
+                {
+                    type: 'category',
+                    gridIndex: 1,
+                    data: dates,
+                    scale: true,
+                    boundaryGap: false,
+                    axisLine: { onZero: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false },
+                    axisLabel: { show: false },
+                    splitNumber: 20,
+                    min: 'dataMin',
+                    max: 'dataMax'
+                }
+            ],
+            yAxis: [
+                {
+                    scale: true,
+                    splitArea: {
+                        show: true
+                    }
+                },
+                {
+                    scale: true,
+                    gridIndex: 1,
+                    splitNumber: 2,
+                    axisLabel: { show: false },
+                    axisLine: { show: false },
+                    axisTick: { show: false },
+                    splitLine: { show: false }
+                }
+            ],
+            dataZoom: [
+                {
+                    type: 'inside',
+                    xAxisIndex: [0, 1],
+                    start: 50,
+                    end: 100
+                },
+                {
+                    show: true,
+                    xAxisIndex: [0, 1],
+                    type: 'slider',
+                    top: '90%',
+                    start: 50,
+                    end: 100
+                }
+            ],
+            series: [
+                {
+                    name: '日K线',
+                    type: 'candlestick',
+                    data: ohlcData,
+                    itemStyle: {
+                        color: '#ef232a',
+                        color0: '#14b143',
+                        borderColor: '#ef232a',
+                        borderColor0: '#14b143'
+                    }
+                },
+                ...maSeries, // Add moving average series
+                {
+                    name: '成交量',
+                    type: 'bar',
+                    xAxisIndex: 1,
+                    yAxisIndex: 1,
+                    data: volumeData,
+                    itemStyle: {
+                        color: function(params) {
+                            // Color bars based on price change
+                            const dataIndex = params.dataIndex;
+                            if (dataIndex > 0) {
+                                const currentClose = klineData[dataIndex].close;
+                                const previousClose = klineData[dataIndex - 1].close;
+                                return currentClose >= previousClose ? '#ef232a' : '#14b143';
+                            }
+                            return '#14b143';
+                        }
+                    }
+                }
+            ]
+        };
+
+        myChart.setOption(option);
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            myChart.resize();
+        });
+    }
+
+    // Helper function to calculate moving average
+    function calculateMA(data, period) {
+        if (data.length < period) return [];
+
+        const result = [];
+        for (let i = 0; i < data.length; i++) {
+            if (i < period - 1) {
+                result.push('-'); // Not enough data for MA calculation
+            } else {
+                const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                result.push(sum / period);
+            }
+        }
+        return result;
+    }
+
+    // Function to calculate technical indicators
+    function calculateTechnicalIndicators() {
+        if (klineData.length === 0) return;
+
+        const tbody = document.getElementById('technical-indicators-body');
+        tbody.innerHTML = '';
+
+        // Calculate simple moving averages
+        const closes = klineData.map(item => item.close);
+        const ma5Values = calculateMA(closes, 5);
+        const ma10Values = calculateMA(closes, 10);
+        const ma20Values = calculateMA(closes, 20);
+
+        // Get the latest values (last non '-' value)
+        const ma5 = getLatestMAValue(ma5Values);
+        const ma10 = getLatestMAValue(ma10Values);
+        const ma20 = getLatestMAValue(ma20Values);
+
+        // Calculate RSI
+        const rsi = calculateRSI(closes, 14);
+
+        // Calculate MACD
+        const macd = calculateMACD(closes);
+
+        // Add indicators to table
+        addIndicatorToTable('5日均线', ma5.toFixed(2), getMovingAverageStatus(closes, ma5));
+        addIndicatorToTable('10日均线', ma10.toFixed(2), getMovingAverageStatus(closes, ma10));
+        addIndicatorToTable('20日均线', ma20.toFixed(2), getMovingAverageStatus(closes, ma20));
+        addIndicatorToTable('RSI(14)', rsi.toFixed(2), getRSIStatus(rsi));
+        addIndicatorToTable('MACD', macd.macd.toFixed(2), getMACDStatus(macd));
+
+        // Add volume information
+        const latestVolume = klineData[klineData.length - 1].volume;
+        const avgVolume = calculateAverageVolume();
+        addIndicatorToTable('成交量', formatVolume(latestVolume), getVolumeStatus(latestVolume, avgVolume));
+    }
+
+    // Helper function to get the latest valid MA value
+    function getLatestMAValue(maValues) {
+        for (let i = maValues.length - 1; i >= 0; i--) {
+            if (maValues[i] !== '-' && typeof maValues[i] === 'number') {
+                return maValues[i];
+            }
+        }
+        return 0;
+    }
+
+    // Helper function to calculate RSI
+    function calculateRSI(data, period) {
+        if (data.length <= period) return 50;
+
+        let gains = 0;
+        let losses = 0;
+
+        for (let i = data.length - period; i < data.length; i++) {
+            const change = data[i] - data[i - 1];
+            if (change > 0) {
+                gains += change;
+            } else {
+                losses -= change;
+            }
+        }
+
+        const avgGain = gains / period;
+        const avgLoss = losses / period;
+
+        if (avgLoss === 0) return 100;
+        const rs = avgGain / avgLoss;
+        return 100 - (100 / (1 + rs));
+    }
+
+    // Helper function to calculate MACD
+    function calculateMACD(data) {
+        if (data.length < 26) return { macd: 0, signal: 0, histogram: 0 };
+
+        const ema12 = calculateEMA(data, 12);
+        const ema26 = calculateEMA(data, 26);
+        const macd = ema12 - ema26;
+        const signal = calculateEMA([ema12], 9); // Simplified signal line
+
+        return {
+            macd: macd,
+            signal: signal,
+            histogram: macd - signal
+        };
+    }
+
+    // Helper function to calculate EMA
+    function calculateEMA(data, period) {
+        if (data.length < period) return data[data.length - 1] || 0;
+
+        const k = 2 / (period + 1);
+        let ema = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+
+        for (let i = period; i < data.length; i++) {
+            ema = data[i] * k + ema * (1 - k);
+        }
+
+        return ema;
+    }
+
+    // Helper function to calculate average volume
+    function calculateAverageVolume() {
+        if (klineData.length === 0) return 0;
+        const volumes = klineData.map(item => item.volume);
+        const sum = volumes.reduce((a, b) => a + b, 0);
+        return sum / volumes.length;
+    }
+
+    // Helper function to format volume
+    function formatVolume(volume) {
+        if (volume >= 100000000) {
+            return (volume / 100000000).toFixed(2) + '亿';
+        } else if (volume >= 10000) {
+            return (volume / 10000).toFixed(2) + '万';
+        }
+        return volume.toFixed(0);
+    }
+
+    // Helper functions for indicator status
+    function getMovingAverageStatus(prices, ma) {
+        const currentPrice = prices[prices.length - 1];
+        if (currentPrice > ma) return '高于均线';
+        if (currentPrice < ma) return '低于均线';
+        return '等于均线';
+    }
+
+    function getRSIStatus(rsi) {
+        if (rsi > 70) return '超买';
+        if (rsi < 30) return '超卖';
+        return '正常';
+    }
+
+    function getMACDStatus(macd) {
+        if (macd.macd > 0 && macd.histogram > 0) return '多头';
+        if (macd.macd < 0 && macd.histogram < 0) return '空头';
+        return '中性';
+    }
+
+    function getVolumeStatus(currentVolume, avgVolume) {
+        if (currentVolume > avgVolume * 1.5) return '放量';
+        if (currentVolume < avgVolume * 0.5) return '缩量';
+        return '正常';
+    }
+
+    // Helper function to add indicator to table
+    function addIndicatorToTable(name, value, status) {
+        const tbody = document.getElementById('technical-indicators-body');
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${name}</td>
+            <td>${value}</td>
+            <td>${status}</td>
+        `;
+        tbody.appendChild(row);
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get stock code and name from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        let code = urlParams.get('code');
+        let name = urlParams.get('name') || code;
+
+        // If not in URL params, try to get from template variables
+        if (!code && typeof stockCodeFromTemplate !== 'undefined') {
+            code = stockCodeFromTemplate;
+        }
+        if (!name && typeof stockNameFromTemplate !== 'undefined') {
+            name = stockNameFromTemplate;
+        }
+
+        if (code) {
+            // Update stock name and code display
+            document.getElementById('stock-name').textContent = name;
+            document.getElementById('stock-code').textContent = code;
+            initializeStockKline(code, name);
+        }
+    });
+</script>
+{% endblock %}
+

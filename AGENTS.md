@@ -351,6 +351,7 @@ python -m backtesting.backtester
    - Enhanced hover effects with color change, scaling, and shadow for improved user interaction
    - Added double-click functionality to open K-line charts for stocks
    - Implemented dynamic data loading from the pool collection with real-time stock information
+   - Added moving average lines to stock K-line charts with parameters retrieved from strategy datasets
 
 ---
 *This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-14*
