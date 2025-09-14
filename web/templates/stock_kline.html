@@ -93,12 +93,12 @@
 
                 klineData = data;
 
-                // Then fetch moving average parameters from strategies
+                // Then fetch moving average parameters from the specific strategy: 三均线多头排列策略（宽松型）
                 fetch('/api/strategies')
                     .then(response => response.json())
                     .then(strategies => {
-                        // Look for moving average strategies and extract parameters
-                        const maParameters = extractMAParameters(strategies);
+                        // Look for the specific three MA bullish arrangement strategy (lenient version)
+                        const maParameters = extractThreeMABullishArrangementParameters(strategies);
                         renderKlineChart(maParameters);
                         calculateTechnicalIndicators();
                     })
@@ -114,45 +114,50 @@
             });
     }
 
-    // Function to extract moving average parameters from strategies
-    function extractMAParameters(strategies) {
+    // Function to extract moving average parameters from the specific 三均线多头排列策略（宽松型） strategy
+    function extractThreeMABullishArrangementParameters(strategies) {
         const maParams = [];
 
-        // Look for common moving average strategies
+        // Look for the specific three MA bullish arrangement strategy (lenient version)
         strategies.forEach(strategy => {
-            if (strategy.parameters) {
-                // Check for short_period and long_period parameters (MA Crossover strategy)
-                if (strategy.parameters.short_period && strategy.parameters.long_period) {
-                    maParams.push({
-                        name: `${strategy.parameters.short_period}日均线`,
-                        period: strategy.parameters.short_period
-                    });
-                    maParams.push({
-                        name: `${strategy.parameters.long_period}日均线`,
-                        period: strategy.parameters.long_period
-                    });
-                }
-                // Check for other common MA parameters
-                else if (strategy.parameters.ma_period) {
-                    maParams.push({
-                        name: `${strategy.parameters.ma_period}日均线`,
-                        period: strategy.parameters.ma_period
-                    });
-                }
-                else if (strategy.parameters.period) {
-                    maParams.push({
-                        name: `${strategy.parameters.period}日均线`,
-                        period: strategy.parameters.period
-                    });
+            // Check if this is the 三均线多头排列策略（宽松型） strategy
+            if ((strategy.name && strategy.name.includes('三均线多头排列策略') && strategy.name.includes('宽松型')) ||
+                (strategy.chinese_name && strategy.chinese_name.includes('三均线多头排列策略') && strategy.chinese_name.includes('宽松型'))) {
+
+                // Extract the three MA periods from the strategy parameters
+                if (strategy.parameters) {
+                    // Handle different parameter naming conventions
+                    const shortPeriod = strategy.parameters.short || strategy.parameters.ma_short;
+                    const midPeriod = strategy.parameters.mid || strategy.parameters.ma_mid;
+                    const longPeriod = strategy.parameters.long || strategy.parameters.ma_long;
+
+                    if (shortPeriod) {
+                        maParams.push({
+                            name: `${shortPeriod}日均线`,
+                            period: shortPeriod
+                        });
+                    }
+                    if (midPeriod) {
+                        maParams.push({
+                            name: `${midPeriod}日均线`,
+                            period: midPeriod
+                        });
+                    }
+                    if (longPeriod) {
+                        maParams.push({
+                            name: `${longPeriod}日均线`,
+                            period: longPeriod
+                        });
+                    }
                 }
             }
         });
 
-        // If no strategies found, use default parameters
+        // If no specific strategy found, use default parameters
         if (maParams.length === 0) {
             maParams.push({name: '5日均线', period: 5});
-            maParams.push({name: '10日均线', period: 10});
-            maParams.push({name: '20日均线', period: 20});
+            maParams.push({name: '13日均线', period: 13});
+            maParams.push({name: '34日均线', period: 34});
         }
 
         // Remove duplicates
