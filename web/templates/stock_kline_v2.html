@@ -1,0 +1,1636 @@
+{% extends "base.html" %}
+
+{% block title %}股票K线图V2 - 量化交易系统{% endblock %}
+
+{% block content %}
+<style>
+    html, body {
+        height: 100%;
+        overflow: auto;
+        margin: 0;
+        padding: 0;
+    }
+
+    .main-container {
+        height: 89.3vh;
+        margin: 1px 5px 0 5px;
+        display: flex;
+        flex-direction: row;
+        gap: 2px;
+    }
+
+    .panel {
+        display: flex;
+        flex-direction: column;
+        background: #2d2d4d;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        overflow: hidden;
+    }
+
+    .left-panel {
+        flex: 1;
+    }
+
+    .right-panel {
+        flex: 1;
+    }
+
+    .panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 2px 4px;
+        background: #3a3a5a;
+        border-bottom: 1px solid #444;
+        min-height: 20px;
+    }
+
+    .stock-info {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #e0e0e0;
+    }
+
+    .panel {
+        display: flex;
+        flex-direction: column;
+        background: #2d2d4a;
+        border-radius: 0;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        overflow: hidden;
+    }
+
+    .btn-group-custom {
+        display: flex;
+        gap: 8px;
+    }
+
+    .btn-custom {
+        padding: 6px 12px;
+        font-size: 0.9rem;
+    }
+
+    .chart-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        margin: 0;
+        min-height: 0;
+    }
+
+    .unified-chart-area {
+        flex: 1;
+        min-height: 0;
+        margin-bottom: 0;
+        display: block;
+        background: transparent;
+    }
+
+    .indicator-tabs {
+        margin: 0;
+        padding: 0;
+    }
+
+    .nav-tabs {
+        border-bottom: 1px solid #444;
+        margin-bottom: 0;
+    }
+
+    .nav-tabs .nav-link {
+        padding: 2px 8px;
+        font-size: 0.8rem;
+        border: 1px solid #444;
+        border-bottom: none;
+        color: #bbb;
+        border-top-left-radius: 2px;
+        border-top-right-radius: 2px;
+    }
+
+    .nav-tabs .nav-link.active {
+        background-color: #3a3a5a;
+        color: #fff;
+        border-color: #555 #555 #3a3a5a;
+    }
+
+    .nav-tabs .nav-link:hover {
+        background-color: #33334d;
+        border-color: #555 #555 #444;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: #fff;
+        background-color: #444466;
+        border-color: #444;
+        border-bottom: 1px solid #444466;
+    }
+
+    .info-container {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        padding: 2px;
+        overflow: hidden;
+    }
+
+    .tabs-container {
+        margin-bottom: 0;
+    }
+
+    .tab-content {
+        flex: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .tab-pane {
+        flex: 1;
+        overflow: auto;
+        display: none;
+    }
+
+    .tab-pane.active {
+        display: block;
+    }
+
+    .json-display {
+        flex: 1;
+        background-color: #1e1e2e;
+        padding: 2px;
+        border-radius: 2px;
+        color: #e0e0e0;
+        font-family: 'Courier New', monospace;
+        font-size: 0.85rem;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .formatted-display {
+        flex: 1;
+        overflow: auto;
+    }
+
+    .strategy-section {
+        margin-bottom: 15px;
+        padding: 12px;
+        background-color: #3a3a5a;
+        border-radius: 5px;
+    }
+
+    .strategy-header {
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: #4fc3f7;
+        border-bottom: 1px solid #444;
+        padding-bottom: 5px;
+    }
+
+    .strategy-item {
+        margin-bottom: 12px;
+        padding: 10px;
+        background-color: #444466;
+        border-radius: 4px;
+    }
+
+    .strategy-name {
+        font-weight: bold;
+        color: #81d4fa;
+        margin-bottom: 6px;
+    }
+
+    .strategy-score {
+        color: #a5d6a7;
+        font-size: 0.9rem;
+    }
+
+    .strategy-value {
+        font-size: 0.85rem;
+        color: #e0e0e0;
+        margin-top: 6px;
+        white-space: pre-wrap;
+        line-height: 1.4;
+    }
+
+    .pagination-controls {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 15px;
+        padding: 10px;
+        background: #3a3a5a;
+        border-top: 1px solid #444;
+    }
+
+    .pagination-btn {
+        padding: 8px 16px;
+        font-size: 0.9rem;
+    }
+
+    .indicator-tabs {
+        margin: 2px 0 5px 0;
+        padding: 0;
+    }
+
+    .nav-tabs .nav-link {
+        padding: 4px 12px;
+        font-size: 0.85rem;
+    }
+
+    .combined-tabs-container {
+            margin: 2px 0 5px 0;
+            padding: 0;
+        }
+    
+        .combined-tabs {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+    
+        .main-overlay-tabs-container {
+            flex: 1;
+        }
+    
+        .indicator-tabs-container {
+            flex: 1;
+            text-align: right;
+        }
+    
+        .main-overlay-tabs-container .nav-tabs,
+        .indicator-tabs-container .nav-tabs {
+            border-bottom: 1px solid #444;
+            margin-bottom: 0;
+        }
+    
+        .main-overlay-tabs-container .nav-tabs .nav-link,
+        .indicator-tabs-container .nav-tabs .nav-link {
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            border: 1px solid #444;
+            border-bottom: none;
+            color: #bbb;
+            border-top-left-radius: 2px;
+            border-top-right-radius: 2px;
+            margin-right: 2px;
+        }
+    
+        .main-overlay-tabs-container .nav-tabs .nav-link.active,
+        .indicator-tabs-container .nav-tabs .nav-link.active {
+            background-color: #3a3a5a;
+            color: #fff;
+            border-color: #555 #555 #3a3a5a;
+        }
+    
+        .main-overlay-tabs-container .nav-tabs .nav-link:hover,
+        .indicator-tabs-container .nav-tabs .nav-link:hover {
+            background-color: #33334d;
+            border-color: #555 #555 #444;
+        }
+    
+        .main-overlay-tabs-container .nav-tabs .nav-link.active,
+        .indicator-tabs-container .nav-tabs .nav-link.active {
+            color: #fff;
+            background-color: #444466;
+            border-color: #444;
+            border-bottom: 1px solid #444466;
+    }
+</style>
+
+<div class="main-container">
+    <!-- 左右两侧统一的头部 -->
+    <div class="panel left-panel">
+        <div class="panel-header" style="display: none;">
+            <div class="stock-info">
+                <span id="stock-name" style="display: none;">{{ name }}</span>
+                <span id="stock-code" style="display: none;">{{ code }}</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+                    <!-- 主图叠加和指标图选项卡 -->
+                    <div class="combined-tabs-container">
+                        <div class="combined-tabs">
+                            <!-- 主图叠加选项卡 -->
+                            <div class="main-overlay-tabs-container">
+                                <ul class="nav nav-tabs" id="mainOverlayTabs">
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-overlay="none" href="#">无叠加</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link active" data-overlay="ma" href="#">MA</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-overlay="boll" href="#">BOLL</a>
+                                    </li>
+                                </ul>
+                            </div>
+        
+                            <!-- 指标图选项卡 -->
+                            <div class="indicator-tabs-container">
+                                <ul class="nav nav-tabs" id="indicatorTabs">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" data-indicator="macd" href="#">MACD</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-indicator="rsi" href="#">RSI</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-indicator="kdj" href="#">KDJ</a>
+                                    </li>
+                                                                <li class="nav-item">
+                                                                    <a class="nav-link" data-indicator="obv" href="#">OBV</a>
+                                                                </li>
+                                                                <li class="nav-item">
+                                                                    <a class="nav-link" data-indicator="roc" href="#">ROC</a>
+                                                                </li>
+                                </ul>
+                            </div>
+                        </div>
+            </div>
+
+            <!-- 统一图表区域 -->
+            <div class="unified-chart-area">
+                <div id="unified-chart" style="width: 100%; height: 100%;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右侧信息区域 -->
+    <div class="panel right-panel">
+        <div class="panel-header">
+            <div class="stock-info">
+                <i class="fas fa-info-circle"></i> 股票分析信息
+            </div>
+        </div>
+
+        <div class="info-container">
+            <!-- 信息切换选项卡 -->
+            <div class="tabs-container">
+                <ul class="nav nav-tabs" id="infoTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-info="json" href="#">原始数据</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-info="formatted" href="#">格式化数据</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- 信息显示区域 -->
+            <div class="tab-content">
+                <!-- JSON格式显示 -->
+                <div id="json-tab" class="tab-pane active">
+                    <div id="json-display" class="json-display"></div>
+                </div>
+
+                <!-- 格式化数据显示 -->
+                <div id="formatted-tab" class="tab-pane">
+                    <div class="formatted-display">
+                        <div class="stock-basic-info mb-3">
+                            <h6>基本信息</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <strong>股票代码:</strong> <span id="info-code"></span>
+                                </div>
+                                <div class="col-6">
+                                    <strong>股票名称:</strong> <span id="info-name"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="stock-trend-info strategy-section">
+                            <div class="strategy-header">趋势策略</div>
+                            <div id="trend-strategies"></div>
+                        </div>
+
+                        <div class="stock-tech-info strategy-section">
+                            <div class="strategy-header">技术策略</div>
+                            <div id="tech-strategies"></div>
+                        </div>
+
+                        <div class="stock-fund-info strategy-section">
+                            <div class="strategy-header">基本面策略</div>
+                            <div id="fund-strategies"></div>
+                        </div>
+
+                        <div class="stock-pub-info strategy-section">
+                            <div class="strategy-header">舆情策略</div>
+                            <div id="pub-strategies"></div>
+                        </div>
+
+                        <div class="stock-signals-info strategy-section">
+                            <div class="strategy-header">信号生成</div>
+                            <div id="signals-info"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ECharts JS -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+<script>
+    // Template variables passed from Flask
+    const stockCodeFromTemplate = "{{ code }}" || "";
+    const stockNameFromTemplate = "{{ name }}" || "";
+</script>
+<script>
+    // Global variables
+    let stockCode = '';
+    let stockName = '';
+    let klineData = [];
+    let stockInfo = {};
+    let currentPage = 0;
+    let pageSize = 100;
+    let chartInstance = null;
+    let mainOverlayType = 'ma';  // 主图叠加类型: none, ma, boll
+    let indicatorType = 'macd';  // 指标图类型: macd, rsi, kdj
+
+    // Function to initialize the page with stock data
+    function initializeStockKline(code, name) {
+        stockCode = code;
+        stockName = name;
+
+        // Load K-line data
+        loadStockKlineData(code);
+
+        // Load stock info data
+        loadStockInfoData(code);
+    }
+
+    // Function to load K-line data for a stock
+    function loadStockKlineData(code) {
+        console.log('Loading K-line data for code:', code);
+        fetch(`/api/stock-kline/${code}`)
+            .then(response => {
+                console.log('API response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received data:', data);
+                if (data.error) {
+                    console.error('Error loading K-line data:', data.error);
+                    return;
+                }
+
+                // Process the data to ensure it matches expected format
+                klineData = data.map(item => ({
+                    date: item.date,
+                    open: parseFloat(item.open),
+                    high: parseFloat(item.high),
+                    low: parseFloat(item.low),
+                    close: parseFloat(item.close),
+                    volume: parseFloat(item.volume)
+                }));
+
+                console.log('Processed klineData:', klineData);
+                renderCharts();
+            })
+            .catch(error => {
+                console.error('Error loading K-line data:', error);
+            });
+    }
+
+    // Function to load stock info data
+    function loadStockInfoData(code) {
+        console.log('Loading stock info data for code:', code);
+        fetch(`/api/pool-data/${code}`)
+                .then(response => {
+                    console.log('API response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+            .then(data => {
+                console.log('Received stock info data:', data);
+                stockInfo = data;
+                displayStockInfo();
+            })
+            .catch(error => {
+                console.error('Error loading stock info data:', error);
+            });
+    }
+
+    // Function to display stock info
+    function displayStockInfo() {
+        // Display JSON format
+        document.getElementById('json-display').textContent = JSON.stringify(stockInfo, null, 2);
+
+        // Display formatted data
+        if (stockInfo.code) {
+            document.getElementById('info-code').textContent = stockInfo.code;
+        }
+        if (stockInfo.name) {
+            document.getElementById('info-name').textContent = stockInfo.name;
+        }
+
+        // Display trend strategies
+        displayStrategies('trend', stockInfo.trend, 'trend-strategies');
+
+        // Display tech strategies
+        displayStrategies('tech', stockInfo.tech, 'tech-strategies');
+
+        // Display fund strategies
+        displayStrategies('fund', stockInfo.fund, 'fund-strategies');
+
+        // Display pub strategies
+        displayStrategies('pub', stockInfo.pub, 'pub-strategies');
+
+        // Display signals
+        displaySignals(stockInfo.signals, 'signals-info');
+    }
+
+    // Function to display strategies
+    function displayStrategies(type, strategies, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        if (!strategies) return;
+
+        for (const [name, data] of Object.entries(strategies)) {
+            const strategyDiv = document.createElement('div');
+            strategyDiv.className = 'strategy-item';
+
+            const score = data.score !== undefined ? data.score.toFixed(2) : 'N/A';
+            const value = data.value || 'N/A';
+
+            strategyDiv.innerHTML = `
+                <div class="strategy-name">${name}</div>
+                <div class="strategy-score">评分: ${score}</div>
+                <div class="strategy-value">${value}</div>
+            `;
+
+            container.appendChild(strategyDiv);
+        }
+    }
+
+    // Function to display signals
+    function displaySignals(signals, containerId) {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+
+        if (!signals) return;
+
+        for (const [name, data] of Object.entries(signals)) {
+            const strategyDiv = document.createElement('div');
+            strategyDiv.className = 'strategy-item';
+
+            let content = `<div class="strategy-name">${name}</div>`;
+
+            for (const [key, value] of Object.entries(data)) {
+                content += `<div><strong>${key}:</strong> ${value}</div>`;
+            }
+
+            strategyDiv.innerHTML = content;
+            container.appendChild(strategyDiv);
+        }
+    }
+
+    // Function to render charts
+    function renderCharts() {
+        console.log('Rendering charts with klineData:', klineData);
+        // Get the current page data
+        const startIndex = currentPage * pageSize;
+        const endIndex = Math.min(startIndex + pageSize, klineData.length);
+        const pageData = klineData.slice(startIndex, endIndex);
+
+        console.log('Page data:', pageData);
+
+        // Prepare data for charts
+        const dates = pageData.map(item => item.date);
+        const ohlcData = pageData.map(item => [
+            item.open,
+            item.close,
+            item.low,
+            item.high
+        ]);
+        const volumeData = pageData.map(item => item.volume);
+        const closes = pageData.map(item => item.close);
+
+        console.log('Chart data prepared - dates:', dates, 'ohlcData:', ohlcData, 'volumeData:', volumeData);
+
+        // Render unified chart with all three components
+        renderUnifiedChart(dates, ohlcData, volumeData, closes);
+    }
+
+    // Function to render unified chart with K-line, indicator, and volume
+    function renderUnifiedChart(dates, ohlcData, volumeData, closes) {
+        console.log('Rendering unified chart with dates:', dates, 'mainOverlayType:', mainOverlayType, 'indicatorType:', indicatorType);
+        const chartDom = document.getElementById('unified-chart');
+        if (!chartDom) {
+            console.error('Could not find unified-chart element');
+            return;
+        }
+
+        try {
+            if (typeof chartInstance === 'undefined' || chartInstance === null) {
+                chartInstance = echarts.init(chartDom);
+            }
+
+            // Calculate indicator data based on selected indicator type
+            let indicatorData = [];
+            let indicatorName = '';
+                        let macdLineData = [];
+                        let signalLineData = [];
+                        let histogramData = [];
+                        let kData = [];
+                        let dData = [];
+                        let jData = [];
+                        let obvData = [];
+                        let rocData = [];
+            
+                        switch(indicatorType) {
+                            case 'macd':
+                                const macdData = calculateMACD(closes);
+                                macdLineData = macdData.macd;
+                                signalLineData = macdData.signal;
+                                histogramData = macdData.histogram;
+                    indicatorName = 'MACD';
+                    break;
+                case 'rsi':
+                    const rsiData = calculateRSI(closes, 14);
+                    indicatorData = Array(dates.length).fill(null);
+                    for (let i = 0; i < rsiData.length && i < indicatorData.length; i++) {
+                        indicatorData[indicatorData.length - rsiData.length + i] = rsiData[i];
+                    }
+                    indicatorName = 'RSI';
+                    break;
+                case 'kdj':
+                    const kdjData = calculateKDJ(closes);
+                                kData = kdjData.k;
+                                dData = kdjData.d;
+                                jData = kdjData.j;
+                                indicatorName = 'KDJ';
+                                break;
+                            case 'obv':
+                                const obvResult = calculateOBV(closes, volumeData);
+                                obvData = obvResult;
+                                indicatorName = 'OBV';
+                                break;
+                            case 'roc':
+                                const rocResult = calculateROC(closes, 12);
+                                rocData = rocResult;
+                                indicatorName = 'ROC';
+                                break;
+                default:
+                    indicatorData = Array(dates.length).fill(null);
+                    indicatorName = 'MACD';
+            }
+
+            // Color bars based on price change for volume chart
+            const volumeColors = volumeData.map((volume, index) => {
+                if (index > 0) {
+                    const currentClose = closes[index];
+                    const previousClose = closes[index - 1];
+                    return currentClose >= previousClose ? '#ef232a' : '#14b143';
+                }
+                return '#14b143';
+            });
+
+                        // Calculate short-term and medium-term volume moving averages
+                        const shortTermVolumeMA = calculateMA(volumeData, 5);  // 5-period MA
+                        const mediumTermVolumeMA = calculateMA(volumeData, 10);   // 10-period MA
+            
+            // Prepare series data for main chart overlays
+            let overlaySeries = [];
+
+            // Add overlay series based on selected overlay type
+            if (mainOverlayType === 'ma') {
+                // Get MA parameters from strategy configuration
+                let maParams = { short: 5, mid: 13, long: 34 }; // Default values
+
+                // Calculate MA data
+                let maShortData = calculateMA(closes, maParams.short);
+                let maMidData = calculateMA(closes, maParams.mid);
+                let maLongData = calculateMA(closes, maParams.long);
+
+                // Add MA series to overlay
+                overlaySeries = [
+                    {
+                        name: `MA${maParams.short}`,
+                        type: 'line',
+                        data: maShortData,
+                        smooth: true,
+                        showSymbol: false,
+                        lineStyle: {
+                            width: 2,
+                            color: '#ff9900'
+                        },
+                        xAxisIndex: 0,
+                        yAxisIndex: 0
+                    },
+                    {
+                        name: `MA${maParams.mid}`,
+                        type: 'line',
+                        data: maMidData,
+                        smooth: true,
+                        showSymbol: false,
+                        lineStyle: {
+                            width: 2,
+                            color: '#0099ff'
+                        },
+                        xAxisIndex: 0,
+                        yAxisIndex: 0
+                    },
+                    {
+                        name: `MA${maParams.long}`,
+                        type: 'line',
+                        data: maLongData,
+                        smooth: true,
+                        showSymbol: false,
+                        lineStyle: {
+                            width: 2,
+                            color: '#ff00ff'
+                        },
+                        xAxisIndex: 0,
+                        yAxisIndex: 0
+                    }
+                ];
+            } else if (mainOverlayType === 'boll') {
+                // Calculate BOLL with classic parameters (20-period SMA, 2 standard deviations)
+                const bollData = calculateBOLL(closes, 20, 2);
+
+                // Add BOLL series to overlay
+                overlaySeries = [
+                    {
+                        name: 'BOLL_UPPER',
+                        type: 'line',
+                        data: bollData.upper,
+                        smooth: true,
+                        showSymbol: false,
+                        lineStyle: {
+                            width: 2,
+                            color: '#ff3300'
+                        },
+                        xAxisIndex: 0,
+                        yAxisIndex: 0
+                    },
+                    {
+                        name: 'BOLL_MIDDLE',
+                        type: 'line',
+                        data: bollData.middle,
+                        smooth: true,
+                        showSymbol: false,
+                        lineStyle: {
+                            width: 2,
+                            color: '#00ff00'
+                        },
+                        xAxisIndex: 0,
+                        yAxisIndex: 0
+                    },
+                    {
+                        name: 'BOLL_LOWER',
+                        type: 'line',
+                        data: bollData.lower,
+                        smooth: true,
+                        showSymbol: false,
+                        lineStyle: {
+                            width: 2,
+                            color: '#3333ff'
+                        },
+                        xAxisIndex: 0,
+                        yAxisIndex: 0
+                    }
+                ];
+            }
+
+            const option = {
+                backgroundColor: 'transparent',
+                title: {
+                    text: stockName + ' (' + stockCode + ')',
+                    textStyle: {
+                        color: '#e6e6e6',
+                        fontSize: 14
+                    },
+                    left: 'center',
+                    top: 5
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                grid: [
+                    {
+                        // K-line grid
+                        left: '8%',
+                        right: '8%',
+                        top: '8%',
+                        height: '44%',
+                        borderColor: '#555',
+                        borderWidth: 1
+                    },
+                    {
+                        // Indicator grid
+                        left: '8%',
+                        right: '8%',
+                        top: '55%',
+                        height: '26%',
+                        borderColor: '#555',
+                        borderWidth: 1
+                    },
+                    {
+                        // Volume grid
+                        left: '8%',
+                        right: '8%',
+                        top: '84%',
+                        height: '11.2%',
+                        borderColor: '#555',
+                        borderWidth: 1
+                    }
+                ],
+                xAxis: [
+                    {
+                        // K-line x-axis (hidden)
+                        type: 'category',
+                        data: dates,
+                        scale: true,
+                        boundaryGap: false,
+                        gridIndex: 0,
+                        axisLine: { onZero: false, lineStyle: { color: '#777' } },
+                        axisTick: { show: false },
+                        splitLine: { show: true, lineStyle: { color: '#444' } },
+                        axisLabel: { show: false }
+                    },
+                    {
+                        // Indicator x-axis (hidden)
+                        type: 'category',
+                        data: dates,
+                        scale: true,
+                        boundaryGap: false,
+                        gridIndex: 1,
+                        axisLine: { onZero: false, lineStyle: { color: '#777' } },
+                        axisTick: { show: false },
+                        splitLine: { show: true, lineStyle: { color: '#444' } },
+                        axisLabel: { show: false }
+                    },
+                    {
+                        // Volume x-axis (visible)
+                        type: 'category',
+                        data: dates,
+                        scale: true,
+                        boundaryGap: false,
+                        gridIndex: 2,
+                        axisLine: { onZero: false, lineStyle: { color: '#777' } },
+                        splitLine: { show: true, lineStyle: { color: '#444' } },
+                        axisLabel: {
+                            color: '#a0a0c0',
+                            formatter: function(value) {
+                                // Format date to show only month/day
+                                if (value && value.length >= 10) {
+                                    return value.substring(5, 10);
+                                }
+                                return value;
+                            }
+                        }
+                    }
+                ],
+                yAxis: [
+                    {
+                        // K-line y-axis
+                        scale: true,
+                        gridIndex: 0,
+                        splitArea: { show: false },
+                        axisLabel: { color: '#a0a0c0' },
+                        axisLine: { lineStyle: { color: '#777' } },
+                        splitLine: { show: true, lineStyle: { color: '#444' } }
+                    },
+                    {
+                        // Indicator y-axis
+                        scale: true,
+                        gridIndex: 1,
+                        axisLabel: { color: '#a0a0c0' },
+                        axisLine: { lineStyle: { color: '#777' } },
+                        splitLine: { show: true, lineStyle: { color: '#444' } }
+                    },
+                    {
+                        // Volume y-axis
+                        scale: true,
+                        gridIndex: 2,
+                        axisLabel: {
+                            color: '#a0a0c0',
+                            formatter: function(value) {
+                                // Divide by 10000 and show as integer with 'W' suffix
+                                return Math.round(value / 10000) + 'W';
+                            }
+                        },
+                        axisLine: { lineStyle: { color: '#777' } },
+                        splitLine: { show: true, lineStyle: { color: '#444' } }
+                    }
+                ],
+                dataZoom: [
+                    {
+                        type: 'inside',
+                        xAxisIndex: [0, 1, 2],
+                        start: 0,
+                        end: 100
+                    },
+                    {
+                        show: true,
+                        xAxisIndex: [0, 1, 2],
+                        type: 'slider',
+                        bottom: 0,
+                        height: 10,
+                        start: 0,
+                        end: 100
+                    }
+                ],
+                series: [
+                    {
+                        name: 'K线图',
+                        type: 'candlestick',
+                        data: ohlcData,
+                        itemStyle: {
+                            color: '#ef232a',
+                            color0: '#14b143',
+                            borderColor: '#ef232a',
+                            borderColor0: '#14b143'
+                        },
+                        xAxisIndex: 0,
+                        yAxisIndex: 0
+                    },
+                    // Add overlay series
+                    ...overlaySeries,
+                                        // Add MACD series when indicatorType is 'macd'
+                                        ...(indicatorType === 'macd' ? [
+                                            {
+                                                name: 'MACD',
+                                                type: 'line',
+                                                data: macdLineData,
+                                                smooth: true,
+                                                showSymbol: false,
+                                                lineStyle: {
+                                                    width: 1,
+                                                                                            color: '#ffffff'  // White color for MACD line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1,
+                                                                                        label: {
+                                                                                            show: false,
+                                                                                            position: 'top',
+                                                                                            formatter: function(params) {
+                                                                                                return params.value.toFixed(2);
+                                                                                            },
+                                                                                            color: '#ffffff',
+                                                                                            fontSize: 10
+                                                                                        }
+                                            },
+                                            {
+                                                name: 'Signal',
+                                                type: 'line',
+                                                data: signalLineData,
+                                                smooth: true,
+                                                showSymbol: false,
+                                                lineStyle: {
+                                                    width: 1,
+                                                                                            color: '#ffff00'  // Yellow color for Signal line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1,
+                                                                                        label: {
+                                                                                            show: false,
+                                                                                            position: 'top',
+                                                                                            formatter: function(params) {
+                                                                                                return params.value.toFixed(2);
+                                                                                            },
+                                                                                            color: '#ffff00',
+                                                                                            fontSize: 10
+                                                                                        }
+                                                                                    },
+                                                                                    {
+                                                                                        name: 'Histogram',
+                                                                                        type: 'bar',
+                                                                                        data: histogramData,
+                                                                                        barWidth: '60%',
+                                                                                        itemStyle: {
+                                                                                            color: function(params) {
+                                                                                                // Color bars based on value: red for positive (bullish/up), green for negative (bearish/down)
+                                                                                                return params.value >= 0 ? '#ff0000' : '#00ff00';
+                                                                                            }
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1,
+                                                                                        label: {
+                                                                                            show: false,
+                                                                                            position: 'top',
+                                                                                            formatter: function(params) {
+                                                                                                return params.value.toFixed(2);
+                                                                                            },
+                                                                                            color: function(params) {
+                                                                                                return params.value >= 0 ? '#ff0000' : '#00ff00';
+                                                                                            },
+                                                                                            fontSize: 8
+                                                                                        }
+                                                                                    }
+                                                                                ] : indicatorType === 'kdj' ? [
+                                                                                    {
+                                                                                        name: 'K',
+                                                                                        type: 'line',
+                                                                                        data: kData,
+                                                                                        smooth: true,
+                                                                                        showSymbol: false,
+                                                                                        lineStyle: {
+                                                                                            width: 1,
+                                                                                            color: '#ffffff'  // White color for K line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1
+                                                                                    },
+                                                                                    {
+                                                                                        name: 'D',
+                                                                                        type: 'line',
+                                                                                        data: dData,
+                                                                                        smooth: true,
+                                                                                        showSymbol: false,
+                                                                                        lineStyle: {
+                                                                                            width: 1,
+                                                                                            color: '#ffff00'  // Yellow color for D line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1
+                                                                                    },
+                                                                                    {
+                                                                                        name: 'J',
+                                                                                        type: 'line',
+                                                                                        data: jData,
+                                                                                        smooth: true,
+                                                                                        showSymbol: false,
+                                                                                        lineStyle: {
+                                                                                            width: 1,
+                                                                                            color: '#ff00ff'  // Magenta color for J line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1
+                                                                                    }
+                                                                                ] : indicatorType === 'rsi' ? [
+                                                                                    {
+                                                                                        name: 'RSI',
+                                                                                        type: 'line',
+                                                                                        data: indicatorData,
+                                                                                        smooth: true,
+                                                                                        showSymbol: false,
+                                                                                        lineStyle: {
+                                                                                            width: 2,
+                                                                                            color: '#ff3333'  // Red color for RSI line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1
+                                                                                    }
+                                                                                ] : indicatorType === 'obv' ? [
+                                                                                    {
+                                                                                        name: 'OBV',
+                                                                                        type: 'line',
+                                                                                        data: obvData,
+                                                                                        smooth: true,
+                                                                                        showSymbol: false,
+                                                                                        lineStyle: {
+                                                                                            width: 2,
+                                                                                            color: '#3333ff'  // Blue color for OBV line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1
+                                                                                    }
+                                                                                ] : indicatorType === 'roc' ? [
+                                                                                    {
+                                                                                        name: 'ROC',
+                                                                                        type: 'line',
+                                                                                        data: rocData,
+                                                                                        smooth: true,
+                                                                                        showSymbol: false,
+                                                                                        lineStyle: {
+                                                                                            width: 2,
+                                                                                            color: '#00ff00'  // Green color for ROC line
+                                                                                        },
+                                                                                        xAxisIndex: 1,
+                                                                                        yAxisIndex: 1
+                                                                                    }
+                                                                                ] : []),
+                    {
+                        name: '成交量',
+                        type: 'bar',
+                        data: volumeData,
+                        itemStyle: {
+                            color: function(params) {
+                                return volumeColors[params.dataIndex];
+                            }
+                        },
+                        xAxisIndex: 2,
+                        yAxisIndex: 2
+                                        },
+                                        {
+                                            name: '短期成交量MA',
+                                            type: 'line',
+                                            data: shortTermVolumeMA,
+                                            smooth: true,
+                                            showSymbol: false,
+                                            lineStyle: {
+                                                width: 1,
+                                                                    color: '#ffffff'
+                                            },
+                                            xAxisIndex: 2,
+                                            yAxisIndex: 2
+                                        },
+                                        {
+                                            name: '中期成交量MA',
+                                            type: 'line',
+                                            data: mediumTermVolumeMA,
+                                            smooth: true,
+                                            showSymbol: false,
+                                            lineStyle: {
+                                                width: 1,
+                                                                    color: '#ffff00'
+                                            },
+                                            xAxisIndex: 2,
+                                            yAxisIndex: 2
+                    }
+                ]
+            };
+
+            chartInstance.setOption(option, true);
+        } catch (error) {
+            console.error('Error rendering unified chart:', error);
+        }
+    }
+
+    // Function to switch main chart overlay
+    function switchMainOverlay(overlayType) {
+        mainOverlayType = overlayType;
+
+        // Save user preference to localStorage
+        localStorage.setItem('selectedMainOverlay', overlayType);
+    
+            // Update active tab
+            document.querySelectorAll('#mainOverlayTabs .nav-link').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-overlay="${overlayType}"]`).classList.add('active');
+    
+        renderCharts();
+    }
+
+    // Function to switch indicator chart
+    function switchIndicator(indicatorTypeParam) {
+        indicatorType = indicatorTypeParam;
+
+        // Save user preference to localStorage
+        localStorage.setItem('selectedIndicator', indicatorType);
+    
+            // Update active tab
+            document.querySelectorAll('#indicatorTabs .nav-link').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelector(`[data-indicator="${indicatorTypeParam}"]`).classList.add('active');
+    
+        renderCharts();
+    }
+
+    // Function to toggle info display
+    function toggleInfoDisplay(infoType) {
+        if (infoType === 'json') {
+            document.getElementById('json-display').parentElement.classList.remove('d-none');
+            document.getElementById('formatted-display').classList.add('d-none');
+        } else {
+            document.getElementById('json-display').parentElement.classList.add('d-none');
+            document.getElementById('formatted-display').classList.remove('d-none');
+        }
+    }
+
+    // Function to toggle fullscreen
+    function toggleFullscreen() {
+        const elem = document.documentElement;
+        if (!document.fullscreenElement) {
+            if (elem.requestFullscreen) {
+                elem.requestFullscreen();
+            } else if (elem.webkitRequestFullscreen) { /* Safari */
+                elem.webkitRequestFullscreen();
+            } else if (elem.msRequestFullscreen) { /* IE11 */
+                elem.msRequestFullscreen();
+            }
+            document.getElementById('fullscreen-btn').innerHTML = '<i class="fas fa-compress"></i> 退出全屏';
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) { /* Safari */
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { /* IE11 */
+                document.msExitFullscreen();
+            }
+            document.getElementById('fullscreen-btn').innerHTML = '<i class="fas fa-expand"></i> 全屏';
+        }
+    }
+
+    // Helper function to calculate EMA
+    function calculateEMA(data, period) {
+        if (!data || data.length < period || period <= 0) return [];
+
+        const k = 2 / (period + 1);
+        const ema = [data[0]];
+
+        for (let i = 1; i < data.length; i++) {
+            ema.push(data[i] * k + ema[i - 1] * (1 - k));
+        }
+
+        return ema;
+    }
+
+    // Helper function to calculate MACD
+    function calculateMACD(data) {
+        if (!data || data.length < 26) return { macd: [], signal: [], histogram: [] };
+
+        const ema12 = calculateEMA(data, 12);
+        const ema26 = calculateEMA(data, 26);
+
+        const macd = [];
+        for (let i = 0; i < ema12.length && i < ema26.length; i++) {
+            macd.push(ema12[i] - ema26[i]);
+        }
+
+        const signal = calculateEMA(macd, 9);
+        const histogram = [];
+        for (let i = 0; i < macd.length && i < signal.length; i++) {
+            histogram.push(macd[i] - signal[i]);
+        }
+
+        return {
+            macd: macd,
+            signal: signal,
+            histogram: histogram
+        };
+    }
+
+    // Helper function to calculate RSI
+    function calculateRSI(data, period) {
+        if (!data || data.length <= period) return [];
+
+        const rsi = [];
+        let gains = 0;
+        let losses = 0;
+
+        // Calculate initial average gain and loss
+        for (let i = 1; i <= period; i++) {
+            const change = data[i] - data[i - 1];
+            if (change > 0) {
+                gains += change;
+            } else {
+                losses -= change;
+            }
+        }
+
+        let avgGain = gains / period;
+        let avgLoss = losses / period;
+        let rs = avgLoss !== 0 ? avgGain / avgLoss : 0;
+        rsi.push(100 - (100 / (1 + rs)));
+
+        // Calculate subsequent values using smoothing
+        for (let i = period + 1; i < data.length; i++) {
+            const change = data[i] - data[i - 1];
+            const gain = change > 0 ? change : 0;
+            const loss = change < 0 ? -change : 0;
+
+            avgGain = (avgGain * (period - 1) + gain) / period;
+            avgLoss = (avgLoss * (period - 1) + loss) / period;
+            rs = avgLoss !== 0 ? avgGain / avgLoss : 0;
+            rsi.push(100 - (100 / (1 + rs)));
+        }
+
+        return rsi;
+    }
+
+    // Helper function to calculate KDJ
+    function calculateKDJ(closes) {
+        if (closes.length < 9) return { k: [], d: [], j: [] };
+
+        const kValues = [];
+        const dValues = [];
+        const jValues = [];
+
+        let prevK = 50;
+        let prevD = 50;
+
+        // We need high and low data for KDJ, but we only have close data
+        // For simplicity, we'll estimate high/low based on close data
+        // In a real implementation, you would pass the full OHLC data
+        const highs = closes.map((close, index) => {
+            if (index === 0) return close;
+            return Math.max(close, closes[index - 1]);
+        });
+
+        const lows = closes.map((close, index) => {
+            if (index === 0) return close;
+            return Math.min(close, closes[index - 1]);
+        });
+
+        for (let i = 0; i < closes.length; i++) {
+            if (i < 8) {
+                kValues.push(null);
+                dValues.push(null);
+                jValues.push(null);
+                continue;
+            }
+
+            const periodHighs = highs.slice(i - 8, i + 1);
+            const periodLows = lows.slice(i - 8, i + 1);
+
+            const highestHigh = Math.max(...periodHighs);
+            const lowestLow = Math.min(...periodLows);
+            const close = closes[i];
+
+            if (highestHigh === lowestLow) {
+                kValues.push(prevK);
+                dValues.push(prevD);
+                jValues.push(3 * prevK - 2 * prevD);
+            } else {
+                const rsv = ((close - lowestLow) / (highestHigh - lowestLow)) * 100;
+                const k = (2/3) * prevK + (1/3) * rsv;
+                const d = (2/3) * prevD + (1/3) * k;
+                const j = 3 * k - 2 * d;
+
+                kValues.push(k);
+                dValues.push(d);
+                jValues.push(j);
+
+                prevK = k;
+                prevD = d;
+            }
+        }
+
+        return { k: kValues, d: dValues, j: jValues };
+        }
+    
+        // Helper function to calculate OBV (On Balance Volume)
+        function calculateOBV(closes, volumes) {
+            if (!closes || !volumes || closes.length !== volumes.length || closes.length < 2) return [];
+    
+            const obv = [0]; // Start with 0
+    
+            for (let i = 1; i < closes.length; i++) {
+                if (closes[i] > closes[i - 1]) {
+                    // Price increased, add volume
+                    obv.push(obv[i - 1] + volumes[i]);
+                } else if (closes[i] < closes[i - 1]) {
+                    // Price decreased, subtract volume
+                    obv.push(obv[i - 1] - volumes[i]);
+                } else {
+                    // Price unchanged, OBV unchanged
+                    obv.push(obv[i - 1]);
+                }
+            }
+    
+            return obv;
+        }
+    
+        // Helper function to calculate ROC (Rate of Change)
+        function calculateROC(closes, period) {
+            if (!closes || closes.length <= period || period <= 0) return [];
+    
+            const roc = [];
+    
+            // Fill initial values with null
+            for (let i = 0; i < period; i++) {
+                roc.push(null);
+            }
+    
+            // Calculate ROC for the rest of the data
+            for (let i = period; i < closes.length; i++) {
+                const currentValue = closes[i];
+                const pastValue = closes[i - period];
+                const rateOfChange = ((currentValue - pastValue) / pastValue) * 100;
+                roc.push(rateOfChange);
+            }
+    
+            return roc;
+    }
+
+    // Helper function to calculate Moving Average
+    function calculateMA(data, period) {
+        if (!data || data.length < period || period <= 0) return [];
+
+        const ma = [];
+        for (let i = 0; i < data.length; i++) {
+            if (i < period - 1) {
+                ma.push(null);
+            } else {
+                const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0);
+                ma.push(sum / period);
+            }
+        }
+
+        return ma;
+    }
+
+    // Helper function to calculate BOLL (Bollinger Bands)
+    function calculateBOLL(data, period, multiplier) {
+        if (!data || data.length < period || period <= 0) return { upper: [], middle: [], lower: [] };
+
+        const middle = calculateMA(data, period);
+        const upper = [];
+        const lower = [];
+
+        for (let i = 0; i < data.length; i++) {
+            if (i < period - 1) {
+                upper.push(null);
+                lower.push(null);
+            } else {
+                // Calculate standard deviation
+                const slice = data.slice(i - period + 1, i + 1);
+                const mean = slice.reduce((a, b) => a + b, 0) / period;
+                const variance = slice.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
+                const stdDev = Math.sqrt(variance);
+
+                upper.push(middle[i] + (multiplier * stdDev));
+                lower.push(middle[i] - (multiplier * stdDev));
+            }
+        }
+
+        return { upper: upper, middle: middle, lower: lower };
+    }
+
+    // Initialize when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded');
+        // Get stock code and name from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        let code = urlParams.get('code');
+        let name = urlParams.get('name') || code;
+
+        console.log('URL params - code:', code, 'name:', name);
+
+        // If not in URL params, try to get from template variables
+        if (!code && typeof stockCodeFromTemplate !== 'undefined') {
+            code = stockCodeFromTemplate;
+        }
+        if (!name && typeof stockNameFromTemplate !== 'undefined') {
+            name = stockNameFromTemplate;
+        }
+
+        console.log('Final code:', code, 'name:', name);
+
+        if (code) {
+            // 从localStorage获取用户选择的主图叠加类型
+            const savedMainOverlay = localStorage.getItem('selectedMainOverlay');
+            if (savedMainOverlay) {
+                mainOverlayType = savedMainOverlay;
+                // 更新主图叠加标签的选中状态
+                document.querySelectorAll('#mainOverlayTabs .nav-link').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                            const activeMainOverlayTab = document.querySelector(`[data-overlay="${savedMainOverlay}"]`);
+                            if (activeMainOverlayTab) {
+                                activeMainOverlayTab.classList.add('active');
+                            }
+                        } else {
+                            // 默认选中MA
+                            mainOverlayType = 'ma';
+                            document.querySelectorAll('#mainOverlayTabs .nav-link').forEach(tab => {
+                                tab.classList.remove('active');
+                            });
+                            const defaultMainOverlayTab = document.querySelector(`[data-overlay="ma"]`);
+                            if (defaultMainOverlayTab) {
+                                defaultMainOverlayTab.classList.add('active');
+                            }
+            }
+
+            // 从localStorage获取用户选择的指标类型
+            const savedIndicator = localStorage.getItem('selectedIndicator');
+            if (savedIndicator) {
+                indicatorType = savedIndicator;
+                // 更新指标图标签的选中状态
+                document.querySelectorAll('#indicatorTabs .nav-link').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                            const activeIndicatorTab = document.querySelector(`[data-indicator="${savedIndicator}"]`);
+                            if (activeIndicatorTab) {
+                                activeIndicatorTab.classList.add('active');
+                            }
+                        } else {
+                            // 默认选中MACD
+                            indicatorType = 'macd';
+                            document.querySelectorAll('#indicatorTabs .nav-link').forEach(tab => {
+                                tab.classList.remove('active');
+                            });
+                            const defaultIndicatorTab = document.querySelector(`[data-indicator="macd"]`);
+                            if (defaultIndicatorTab) {
+                                defaultIndicatorTab.classList.add('active');
+                            }
+            }
+
+            // Initialize stock kline
+            initializeStockKline(code, name);
+        } else {
+            console.error('No stock code provided');
+        }
+
+        // Add event listeners for main overlay tabs
+        document.querySelectorAll('#mainOverlayTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const overlayType = this.getAttribute('data-overlay');
+
+                // Switch main overlay
+                switchMainOverlay(overlayType);
+            });
+        });
+
+        // Add event listeners for indicator tabs
+        document.querySelectorAll('#indicatorTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const indicatorTypeParam = this.getAttribute('data-indicator');
+
+                // Switch indicator
+                switchIndicator(indicatorTypeParam);
+            });
+        });
+
+        // Add event listeners for info tabs
+        document.querySelectorAll('#infoTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const infoType = this.getAttribute('data-info');
+
+                // Update active tab
+                document.querySelectorAll('#infoTabs .nav-link').forEach(t => {
+                    t.classList.remove('active');
+                });
+                this.classList.add('active');
+
+                // Toggle info display
+                toggleInfoDisplay(infoType);
+            });
+        });
+
+        // Add event listeners for buttons
+        const fullscreenBtn = document.getElementById('fullscreen-btn');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+        }
+
+        const backBtn = document.getElementById('back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', function() {
+                window.history.back();
+            });
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (chartInstance) chartInstance.resize();
+        });
+
+        // Handle mouse wheel for zooming
+        document.addEventListener('wheel', function(event) {
+            // Only handle wheel events when hovering over the chart
+            const chartArea = document.querySelector('.unified-chart-area');
+            if (chartArea && chartArea.contains(event.target)) {
+                // Prevent default scrolling behavior
+                event.preventDefault();
+
+                // Get the current zoom level from the chart instance
+                if (chartInstance) {
+                    const option = chartInstance.getOption();
+                    if (option && option.dataZoom && option.dataZoom.length > 0) {
+                        const currentStart = option.dataZoom[0].start || 0;
+                        const currentEnd = option.dataZoom[0].end || 100;
+
+                        // Calculate zoom delta (sensitive to wheel movement)
+                        const zoomDelta = event.deltaY > 0 ? 5 : -5;
+
+                        // Calculate new zoom levels
+                        let newStart = currentStart - zoomDelta;
+                        let newEnd = currentEnd + zoomDelta;
+
+                        // Ensure bounds
+                        if (newStart < 0) {
+                            newStart = 0;
+                            newEnd = Math.min(100, newEnd - newStart);
+                        }
+                        if (newEnd > 100) {
+                            newEnd = 100;
+                            newStart = Math.max(0, newStart - (newEnd - 100));
+                        }
+
+                        // Apply zoom
+                        chartInstance.dispatchAction({
+                            type: 'dataZoom',
+                            start: newStart,
+                            end: newEnd
+                        });
+                    }
+                }
+            }
+        }, { passive: false });
+    });
+</script>
+{% endblock %}
+

@@ -353,6 +353,8 @@ python -m backtesting.backtester
    - Implemented dynamic data loading from the pool collection with real-time stock information
    - Added moving平均 lines to stock K-line charts with parameters retrieved from strategy datasets
    - Enhanced K-line charts to specifically fetch moving average parameters from the "三均线多头排列策略（宽松型）" strategy in the database
+   - Modified K-line charts to display all data by default with synchronized zooming across main chart, indicator chart, and volume chart
+   - Added indicator chart between main chart and volume chart with tab switching functionality for MACD, RSI, and KDJ indicators
 
 ---
 *This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-14*
