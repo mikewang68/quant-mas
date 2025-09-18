@@ -430,7 +430,8 @@ class SignalGenerator(BaseAgent, DataProviderInterface):
                             'code': stock.get('code'),
                             'selection_reason': stock.get('selection_reason', stock.get('value', '')),
                             'score': stock.get('score', 0),  # Include the actual score from strategy
-                            'strategy_name': strategy_name
+                            'strategy_name': strategy_name,
+                            'signals': stock.get('signals', {})  # Include the actual signals data from strategy
                         }
                         all_selected_stocks.append(signal_stock)
 
@@ -522,7 +523,10 @@ class SignalGenerator(BaseAgent, DataProviderInterface):
 
                     # Get the signal data from the strategy result
                     signal_data = signal_stock.get('signals', {})
-                    strategy_name = self.name  # Use the agent name as strategy name
+                    # Use the actual strategy name from database configuration instead of agent class name
+                    strategy_name = signal_stock.get('strategy_name', 'unknown_strategy')
+                    if not strategy_name or not isinstance(strategy_name, str):
+                        strategy_name = 'unknown_strategy'
 
                     existing_stock_map[code]['signals'][strategy_name] = signal_data
 

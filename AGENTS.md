@@ -265,6 +265,14 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **ENHANCED**: Updated Signal Generation V1 Strategy to dynamically load LLM configuration from database and use external LLM services for AI analysis
 - **FIXED**: Corrected output format to match required structure with proper nested signals field
 - **UPDATED**: Synchronized documentation to reflect the correct output data structure
+- **MODIFIED**: Updated signal action calculation logic to output only "买入" or "卖出" when both signal_calc and signal_ai agree on buy/sell, or empty string otherwise
+- **FIXED**: Corrected database signal data storage to properly include signals from strategy execution
+
+### Web Interface Enhancement for Signal Display
+- **MODIFIED**: Updated stock K-line v2 HTML template to display signal generation agent content first in the right-side information table
+- **CHANGED**: Renamed table header from "值" to "内容" for better clarity
+- **ENHANCED**: Improved signal generation V1 data display to show detailed information including strategy counts, calculated signals, AI signals, scores, and AI analysis reasoning
+- **MODIFIED**: Updated MA line styles in K-line charts with customized widths and colors (short: 1px white, medium: 2px yellow, long: 3px magenta)
 
 ## Usage Patterns
 
@@ -357,5 +365,5 @@ python -m backtesting.backtester
    - Added indicator chart between main chart and volume chart with tab switching functionality for MACD, RSI, and KDJ indicators
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-14*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-18*
 

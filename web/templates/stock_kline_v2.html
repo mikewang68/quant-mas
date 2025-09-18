@@ -131,7 +131,7 @@
         display: flex;
         flex-direction: column;
         padding: 2px;
-        overflow: hidden;
+        overflow: auto;
     }
 
     .tabs-container {
@@ -365,69 +365,28 @@
             <div class="stock-info">
                 <i class="fas fa-info-circle"></i> 股票分析信息
             </div>
+                <div class="btn-group-custom">
+                    <button class="btn-custom btn-secondary btn-sm" id="prev-btn">上一个</button>
+                    <button class="btn-custom btn-secondary btn-sm" id="next-btn">下一个</button>
+                </div>
         </div>
 
         <div class="info-container">
-            <!-- 信息切换选项卡 -->
-            <div class="tabs-container">
-                <ul class="nav nav-tabs" id="infoTabs">
-                    <li class="nav-item">
-                        <a class="nav-link active" data-info="json" href="#">原始数据</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" data-info="formatted" href="#">格式化数据</a>
-                    </li>
-                </ul>
-            </div>
-
-            <!-- 信息显示区域 -->
-            <div class="tab-content">
-                <!-- JSON格式显示 -->
-                <div id="json-tab" class="tab-pane active">
-                    <div id="json-display" class="json-display"></div>
-                </div>
-
-                <!-- 格式化数据显示 -->
-                <div id="formatted-tab" class="tab-pane">
-                    <div class="formatted-display">
-                        <div class="stock-basic-info mb-3">
-                            <h6>基本信息</h6>
-                            <div class="row">
-                                <div class="col-6">
-                                    <strong>股票代码:</strong> <span id="info-code"></span>
-                                </div>
-                                <div class="col-6">
-                                    <strong>股票名称:</strong> <span id="info-name"></span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="stock-trend-info strategy-section">
-                            <div class="strategy-header">趋势策略</div>
-                            <div id="trend-strategies"></div>
-                        </div>
-
-                        <div class="stock-tech-info strategy-section">
-                            <div class="strategy-header">技术策略</div>
-                            <div id="tech-strategies"></div>
-                        </div>
-
-                        <div class="stock-fund-info strategy-section">
-                            <div class="strategy-header">基本面策略</div>
-                            <div id="fund-strategies"></div>
-                        </div>
-
-                        <div class="stock-pub-info strategy-section">
-                            <div class="strategy-header">舆情策略</div>
-                            <div id="pub-strategies"></div>
-                        </div>
-
-                        <div class="stock-signals-info strategy-section">
-                            <div class="strategy-header">信号生成</div>
-                            <div id="signals-info"></div>
-                        </div>
-                    </div>
-                </div>
+            <!-- 股票详细信息表格 -->
+            <div class="stock-details-table">
+                <table class="table table-striped table-bordered table-hover">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>智能体</th>
+                            <th>策略名称</th>
+                            <th>分数</th>
+                            <th>内容</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stock-details-tbody">
+                        <!-- 数据将通过JavaScript动态填充 -->
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -451,9 +410,12 @@
     let chartInstance = null;
     let mainOverlayType = 'ma';  // 主图叠加类型: none, ma, boll
     let indicatorType = 'macd';  // 指标图类型: macd, rsi, kdj
+    let stockPool = [];  // 股票池数据
+    let currentStockIndex = -1;  // 当前股票在股票池中的索引
 
     // Function to initialize the page with stock data
     function initializeStockKline(code, name) {
+        console.log('Initializing stock kline with code:', code, 'name:', name);
         stockCode = code;
         stockName = name;
 
@@ -462,6 +424,9 @@
 
         // Load stock info data
         loadStockInfoData(code);
+
+        // Load stock pool data to enable navigation
+        loadStockPoolData();
     }
 
     // Function to load K-line data for a stock
@@ -504,16 +469,24 @@
     function loadStockInfoData(code) {
         console.log('Loading stock info data for code:', code);
         fetch(`/api/pool-data/${code}`)
-                .then(response => {
-                    console.log('API response status:', response.status);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    return response.json();
-                })
+            .then(response => {
+                console.log('API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 console.log('Received stock info data:', data);
+                if (data.error) {
+                    console.error('Error loading stock info data:', data.error);
+                    return;
+                }
+
+                // Store the stock info data
                 stockInfo = data;
+
+                // Display the stock info
                 displayStockInfo();
             })
             .catch(error => {
@@ -521,80 +494,250 @@
             });
     }
 
-    // Function to display stock info
+
+    // Function to load stock pool data
+    function loadStockPoolData() {
+        console.log('Loading stock pool data');
+        fetch('/api/latest-pool-stocks')
+            .then(response => {
+                console.log('API response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received stock pool data:', data);
+                stockPool = data;
+
+                // Find the current stock index in the pool
+                currentStockIndex = stockPool.findIndex(stock => stock.code === stockCode);
+                console.log('Current stock index:', currentStockIndex);
+
+                // Update button states
+                updateNavigationButtons();
+            })
+            .catch(error => {
+                console.error('Error loading stock pool data:', error);
+            });
+    }
+
+    // Function to update navigation button states
+    function updateNavigationButtons() {
+        const prevBtn = document.getElementById('prev-btn');
+        const nextBtn = document.getElementById('next-btn');
+
+        if (!prevBtn || !nextBtn) {
+            console.error('Navigation buttons not found');
+            return;
+        }
+
+        // Disable/enable previous button
+        if (currentStockIndex <= 0) {
+            prevBtn.disabled = true;
+            prevBtn.classList.add('btn-secondary');
+            prevBtn.classList.remove('btn-primary');
+        } else {
+            prevBtn.disabled = false;
+            prevBtn.classList.remove('btn-secondary');
+            prevBtn.classList.add('btn-primary');
+        }
+
+        // Disable/enable next button
+        if (currentStockIndex >= stockPool.length - 1) {
+            nextBtn.disabled = true;
+            nextBtn.classList.add('btn-secondary');
+            nextBtn.classList.remove('btn-primary');
+        } else {
+            nextBtn.disabled = false;
+            nextBtn.classList.remove('btn-secondary');
+            nextBtn.classList.add('btn-primary');
+        }
+    }
+
+    // Function to navigate to a specific stock
+    function navigateToStock(index) {
+        if (index < 0 || index >= stockPool.length) {
+            console.error('Invalid stock index:', index);
+            return;
+        }
+
+        const stock = stockPool[index];
+        console.log('Navigating to stock:', stock.code, stock.name);
+
+        // Update current stock index
+        currentStockIndex = index;
+
+        // Update stock code and name
+        stockCode = stock.code;
+        stockName = stock.name || stock.code;
+
+        // Update URL without reloading the page
+        const url = new URL(window.location);
+        url.searchParams.set('code', stockCode);
+        url.searchParams.set('name', stockName);
+        window.history.replaceState({}, '', url);
+
+        // Load data for the new stock
+        loadStockKlineData(stockCode);
+        loadStockInfoData(stockCode);
+
+        // Update button states
+        updateNavigationButtons();
+    }
+
+    // Function to navigate to the previous stock
+    function navigateToPreviousStock() {
+        console.log('Navigating to previous stock, current index:', currentStockIndex);
+        if (currentStockIndex > 0) {
+            navigateToStock(currentStockIndex - 1);
+        }
+    }
+
+    // Function to navigate to the next stock
+    function navigateToNextStock() {
+        console.log('Navigating to next stock, current index:', currentStockIndex);
+        if (currentStockIndex < stockPool.length - 1) {
+            navigateToStock(currentStockIndex + 1);
+        }
+    }
+
+    // Function to display stock info in hierarchical structure
     function displayStockInfo() {
-        // Display JSON format
-        document.getElementById('json-display').textContent = JSON.stringify(stockInfo, null, 2);
-
-        // Display formatted data
-        if (stockInfo.code) {
-            document.getElementById('info-code').textContent = stockInfo.code;
+        console.log('Displaying stock info:', stockInfo);
+        const tbody = document.getElementById('stock-details-tbody');
+        if (!tbody) {
+            console.error('Could not find stock-details-tbody element');
+            return;
         }
-        if (stockInfo.name) {
-            document.getElementById('info-name').textContent = stockInfo.name;
-        }
+        tbody.innerHTML = ''; // Clear existing data
 
-        // Display trend strategies
-        displayStrategies('trend', stockInfo.trend, 'trend-strategies');
-
-        // Display tech strategies
-        displayStrategies('tech', stockInfo.tech, 'tech-strategies');
-
-        // Display fund strategies
-        displayStrategies('fund', stockInfo.fund, 'fund-strategies');
-
-        // Display pub strategies
-        displayStrategies('pub', stockInfo.pub, 'pub-strategies');
-
-        // Display signals
-        displaySignals(stockInfo.signals, 'signals-info');
+        // Display strategy information in table format (Agent, Strategy Name, Score, Value)
+        displayStrategySection('signals', '信号生成', stockInfo.signals, tbody);
+        displayStrategySection('trend', '趋势策略', stockInfo.trend, tbody);
+        displayStrategySection('tech', '技术策略', stockInfo.tech, tbody);
+        displayStrategySection('fund', '基本面策略', stockInfo.fund, tbody);
+        displayStrategySection('pub', '舆情策略', stockInfo.pub, tbody);
     }
 
-    // Function to display strategies
-    function displayStrategies(type, strategies, containerId) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
-
-        if (!strategies) return;
-
-        for (const [name, data] of Object.entries(strategies)) {
-            const strategyDiv = document.createElement('div');
-            strategyDiv.className = 'strategy-item';
-
-            const score = data.score !== undefined ? data.score.toFixed(2) : 'N/A';
-            const value = data.value || 'N/A';
-
-            strategyDiv.innerHTML = `
-                <div class="strategy-name">${name}</div>
-                <div class="strategy-score">评分: ${score}</div>
-                <div class="strategy-value">${value}</div>
-            `;
-
-            container.appendChild(strategyDiv);
+    // Function to display a section of strategies in table format
+    // Function to display strategy section in table format
+    function displayStrategySection(agentKey, agentName, strategies, tbody) {
+        if (!strategies || typeof strategies !== 'object') {
+            return;
         }
-    }
 
-    // Function to display signals
-    function displaySignals(signals, containerId) {
-        const container = document.getElementById(containerId);
-        container.innerHTML = '';
+        // Special handling for signals section to display "信号生成V1" data first
+        if (agentKey === 'signals') {
+            // First display "信号生成V1" if it exists
+            if (strategies['信号生成V1']) {
+                const signalData = strategies['信号生成V1'];
+                const row = document.createElement('tr');
 
-        if (!signals) return;
+                // Format the signal data for display
+                let signalContent = '';
+                if (typeof signalData === 'object' && signalData !== null) {
+                    signalContent = `
+                        <div>
+                            <div><strong>满足策略数:</strong> ${signalData.counts || 0}</div>
+                            <div><strong>计算信号:</strong> ${signalData.signal_calc || ''}</div>
+                            <div><strong>AI信号:</strong> ${signalData.signal_ai || ''}</div>
+                            <div><strong>计算分数:</strong> ${signalData.score_calc !== undefined ? signalData.score_calc.toFixed(4) : ''}</div>
+                            <div><strong>AI分数:</strong> ${signalData.score_ai !== undefined ? signalData.score_ai.toFixed(4) : ''}</div>
+                            <div><strong>AI分析:</strong> ${signalData.reason_ai || ''}</div>
+                        </div>
+                    `;
+                } else {
+                    signalContent = formatValueForTable(signalData);
+                }
 
-        for (const [name, data] of Object.entries(signals)) {
-            const strategyDiv = document.createElement('div');
-            strategyDiv.className = 'strategy-item';
+                // Use action field for score column in signals section
+                const action = signalData.action !== undefined ? signalData.action : '';
 
-            let content = `<div class="strategy-name">${name}</div>`;
+                row.innerHTML = `
+                    <td>${agentName}</td>
+                    <td>信号生成V1</td>
+                    <td>${action}</td>
+                    <td>${signalContent}</td>
+                `;
 
-            for (const [key, value] of Object.entries(data)) {
-                content += `<div><strong>${key}:</strong> ${value}</div>`;
+                tbody.appendChild(row);
             }
 
-            strategyDiv.innerHTML = content;
-            container.appendChild(strategyDiv);
+            // Then display other signals
+            for (const [strategyName, strategyData] of Object.entries(strategies)) {
+                if (strategyName === '信号生成V1') continue; // Skip as it's already displayed
+
+                const row = document.createElement('tr');
+
+                // Get score and value
+                const score = strategyData.score !== undefined ?
+                    (typeof strategyData.score === 'number' ? strategyData.score.toFixed(2) : strategyData.score) :
+                    '';
+
+                const value = strategyData.value !== undefined ?
+                    formatValueForTable(strategyData.value) :
+                    '';
+
+                row.innerHTML = `
+                    <td>${agentName}</td>
+                    <td>${strategyName}</td>
+                    <td>${score}</td>
+                    <td>${value}</td>
+                `;
+
+                tbody.appendChild(row);
+            }
+        } else {
+            // Handle other sections normally
+            for (const [strategyName, strategyData] of Object.entries(strategies)) {
+                const row = document.createElement('tr');
+
+                // Get score and value
+                const score = strategyData.score !== undefined ?
+                    (typeof strategyData.score === 'number' ? strategyData.score.toFixed(2) : strategyData.score) :
+                    '';
+
+                const value = strategyData.value !== undefined ?
+                    formatValueForTable(strategyData.value) :
+                    '';
+
+                row.innerHTML = `
+                    <td>${agentName}</td>
+                    <td>${strategyName}</td>
+                    <td>${score}</td>
+                    <td>${value}</td>
+                `;
+
+                tbody.appendChild(row);
+            }
         }
     }
+
+    // Helper function to format values for table display
+    function formatValueForTable(value) {
+        // If value is an object, format it nicely
+        if (typeof value === 'object' && value !== null) {
+            // For objects with multiple properties, display each property
+            if (Object.keys(value).length > 0) {
+                let result = '<div>';
+                for (const [key, val] of Object.entries(value)) {
+                    result += `<div><strong>${key}:</strong> ${val}</div>`;
+                }
+                result += '</div>';
+                return result;
+            }
+            // For empty objects
+            return JSON.stringify(value);
+        }
+        // For arrays, join elements
+        if (Array.isArray(value)) {
+            return value.join(', ');
+        }
+        // For other types, convert to string
+        return String(value);
+    }
+
 
     // Function to render charts
     function renderCharts() {
@@ -723,8 +866,8 @@
                         smooth: true,
                         showSymbol: false,
                         lineStyle: {
-                            width: 2,
-                            color: '#ff9900'
+                            width: 1,
+                            color: '#ffffff'
                         },
                         xAxisIndex: 0,
                         yAxisIndex: 0
@@ -737,7 +880,7 @@
                         showSymbol: false,
                         lineStyle: {
                             width: 2,
-                            color: '#0099ff'
+                            color: '#ffff00'
                         },
                         xAxisIndex: 0,
                         yAxisIndex: 0
@@ -749,7 +892,7 @@
                         smooth: true,
                         showSymbol: false,
                         lineStyle: {
-                            width: 2,
+                            width: 3,
                             color: '#ff00ff'
                         },
                         xAxisIndex: 0,
@@ -1581,6 +1724,17 @@
             backBtn.addEventListener('click', function() {
                 window.history.back();
             });
+        }
+
+        // Add event listeners for navigation buttons
+        const prevBtn = document.getElementById('prev-btn');
+        if (prevBtn) {
+            prevBtn.addEventListener('click', navigateToPreviousStock);
+        }
+
+        const nextBtn = document.getElementById('next-btn');
+        if (nextBtn) {
+            nextBtn.addEventListener('click', navigateToNextStock);
         }
 
         // Handle window resize

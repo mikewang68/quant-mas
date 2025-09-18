@@ -92,6 +92,9 @@ class SignalGenerationV1Strategy(BaseStrategy):
                     if not code:
                         continue
 
+                    # Log the stock code being processed
+                    self.log_info(f"Processing stock: {code}")
+
                     # Analyze the stock using global strategy count
                     analysis_result = self._analyze_stock(stock, global_strategy_count)
 
@@ -133,6 +136,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
         """
         try:
             code = stock.get('code', '')
+            self.log_info(f"[{code}] Analyzing stock with global strategy count: {global_strategy_count}")
 
             # Initialize counters and accumulators
             non_zero_strategy_count = 0   # Strategies with non-zero scores (for count value)
@@ -175,6 +179,8 @@ class SignalGenerationV1Strategy(BaseStrategy):
                             'value': value
                         })
 
+            self.log_info(f"[{code}] Processed {len(strategy_data)} strategies, {non_zero_strategy_count} with non-zero scores")
+
             # Calculate average score using global_strategy_count as denominator
             # (including strategies with zero scores)
             if global_strategy_count > 0:
@@ -190,17 +196,29 @@ class SignalGenerationV1Strategy(BaseStrategy):
             else:
                 signal_calc = "买入"
 
+            self.log_info(f"[{code}] Calculated score: {score_calc:.4f}, signal: {signal_calc}")
+
             # Use AI to analyze strategy data
             ai_result = self._analyze_with_ai(strategy_data)
             score_ai = ai_result.get('score_ai', 0.0)
             signal_ai = ai_result.get('signal_ai', '持有')
 
-            # Determine action based on whether signal_calc and signal_ai are the same
-            action = signal_calc if signal_calc == signal_ai else ""
+            self.log_info(f"[{code}] AI analysis - score: {score_ai:.4f}, signal: {signal_ai}")
+
+            # Determine action based on new rules:
+            # - If both signal_calc and signal_ai are "买入", output "买入"
+            # - If either signal_calc or signal_ai is "卖出", output "卖出"
+            # - Otherwise, output empty string
+            if signal_calc == "买入" and signal_ai == "买入":
+                action = "买入"
+            elif signal_calc == "卖出" or signal_ai == "卖出":
+                action = "卖出"
+            else:
+                action = ""
 
             # Create analysis result with exactly the required structure
             signal_data = {
-                'count': non_zero_strategy_count,
+                'counts': non_zero_strategy_count,
                 'action': action,
                 'score_calc': round(score_calc, 4),
                 'signal_calc': signal_calc,
@@ -210,7 +228,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
             }
 
             result = {
-                'count': non_zero_strategy_count,
+                'counts': non_zero_strategy_count,
                 'action': action,
                 'score_ai': round(score_ai, 4),
                 'score_calc': round(score_calc, 4),
@@ -221,6 +239,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
                 'signals': signal_data
             }
 
+            self.log_info(f"[{code}] Analysis completed - counts: {non_zero_strategy_count}, action: '{action}'")
             return result
 
         except Exception as e:
@@ -624,9 +643,9 @@ class SignalGenerationV1Strategy(BaseStrategy):
                         existing_stock["signals"] = {}
 
                     # Create the proper structure for our strategy signals
-                    # Format: {"信号生成V1": {count, action, score_calc, signal_calc, score_ai, signal_ai, reason_ai}}
+                    # Format: {"信号生成V1": {counts, action, score_calc, signal_calc, score_ai, signal_ai, reason_ai}}
                     signal_data = {
-                        "count": analyzed_stock.get("count", 0),
+                        "counts": analyzed_stock.get("counts", 0),
                         "action": analyzed_stock.get("action", ""),
                         "score_calc": analyzed_stock.get("score_calc", 0.0),
                         "signal_calc": analyzed_stock.get("signal_calc", "持有"),
