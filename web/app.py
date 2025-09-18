@@ -5,6 +5,8 @@ Provides REST API and web UI for system monitoring and control.
 
 import os
 import sys
+from datetime import datetime
+from bson import ObjectId
 
 # Add the project root to the Python path to resolve imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -104,6 +106,20 @@ def register_routes(app: Flask):
         """Settings page"""
         return render_template("settings.html")
 
+    @app.route("/stock-kline")
+    def stock_kline_page():
+        """Stock K-line chart page"""
+        code = request.args.get('code', '')
+        name = request.args.get('name', code)
+        # Debug logging
+        app.logger.info(f"Rendering stock_kline_v2.html with code={code}, name={name}")
+        try:
+            return render_template("stock_kline_v2.html", code=code, name=name)
+        except Exception as e:
+            app.logger.error(f"Error rendering stock_kline_v2.html: {str(e)}")
+            # Fallback to old template
+            return render_template("stock_kline.html", code=code, name=name)
+
     @app.route("/api/status")
     def get_status():
         """Get system status"""
@@ -124,69 +140,48 @@ def register_routes(app: Flask):
         ]
         return jsonify(stocks)
 
-    @app.route("/api/stock-name/<code>")
-    def get_stock_name(code):
-        """Get stock name by code"""
-        try:
-            # Check if MongoDB connection is available
-            if app.config["MONGO_DB"] is None:
-                logger.error("MongoDB connection not available")
-                return jsonify({"error": "Database connection not available"}), 500
-
-            # Query MongoDB for stock name using the correct collection from config
-            db_config = app.config["DB_CONFIG"]
-            stock_collection_name = db_config["collections"]["stock_codes"]
-            stock_record = app.config["MONGO_DB"][stock_collection_name].find_one(
-                {"code": code}
-            )
-            if stock_record and "name" in stock_record:
-                return jsonify({"code": code, "name": stock_record["name"]})
-            else:
-                return jsonify({"code": code, "name": ""}), 404
-        except Exception as e:
-            logger.error(f"Error fetching stock name for {code}: {e}")
-            return jsonify({"error": f"Failed to fetch stock name: {str(e)}"}), 500
-
     @app.route("/api/stock-price/<code>")
     def get_stock_price(code):
         """Get real-time stock price by code"""
         try:
             # Check if this is a cryptocurrency (based on common crypto trading pairs)
-            if code.upper().endswith(('USDT', 'BTC', 'ETH', 'BNB')):
+            if code.upper().endswith(("USDT", "BTC", "ETH", "BNB")):
                 # For cryptocurrency, we would need to implement Binance API
                 # For now, return a mock price or fallback
                 # In a real implementation, you would call Binance API here
                 import requests
+
                 try:
                     # Try to get price from Binance API
                     url = f"https://api.binance.com/api/v3/ticker/price?symbol={code.upper()}"
                     response = requests.get(url, timeout=5)
                     if response.status_code == 200:
                         data = response.json()
-                        return jsonify({"code": code, "price": float(data['price'])})
+                        return jsonify({"code": code, "price": float(data["price"])})
                     else:
                         # Fallback to mock data if Binance API fails
                         return jsonify({"code": code, "price": 0.0})
                 except Exception as binance_error:
-                    logger.error(f"Error getting crypto price from Binance for {code}: {binance_error}")
+                    logger.error(
+                        f"Error getting crypto price from Binance for {code}: {binance_error}"
+                    )
                     # Fallback to mock data if Binance API fails
                     return jsonify({"code": code, "price": 0.0})
             else:
                 # Get real-time data using akshare for stocks
                 stock_data = ak.stock_bid_ask_em(symbol=code)
-                
+
                 # Extract the current price (based on your example, it's at index 20 in the 'value' column)
                 current_price = stock_data.iloc[20]["value"]
-                
+
                 if current_price is not None:
                     return jsonify({"code": code, "price": float(current_price)})
                 else:
                     return jsonify({"error": "Failed to get current price"}), 404
-                    
+
         except Exception as e:
             logger.error(f"Error getting stock price for {code}: {e}")
             return jsonify({"error": f"Failed to get stock price: {str(e)}"}), 500
-
 
     @app.route("/api/backtest", methods=["POST"])
     def run_backtest():
@@ -380,10 +375,10 @@ def register_routes(app: Flask):
                 ), 500
 
             data = request.get_json()
-            
+
             # Save agent using MongoDBManager
             agent_id = app.config["MONGO_MANAGER"].create_agent(data)
-            
+
             if agent_id:
                 # Add the inserted ID to the response
                 data["_id"] = agent_id
@@ -615,10 +610,8 @@ def register_routes(app: Flask):
 
             data = request.get_json()
             if not data:
-                return jsonify(
-                    {"status": "error", "message": "Invalid JSON data"}
-                ), 400
-                
+                return jsonify({"status": "error", "message": "Invalid JSON data"}), 400
+
             agent_id = data.get("agent_id")
 
             if not agent_id:
@@ -638,23 +631,26 @@ def register_routes(app: Flask):
             logger.info(f"Agent name: {agent_name}")
             is_weekly_selector = "趋势选股" in agent_name
             logger.info(f"Is weekly selector: {is_weekly_selector}")
-            
+
             # Check if this is the weekly selector agent
             if is_weekly_selector:
                 # Actually run the weekly selector agent with strategy parameters
                 logger.info(f"Running weekly selector agent {agent['name']}")
-                
+
                 try:
                     # Initialize components
                     db_manager = app.config["MONGO_MANAGER"]
                     from utils.akshare_client import AkshareClient
+
                     data_fetcher = AkshareClient()
                     from agents.weekly_selector import WeeklyStockSelector
-                    
+
                     # Get strategies associated with this agent
-                    strategy_ids = agent.get('strategies', [])
-                    logger.info(f"Agent has {len(strategy_ids)} strategies: {strategy_ids}")
-                    
+                    strategy_ids = agent.get("strategies", [])
+                    logger.info(
+                        f"Agent has {len(strategy_ids)} strategies: {strategy_ids}"
+                    )
+
                     # Execute each strategy with its specific parameters and collect all selected stocks
                     all_selected_stocks = []
                     selectors = []  # Keep track of all selector instances
@@ -671,49 +667,79 @@ def register_routes(app: Flask):
                         selectors.append(selector)
 
                         # Select stocks
-                        selected_stocks, strategy_last_data_date, golden_cross_flags, selected_scores, technical_analysis_data = selector.select_stocks()
+                        (
+                            selected_stocks,
+                            strategy_last_data_date,
+                            golden_cross_flags,
+                            selected_scores,
+                            technical_analysis_data,
+                        ) = selector.select_stocks()
                         all_selected_stocks.extend(selected_stocks)
                         all_golden_cross_flags.update(golden_cross_flags)
                         all_selected_scores.update(selected_scores)
                         all_technical_analysis_data.update(technical_analysis_data)
 
                         # Update last_data_date
-                        if strategy_last_data_date and (not last_data_date or strategy_last_data_date > last_data_date):
+                        if strategy_last_data_date and (
+                            not last_data_date
+                            or strategy_last_data_date > last_data_date
+                        ):
                             last_data_date = strategy_last_data_date
                     else:
                         # Execute each strategy with its specific parameters
                         for strategy_id in strategy_ids:
                             # Get strategy details
-                            strategy = app.config["MONGO_MANAGER"].get_strategy(strategy_id)
+                            strategy = app.config["MONGO_MANAGER"].get_strategy(
+                                strategy_id
+                            )
                             if not strategy:
                                 logger.warning(f"Strategy {strategy_id} not found")
                                 continue
 
-                            logger.info(f"Executing strategy {strategy['name']} with parameters: {strategy.get('parameters', {})}")
+                            logger.info(
+                                f"Executing strategy {strategy['name']} with parameters: {strategy.get('parameters', {})}"
+                            )
 
                             # Initialize selector with specific strategy ID
-                            selector = WeeklyStockSelector(db_manager, data_fetcher, strategy_id)
+                            selector = WeeklyStockSelector(
+                                db_manager, data_fetcher, strategy_id
+                            )
                             selectors.append(selector)
 
                             # Select stocks using this strategy
-                            selected_stocks, strategy_last_data_date, golden_cross_flags, selected_scores, technical_analysis_data = selector.select_stocks()
+                            (
+                                selected_stocks,
+                                strategy_last_data_date,
+                                golden_cross_flags,
+                                selected_scores,
+                                technical_analysis_data,
+                            ) = selector.select_stocks()
                             all_selected_stocks.extend(selected_stocks)
                             all_golden_cross_flags.update(golden_cross_flags)
                             all_selected_scores.update(selected_scores)
                             all_technical_analysis_data.update(technical_analysis_data)
-                            logger.info(f"Strategy {strategy['name']} selected {len(selected_stocks)} stocks")
+                            logger.info(
+                                f"Strategy {strategy['name']} selected {len(selected_stocks)} stocks"
+                            )
 
                             # Update last_data_date to the latest date among all strategies
-                            if strategy_last_data_date and (not last_data_date or strategy_last_data_date > last_data_date):
+                            if strategy_last_data_date and (
+                                not last_data_date
+                                or strategy_last_data_date > last_data_date
+                            ):
                                 last_data_date = strategy_last_data_date
 
                     # Remove duplicates while preserving order
                     selected_stocks = list(dict.fromkeys(all_selected_stocks))
-                    logger.info(f"Total selected {len(selected_stocks)} stocks: {selected_stocks}")
+                    logger.info(
+                        f"Total selected {len(selected_stocks)} stocks: {selected_stocks}"
+                    )
 
                     # Save selection to pool collection using the first selector instance or create a default one if needed
                     if selectors:
-                        selector_to_use = selectors[0]  # Use the first selector instance
+                        selector_to_use = selectors[
+                            0
+                        ]  # Use the first selector instance
                     else:
                         selector_to_use = WeeklyStockSelector(db_manager, data_fetcher)
 
@@ -721,31 +747,39 @@ def register_routes(app: Flask):
                         success = selector_to_use.save_selected_stocks(
                             stocks=selected_stocks,
                             golden_cross_flags=all_golden_cross_flags,
-                            date=datetime.now().strftime('%Y-%m-%d'),
+                            date=datetime.now().strftime("%Y-%m-%d"),
                             last_data_date=last_data_date,
                             scores=all_selected_scores,
-                            technical_analysis_data=all_technical_analysis_data
+                            technical_analysis_data=all_technical_analysis_data,
                         )
                         if success:
-                            logger.info("Successfully saved selected stocks to pool collection")
+                            logger.info(
+                                "Successfully saved selected stocks to pool collection"
+                            )
                         else:
-                            logger.error("Failed to save selected stocks to pool collection")
+                            logger.error(
+                                "Failed to save selected stocks to pool collection"
+                            )
                     else:
                         logger.warning("No stocks selected")
                         # Still save an empty selection to pool collection
                         success = selector_to_use.save_selected_stocks(
                             stocks=[],
                             golden_cross_flags={},
-                            date=datetime.now().strftime('%Y-%m-%d'),
+                            date=datetime.now().strftime("%Y-%m-%d"),
                             last_data_date=last_data_date,
                             scores={},
-                            technical_analysis_data={}
+                            technical_analysis_data={},
                         )
                         if success:
-                            logger.info("Successfully saved empty selection to pool collection")
+                            logger.info(
+                                "Successfully saved empty selection to pool collection"
+                            )
                         else:
-                            logger.error("Failed to save empty selection to pool collection")
-                    
+                            logger.error(
+                                "Failed to save empty selection to pool collection"
+                            )
+
                     return jsonify(
                         {
                             "status": "success",
@@ -753,28 +787,37 @@ def register_routes(app: Flask):
                             "agent_id": agent_id,
                             "result": {
                                 "selected_stocks": selected_stocks,
-                                "count": len(selected_stocks)
-                            }
+                                "count": len(selected_stocks),
+                            },
                         }
                     )
                 except Exception as selector_error:
-                    logger.error(f"Error running weekly selector agent: {selector_error}")
+                    logger.error(
+                        f"Error running weekly selector agent: {selector_error}"
+                    )
                     return jsonify(
-                        {"status": "error", "message": f"Failed to run weekly selector agent: {str(selector_error)}"}
+                        {
+                            "status": "error",
+                            "message": f"Failed to run weekly selector agent: {str(selector_error)}",
+                        }
                     ), 500
             elif "技术分析" in agent_name:
                 # Handle technical analysis agents
-                strategy_ids = agent.get('strategies', [])
-                logger.info(f"Running technical analysis agent {agent['name']} with strategies {strategy_ids}")
+                strategy_ids = agent.get("strategies", [])
+                logger.info(
+                    f"Running technical analysis agent {agent['name']} with strategies {strategy_ids}"
+                )
 
                 try:
                     # Initialize components
                     db_manager = app.config["MONGO_MANAGER"]
                     from utils.akshare_client import AkshareClient
+
                     data_fetcher = AkshareClient()
 
                     # Initialize the technical stock selector
                     from agents.technical_selector import TechnicalStockSelector
+
                     selector = TechnicalStockSelector(db_manager, data_fetcher)
 
                     # Execute technical analysis and update pool
@@ -789,8 +832,8 @@ def register_routes(app: Flask):
                                 "agent_id": agent_id,
                                 "result": {
                                     "analysis_complete": True,
-                                    "stocks_updated": True
-                                }
+                                    "stocks_updated": True,
+                                },
                             }
                         )
                     else:
@@ -799,28 +842,35 @@ def register_routes(app: Flask):
                             {
                                 "status": "error",
                                 "message": f"Failed to run technical analysis agent: Execution failed",
-                                "agent_id": agent_id
+                                "agent_id": agent_id,
                             }
                         ), 500
 
                 except Exception as selector_error:
-                    logger.error(f"Error running technical analysis agent: {selector_error}")
+                    logger.error(
+                        f"Error running technical analysis agent: {selector_error}"
+                    )
                     return jsonify(
                         {
                             "status": "error",
                             "message": f"Failed to run technical analysis agent: {str(selector_error)}",
-                            "agent_id": agent_id
+                            "agent_id": agent_id,
                         }
                     ), 500
             elif "基本面分析" in agent_name:
                 # Handle fundamental analysis agents
-                strategy_ids = agent.get('strategies', [])
-                logger.info("Running fundamental analysis agent %s with strategies %s", agent['name'], strategy_ids)
+                strategy_ids = agent.get("strategies", [])
+                logger.info(
+                    "Running fundamental analysis agent %s with strategies %s",
+                    agent["name"],
+                    strategy_ids,
+                )
 
                 try:
                     # Initialize components
                     db_manager = app.config["MONGO_MANAGER"]
                     from utils.akshare_client import AkshareClient
+
                     data_fetcher = AkshareClient()
 
                     # Initialize the fundamental stock selector
@@ -838,8 +888,8 @@ def register_routes(app: Flask):
                                 "agent_id": agent_id,
                                 "result": {
                                     "analysis_complete": True,
-                                    "stocks_updated": True
-                                }
+                                    "stocks_updated": True,
+                                },
                             }
                         )
                     else:
@@ -848,39 +898,49 @@ def register_routes(app: Flask):
                             {
                                 "status": "error",
                                 "message": "Failed to run fundamental analysis agent: Execution failed",
-                                "agent_id": agent_id
+                                "agent_id": agent_id,
                             }
                         ), 500
 
                 except Exception as selector_error:
-                    logger.error("Error running fundamental analysis agent: %s", selector_error)
+                    logger.error(
+                        "Error running fundamental analysis agent: %s", selector_error
+                    )
                     return jsonify(
                         {
                             "status": "error",
                             "message": f"Failed to run fundamental analysis agent: {str(selector_error)}",
-                            "agent_id": agent_id
+                            "agent_id": agent_id,
                         }
                     ), 500
             elif "舆情分析" in agent_name:
                 # Handle public opinion analysis agents
-                strategy_ids = agent.get('strategies', [])
-                logger.info(f"Running public opinion analysis agent {agent['name']} with strategies {strategy_ids}")
+                strategy_ids = agent.get("strategies", [])
+                logger.info(
+                    f"Running public opinion analysis agent {agent['name']} with strategies {strategy_ids}"
+                )
 
                 try:
                     # Initialize components
                     db_manager = app.config["MONGO_MANAGER"]
                     from utils.akshare_client import AkshareClient
+
                     data_fetcher = AkshareClient()
 
                     # Initialize the public opinion stock selector
-                    from agents.public_opinion_selector import PublicOpinionStockSelector
+                    from agents.public_opinion_selector import (
+                        PublicOpinionStockSelector,
+                    )
+
                     selector = PublicOpinionStockSelector(db_manager, data_fetcher)
 
                     # Execute public opinion analysis and update pool
                     success = selector.update_pool_with_public_opinion_analysis()
 
                     if success:
-                        logger.info("Successfully executed public opinion analysis agent")
+                        logger.info(
+                            "Successfully executed public opinion analysis agent"
+                        )
                         return jsonify(
                             {
                                 "status": "success",
@@ -888,8 +948,8 @@ def register_routes(app: Flask):
                                 "agent_id": agent_id,
                                 "result": {
                                     "analysis_complete": True,
-                                    "stocks_updated": True
-                                }
+                                    "stocks_updated": True,
+                                },
                             }
                         )
                     else:
@@ -898,32 +958,38 @@ def register_routes(app: Flask):
                             {
                                 "status": "error",
                                 "message": "Failed to run public opinion analysis agent: Execution failed",
-                                "agent_id": agent_id
+                                "agent_id": agent_id,
                             }
                         ), 500
 
                 except Exception as selector_error:
-                    logger.error(f"Error running public opinion analysis agent: {selector_error}")
+                    logger.error(
+                        f"Error running public opinion analysis agent: {selector_error}"
+                    )
                     return jsonify(
                         {
                             "status": "error",
                             "message": f"Failed to run public opinion analysis agent: {str(selector_error)}",
-                            "agent_id": agent_id
+                            "agent_id": agent_id,
                         }
                     ), 500
             elif "信号生成" in agent_name:
                 # Handle signal generator agents
-                strategy_ids = agent.get('strategies', [])
-                logger.info(f"Running signal generator agent {agent['name']} with strategies {strategy_ids}")
+                strategy_ids = agent.get("strategies", [])
+                logger.info(
+                    f"Running signal generator agent {agent['name']} with strategies {strategy_ids}"
+                )
 
                 try:
                     # Initialize components
                     db_manager = app.config["MONGO_MANAGER"]
                     from utils.akshare_client import AkshareClient
+
                     data_fetcher = AkshareClient()
 
                     # Initialize the signal generator
                     from agents.signal_generator import SignalGenerator
+
                     signal_generator = SignalGenerator(db_manager, data_fetcher)
 
                     # Execute signal generation
@@ -938,8 +1004,8 @@ def register_routes(app: Flask):
                                 "agent_id": agent_id,
                                 "result": {
                                     "generation_complete": True,
-                                    "signals_updated": True
-                                }
+                                    "signals_updated": True,
+                                },
                             }
                         )
                     else:
@@ -948,31 +1014,33 @@ def register_routes(app: Flask):
                             {
                                 "status": "error",
                                 "message": "Failed to run signal generator agent: Execution failed",
-                                "agent_id": agent_id
+                                "agent_id": agent_id,
                             }
                         ), 500
 
                 except Exception as generator_error:
-                    logger.error(f"Error running signal generator agent: {generator_error}")
+                    logger.error(
+                        f"Error running signal generator agent: {generator_error}"
+                    )
                     return jsonify(
                         {
                             "status": "error",
                             "message": f"Failed to run signal generator agent: {str(generator_error)}",
-                            "agent_id": agent_id
+                            "agent_id": agent_id,
                         }
                     ), 500
         except Exception as e:
             # Handle case where agent_id might not be defined
-            agent_id = data.get("agent_id") if 'data' in locals() and data else "unknown"
+            agent_id = (
+                data.get("agent_id") if "data" in locals() and data else "unknown"
+            )
             if agent_id and agent_id != "unknown":
                 logger.error(f"Error running agent {agent_id}: {e}")
                 message = f"Failed to run agent {agent_id}: {str(e)}"
             else:
                 logger.error(f"Error running agent: {e}")
                 message = f"Failed to run agent: {str(e)}"
-            return jsonify(
-                {"status": "error", "message": message}
-            ), 500
+            return jsonify({"status": "error", "message": message}), 500
 
     @app.route("/api/config", methods=["GET"])
     def get_config():
@@ -1024,7 +1092,10 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error saving config: {e}")
             return jsonify(
-                {"status": "error", "message": f"Failed to save configuration: {str(e)}"}
+                {
+                    "status": "error",
+                    "message": f"Failed to save configuration: {str(e)}",
+                }
             ), 500
 
     @app.route("/api/llm-config", methods=["POST"])
@@ -1055,7 +1126,10 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error saving LLM config: {e}")
             return jsonify(
-                {"status": "error", "message": f"Failed to save LLM configuration: {str(e)}"}
+                {
+                    "status": "error",
+                    "message": f"Failed to save LLM configuration: {str(e)}",
+                }
             ), 500
 
     @app.route("/api/llm-config", methods=["GET"])
@@ -1127,7 +1201,274 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error saving LLM configs: {e}")
             return jsonify(
-                {"status": "error", "message": f"Failed to save LLM configurations: {str(e)}"}
+                {
+                    "status": "error",
+                    "message": f"Failed to save LLM configurations: {str(e)}",
+                }
+            ), 500
+
+    @app.route("/api/latest-pool-stocks")
+    def get_latest_pool_stocks():
+        """Get the latest pool record with stock information"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify([]), 200
+
+            # Get pool collection
+            pool_collection = app.config["MONGO_DB"]["pool"]
+
+            # Find the latest record sorted by _id (which contains the date)
+            latest_record = pool_collection.find_one(sort=[("_id", -1)])
+
+            if not latest_record:
+                logger.warning("No records found in pool collection")
+                return jsonify([]), 200
+
+            # Extract stocks information
+            stocks = latest_record.get("stocks", [])
+
+            # Get stock codes for fetching data
+            stock_codes = [stock.get("code") for stock in stocks if stock.get("code")]
+
+            # Get stock names from code collection
+            stock_names = {}
+            if stock_codes:
+                try:
+                    # Get database configuration
+                    db_config = app.config["MONGO_MANAGER"].config_loader.get_collections_config()
+                    code_collection_name = db_config.get("stock_codes", "code")
+                    code_collection = app.config["MONGO_DB"][code_collection_name]
+
+                    # Get stock names for all codes
+                    code_records = code_collection.find({"code": {"$in": stock_codes}})
+                    for record in code_records:
+                        code = record.get("code")
+                        name = record.get("name", "")
+                        if code:
+                            stock_names[code] = name
+                except Exception as e:
+                    logger.error(f"Error getting stock names from code collection: {e}")
+
+            # Get latest data from buf_data collection
+            buf_data = {}
+            if stock_codes:
+                try:
+                    buf_data_collection = app.config["MONGO_DB"]["buf_data"]
+
+                    # For each stock, get the latest record from buf_data
+                    for code in stock_codes:
+                        latest_buf_record = buf_data_collection.find_one(
+                            {"code": code},
+                            sort=[("date", -1)]  # Sort by date descending to get latest
+                        )
+                        if latest_buf_record:
+                            buf_data[code] = {
+                                "price": float(latest_buf_record.get("close", 0.0)),
+                                "change_percent": float(latest_buf_record.get("pct_change", 0.0)),
+                                "turnover_rate": float(latest_buf_record.get("turnover_rate", 0.0)),
+                            }
+                except Exception as e:
+                    logger.error(f"Error getting data from buf_data collection: {e}")
+
+            # Combine pool data with stock names and buf_data
+            result_stocks = []
+            for stock in stocks:
+                code = stock.get("code", "")
+                stock_info = {
+                    "code": code,
+                    "name": stock_names.get(code, ""),
+                    "price": buf_data.get(code, {}).get("price", 0.0),
+                    "change_percent": buf_data.get(code, {}).get("change_percent", 0.0),
+                    "turnover_rate": buf_data.get(code, {}).get("turnover_rate", 0.0),
+                    "signal": stock.get("signals", {}),
+                    "trend": {
+                        "score": stock.get("trend", {}).get("score", 0.0)
+                        if stock.get("trend")
+                        else 0.0,
+                        "value": stock.get("trend", {}).get("value", "")
+                        if stock.get("trend")
+                        else "",
+                    },
+                    "tech": stock.get("tech", {}),
+                    "fund": stock.get("fund", {}),
+                    "pub": stock.get("pub", {}),
+                }
+                result_stocks.append(stock_info)
+
+            return jsonify(result_stocks), 200
+
+        except Exception as e:
+            logger.error(f"Error getting latest pool stocks: {e}")
+            return jsonify([]), 200
+
+    @app.route("/api/stock-kline/<code>")
+    def get_stock_kline_data(code):
+        """Get K-line data for a specific stock from buf_data collection"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({"error": "Database connection not available"}), 500
+
+            # Get buf_data collection
+            buf_data_collection = app.config["MONGO_DB"]["buf_data"]
+
+            # Get all data for the stock, sorted by date ascending
+            kline_records = list(buf_data_collection.find(
+                {"code": code}
+            ).sort("date", 1))
+
+            if not kline_records:
+                logger.warning(f"No K-line data found for stock {code}")
+                return jsonify({"error": "No K-line data found"}), 404
+
+            # Process the data for charting
+            kline_data = []
+            for record in kline_records:
+                kline_data.append({
+                    "date": record.get("date"),
+                    "open": float(record.get("open", 0.0)),
+                    "high": float(record.get("high", 0.0)),
+                    "low": float(record.get("low", 0.0)),
+                    "close": float(record.get("close", 0.0)),
+                    "volume": float(record.get("volume", 0.0)),
+                    "amount": float(record.get("amount", 0.0)) if "amount" in record else 0.0,
+                    "turnover_rate": float(record.get("turnover_rate", 0.0)) if "turnover_rate" in record else 0.0,
+                })
+
+            return jsonify(kline_data), 200
+
+        except Exception as e:
+            logger.error(f"Error getting K-line data for stock {code}: {e}")
+            return jsonify({"error": f"Failed to get K-line data: {str(e)}"}), 500
+
+    @app.route("/api/strategy-by-name/<string:strategy_name>", methods=["GET"])
+    def get_strategy_by_name(strategy_name):
+        """Get a specific strategy by name"""
+        try:
+            # Check if MongoDBManager is available
+            if app.config["MONGO_MANAGER"] is None:
+                logger.error("MongoDBManager not available")
+                return jsonify({"error": "Database connection not available"}), 500
+
+            # Get strategy using MongoDBManager
+            strategy = app.config["MONGO_MANAGER"].get_strategy_by_name(strategy_name)
+
+            if strategy:
+                return jsonify(strategy), 200
+            else:
+                return jsonify({"error": f"Strategy {strategy_name} not found"}), 404
+        except Exception as e:
+            logger.error(f"Error getting strategy {strategy_name}: {e}")
+            return jsonify({"error": f"Failed to get strategy: {str(e)}"}), 500
+
+    @app.route("/api/pool-data/<code>")
+    def get_pool_data_by_code(code):
+        """Get pool data for a specific stock code"""
+        try:
+            # Get MongoDB manager instance from app config
+            db_manager = app.config["MONGO_MANAGER"]
+
+            # Access the pool collection
+            pool_collection = db_manager.get_collection('pool')
+
+            # Find the latest pool record (sorted by _id descending)
+            latest_record = pool_collection.find_one(
+                sort=[("_id", -1)]  # Sort by _id descending to get the latest
+            )
+
+            if not latest_record:
+                return jsonify({"error": "No pool data found"}), 404
+
+            # Extract stocks from the latest record
+            stocks = latest_record.get("stocks", [])
+
+            # Find the specific stock by code
+            target_stock = None
+            for stock in stocks:
+                if stock.get("code") == code:
+                    target_stock = stock
+                    break
+
+            if not target_stock:
+                return jsonify({"error": f"No data found for stock code {code}"}), 404
+
+            # Add the stock code and name to the response
+            target_stock["code"] = code
+
+            # Try to get stock name from code collection
+            try:
+                code_collection = db_manager.get_collection('code')
+                code_record = code_collection.find_one({"code": code})
+                if code_record and "name" in code_record:
+                    target_stock["name"] = code_record["name"]
+            except Exception as name_error:
+                logger.warning(f"Could not fetch stock name for {code}: {name_error}")
+
+            return jsonify(target_stock), 200
+
+        except Exception as e:
+            logger.error(f"Error getting pool data for stock {code}: {e}")
+            return jsonify({"error": f"Failed to get pool data: {str(e)}"}), 500
+
+
+    @app.route("/api/orders", methods=["POST"])
+    def create_order():
+        """Create a new order"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify(
+                    {"status": "error", "message": "Database connection not available"}
+                ), 500
+
+            data = request.get_json()
+
+            # Validate required fields
+            required_fields = ["date", "account_id", "code", "name", "price", "quantity"]
+            for field in required_fields:
+                if field not in data or not data[field]:
+                    return jsonify(
+                        {"status": "error", "message": f"Missing required field: {field}"}
+                    ), 400
+
+            # Prepare order document
+            order = {
+                "date": data["date"],
+                "account_id": data["account_id"],
+                "account_name": data.get("account_name", ""),  # Add account_name field
+                "code": data["code"],
+                "name": data["name"],
+                "price": float(data["price"]),
+                "quantity": int(data["quantity"]),
+                "total_amount": float(data["price"]) * int(data["quantity"]),
+                "created_at": datetime.now()
+            }
+
+            # Save order to MongoDB
+            result = app.config["MONGO_DB"].orders.insert_one(order)
+
+            if result.inserted_id:
+                # Add the inserted ID to the response
+                order["_id"] = str(result.inserted_id)
+                return jsonify(
+                    {
+                        "status": "success",
+                        "message": "Order created successfully",
+                        "order": order,
+                    }
+                )
+            else:
+                return jsonify(
+                    {"status": "error", "message": "Failed to create order"}
+                ), 500
+        except Exception as e:
+            logger.error(f"Error creating order: {e}")
+            return jsonify(
+                {"status": "error", "message": f"Failed to create order: {str(e)}"}
             ), 500
 
 

@@ -105,7 +105,7 @@
                 tbody.innerHTML = '';
 
                 if (data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan=\"10\" class=\"text-center\">暂无数据</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="10" class="text-center">暂无数据</td></tr>';
                     return;
                 }
 
@@ -132,36 +132,36 @@
                         score_ai = strategyData.score_ai !== undefined ? strategyData.score_ai : 0;
                     }
 
-                        // Format change percentage with % symbol and color coding
-                        let changePercentDisplay = '';
-                        if (stock.change_percent !== undefined && stock.change_percent !== null) {
-                            const changePercent = parseFloat(stock.change_percent);
-                            const formattedChange = changePercent.toFixed(2);
-                            const sign = changePercent >= 0 ? '+' : '';
-                            const colorClass = changePercent >= 0 ? 'text-success' : 'text-danger';
-                            changePercentDisplay = `<span class="${colorClass}">${sign}${formattedChange}%</span>`;
-                        }
-    
-                        // Format turnover rate with % symbol
-                        let turnoverRateDisplay = '';
-                        if (stock.turnover_rate !== undefined && stock.turnover_rate !== null) {
-                            const turnoverRate = parseFloat(stock.turnover_rate);
-                            turnoverRateDisplay = `${turnoverRate.toFixed(2)}%`;
-                        }
-    
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${stock.code}</td>
-                            <td>${stock.name || ''}</td>
-                            <td>${stock.price.toFixed(2)}</td>
-                            <td>${changePercentDisplay}</td>
-                            <td>${turnoverRateDisplay}</td>
+                    // Format change percentage with % symbol and color coding
+                    let changePercentDisplay = '';
+                    if (stock.change_percent !== undefined && stock.change_percent !== null) {
+                        const changePercent = parseFloat(stock.change_percent);
+                        const formattedChange = changePercent.toFixed(2);
+                        const sign = changePercent >= 0 ? '+' : '';
+                        const colorClass = changePercent >= 0 ? 'text-success' : 'text-danger';
+                        changePercentDisplay = `<span class="${colorClass}">${sign}${formattedChange}%</span>`;
+                    }
+
+                    // Format turnover rate with % symbol
+                    let turnoverRateDisplay = '';
+                    if (stock.turnover_rate !== undefined && stock.turnover_rate !== null) {
+                        const turnoverRate = parseFloat(stock.turnover_rate);
+                        turnoverRateDisplay = `${turnoverRate.toFixed(2)}%`;
+                    }
+
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${stock.code}</td>
+                        <td>${stock.name || ''}</td>
+                        <td>${stock.price.toFixed(2)}</td>
+                        <td>${changePercentDisplay}</td>
+                        <td>${turnoverRateDisplay}</td>
                         <td>${action}</td>
                         <td>${counts}</td>
                         <td>${score_calc.toFixed(2)}</td>
                         <td>${score_ai.toFixed(2)}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary">详情</button>
+                            <button class="btn btn-sm btn-outline-success buy-btn" data-code="${stock.code}" data-name="${stock.name || stock.code}" data-price="${stock.price.toFixed(2)}">买入</button>
                         </td>
                     `;
                     // Add double-click event to open K-line chart
@@ -174,14 +174,188 @@
             .catch(error => {
                 console.error('Error loading pool stocks:', error);
                 const tbody = document.getElementById('pool-stocks-body');
-                tbody.innerHTML = '<tr><td colspan=\"10\" class=\"text-center text-danger\">加载数据失败</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger">加载数据失败</td></tr>';
             });
     }
 
     // Load data when page loads
     document.addEventListener('DOMContentLoaded', function() {
         loadLatestPoolStocks();
+
+        // Buy modal functionality
+        let currentStockCode = '';
+        let currentStockName = '';
+        let currentStockPrice = 0;
+
+        // Handle buy button clicks using event delegation
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('buy-btn')) {
+                const button = e.target;
+                currentStockCode = button.getAttribute('data-code');
+                currentStockName = button.getAttribute('data-name');
+                currentStockPrice = parseFloat(button.getAttribute('data-price'));
+
+                // Set default date to today
+                const today = new Date().toISOString().split('T')[0];
+                document.getElementById('buyDate').value = today;
+
+                // Set stock code and name directly from data attributes
+                document.getElementById('stockCode').value = currentStockCode;
+                document.getElementById('stockName').value = currentStockName;
+
+                // Set stock price
+                document.getElementById('buyPrice').value = currentStockPrice.toFixed(2);
+
+                // Load accounts
+                loadAccountsForBuy();
+
+                // Show modal using Bootstrap's JavaScript API
+                const buyModal = new bootstrap.Modal(document.getElementById('buyModal'));
+                buyModal.show();
+            }
+        });
+
+        // Load accounts for buy modal
+        function loadAccountsForBuy() {
+            fetch('/api/accounts')
+                .then(response => response.json())
+                .then(accounts => {
+                    const accountSelect = document.getElementById('accountSelect');
+                    accountSelect.innerHTML = '<option value="">请选择账户</option>';
+                    accounts.forEach(function(account) {
+                        const option = document.createElement('option');
+                        option.value = account._id;
+                        option.textContent = account.name;
+                        accountSelect.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    console.error('Failed to load accounts:', error);
+                });
+        }
+
+        // Handle stock code input change
+        document.getElementById('stockCode').addEventListener('input', function() {
+            const code = this.value;
+            if (code) {
+                // In a real implementation, you would fetch the stock name from the server
+                // For now, we'll just leave it as is since we're getting it from the data attributes
+            } else {
+                document.getElementById('stockName').value = '';
+            }
+        });
+
+        // Handle buy form submission
+        document.getElementById('buyForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            // Get selected account name
+            const accountSelect = document.getElementById('accountSelect');
+            const selectedOption = accountSelect.options[accountSelect.selectedIndex];
+            const accountName = selectedOption.textContent;
+
+            const orderData = {
+                date: document.getElementById('buyDate').value,
+                account_id: document.getElementById('accountSelect').value,
+                account_name: accountName,  // Add account name to order data
+                code: document.getElementById('stockCode').value,
+                name: document.getElementById('stockName').value,
+                price: parseFloat(document.getElementById('buyPrice').value),
+                quantity: parseInt(document.getElementById('buyQuantity').value)
+            };
+
+            // Validate form
+            if (!orderData.date || !orderData.account_id || !orderData.code || !orderData.name || !orderData.price || !orderData.quantity) {
+                alert('请填写所有必填字段');
+                return;
+            }
+
+            // Save order to database
+            fetch('/api/orders', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => response.json())
+            .then(response => {
+                if (response.status === 'success') {
+                    alert('订单创建成功');
+                    // Hide modal using Bootstrap's JavaScript API
+                    const buyModalElement = document.getElementById('buyModal');
+                    const buyModal = bootstrap.Modal.getInstance(buyModalElement);
+                    if (buyModal) {
+                        buyModal.hide();
+                    } else {
+                        // If instance doesn't exist, create new one and hide
+                        const modal = new bootstrap.Modal(buyModalElement);
+                        modal.hide();
+                    }
+                    // Reset form
+                    document.getElementById('buyForm').reset();
+                } else {
+                    alert('订单创建失败: ' + response.message);
+                }
+            })
+            .catch(error => {
+                alert('订单创建失败: ' + error.message);
+                console.error('Order creation error:', error);
+            });
+        });
+
+        // Handle confirm button click
+        document.getElementById('confirmBuy').addEventListener('click', function() {
+            document.getElementById('buyForm').dispatchEvent(new Event('submit'));
+        });
     });
 </script>
+
+<!-- Buy Modal -->
+<div class="modal fade" id="buyModal" tabindex="-1" aria-labelledby="buyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="buyModalLabel">买入股票</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="buyForm">
+                    <div class="mb-3">
+                        <label for="buyDate" class="form-label">日期</label>
+                        <input type="date" class="form-control" id="buyDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="accountSelect" class="form-label">账户</label>
+                        <select class="form-select" id="accountSelect" required>
+                            <option value="">请选择账户</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stockCode" class="form-label">股票代码</label>
+                        <input type="text" class="form-control" id="stockCode" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="stockName" class="form-label">股票名称</label>
+                        <input type="text" class="form-control" id="stockName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="buyPrice" class="form-label">买入价格</label>
+                        <input type="number" class="form-control" id="buyPrice" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="buyQuantity" class="form-label">买入数量</label>
+                        <input type="number" class="form-control" id="buyQuantity" min="1" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmBuy">确认</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 

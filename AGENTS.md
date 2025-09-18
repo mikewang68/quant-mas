@@ -274,6 +274,12 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **ENHANCED**: Improved signal generation V1 data display to show detailed information including strategy counts, calculated signals, AI signals, scores, and AI analysis reasoning
 - **MODIFIED**: Updated MA line styles in K-line charts with customized widths and colors (short: 1px white, medium: 2px yellow, long: 3px magenta)
 
+### Order Account Name Enhancement
+- **ADDED**: Added `account_name` field to order records to improve order tracking and display
+- **MODIFIED**: Updated frontend to capture and send account name when creating orders
+- **MODIFIED**: Updated backend API to store account name with order data
+- **BENEFITS**: Improved performance by eliminating additional database lookups for account names in order listings
+
 ## Usage Patterns
 
 ### Running Agents
