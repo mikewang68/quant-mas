@@ -280,6 +280,13 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **MODIFIED**: Updated backend API to store account name with order data
 - **BENEFITS**: Improved performance by eliminating additional database lookups for account names in order listings
 
+### Position Page Layout Optimization and Enhancement
+- **MODIFIED**: Adjusted layout of position page to use non-equal column widths (left: 1/4, right: 3/4) for better information display
+- **REMOVED**: Eliminated currency symbols (¥) from all monetary displays on the position page for cleaner presentation
+- **ADDED**: Added profit/loss amount and profit/loss ratio to the left account summary panel
+- **ENHANCED**: Implemented color-coded display for profit/loss information (green for profits, red for losses)
+- **VERIFIED**: Confirmed that sell operations work correctly for accounts with multiple stocks, maintaining data consistency
+
 ## Usage Patterns
 
 ### Running Agents

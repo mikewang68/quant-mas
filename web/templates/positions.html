@@ -1,0 +1,598 @@
+{% extends "base.html" %}
+
+{% block title %}持仓 - 量化交易系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">账户持仓</h2>
+
+            <!-- Accounts List -->
+            <div class="row" id="accounts-container">
+                <!-- Accounts will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sell Stock Modal -->
+<div class="modal fade" id="sellStockModal" tabindex="-1" aria-labelledby="sellStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="sellStockModalLabel">卖出股票</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="sellStockForm">
+                    <div class="mb-3">
+                        <label for="sellDate" class="form-label">日期</label>
+                        <input type="date" class="form-control" id="sellDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sellAccountSelect" class="form-label">账户</label>
+                        <select class="form-select" id="sellAccountSelect" required>
+                            <option value="">请选择账户</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sellStockCode" class="form-label">股票代码</label>
+                        <input type="text" class="form-control" id="sellStockCode" required readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sellStockName" class="form-label">股票名称</label>
+                        <input type="text" class="form-control" id="sellStockName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sellPrice" class="form-label">卖出价格</label>
+                        <input type="number" class="form-control" id="sellPrice" step="0.01" min="0" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="sellQuantity" class="form-label">卖出数量</label>
+                        <input type="number" class="form-control" id="sellQuantity" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="holdingQuantity" class="form-label">最大可卖数量</label>
+                        <input type="text" class="form-control" id="holdingQuantity" readonly>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="confirmSellBtn">确认卖出</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Load accounts when page loads
+    $(document).ready(function() {
+        loadAccounts();
+    });
+
+    // Load all accounts with their positions
+    function loadAccounts() {
+        $.get('/api/accounts')
+            .done(function(accounts) {
+                const container = $('#accounts-container');
+                container.empty();
+
+                if (accounts.length === 0) {
+                    container.append('<div class="col-12"><p>暂无账户信息</p></div>');
+                    return;
+                }
+
+                accounts.forEach(function(account) {
+                    const accountCard = createAccountCard(account);
+                    container.append(accountCard);
+                });
+
+                // Preload stock prices for all accounts
+                let allStocks = [];
+                accounts.forEach(account => {
+                    if (account.stocks && account.stocks.length > 0) {
+                        allStocks = allStocks.concat(account.stocks);
+                    }
+                });
+                if (allStocks.length > 0) {
+                    preloadStockPrices(allStocks);
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load accounts:', error);
+                $('#accounts-container').html('<div class="col-12"><p class="text-danger">加载账户信息失败</p></div>');
+            });
+    }
+
+    // Create account card HTML
+    function createAccountCard(account) {
+        const accountId = account._id;
+        const accountName = account.name || '未命名账户';
+        const accountType = account.type || '未知';
+        const initialCapital = account.initial_capital || 0;
+        const cash = account.cash || 0;
+        const stocks = account.stocks || [];
+
+        // Calculate total value based on market price (will be updated when prices load)
+        let totalStockValue = 0;
+        stocks.forEach(stock => {
+            // Initially use cost price as fallback, will be updated with market price
+            totalStockValue += (stock.cost || 0) * (stock.quantity || 0);
+        });
+                const totalValue = cash + totalStockValue;
+        
+                // Calculate profit/loss information
+                const profitAmount = totalValue - initialCapital;
+                const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
+
+        let stocksHtml = '';
+        if (stocks.length > 0) {
+            stocksHtml = `
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>股票代码</th>
+                            <th>股票名称</th>
+                            <th>持有数量</th>
+                            <th>成本价</th>
+                            <th>当前价</th>
+                            <th>市值</th>
+                            <th>盈亏额</th>
+                            <th>盈亏比</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${stocks.map(stock => `
+                            <tr>
+                                <td>${stock.code}</td>
+                                <td>${stock.name}</td>
+                                <td>${stock.quantity}</td>
+                                <td>${stock.cost.toFixed(2)}</td>
+                                <td><span class="current-price" data-code="${stock.code}">加载中...</span></td>
+                                <td><span class="market-value" data-code="${stock.code}" data-quantity="${stock.quantity}">加载中...</span></td>
+                                <td><span class="profit-amount" data-code="${stock.code}" data-quantity="${stock.quantity}" data-cost="${stock.cost}">加载中...</span></td>
+                                <td><span class="profit-ratio" data-code="${stock.code}" data-quantity="${stock.quantity}" data-cost="${stock.cost}">加载中...</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-warning sell-stock-btn"
+                                            data-account-id="${accountId}"
+                                            data-account-name="${accountName}"
+                                            data-stock-code="${stock.code}"
+                                            data-stock-name="${stock.name}"
+                                            data-quantity="${stock.quantity}"
+                                            data-cost="${stock.cost}">
+                                        卖出
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        } else {
+            stocksHtml = '<p class="text-muted">暂无持仓股票</p>';
+        }
+
+        const cardHtml = `
+            <div class="col-12 mb-4">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">${accountName}</h5>
+                        <small class="text-white-50">类型: ${accountType}</small>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                                                    <div class="col-md-3">
+                                                        <div class="mb-3">
+                                                            <h6 class="text-muted">资金信息</h6>
+                                                                                        <p class="mb-1">初始资金: ${initialCapital.toFixed(2)}</p>
+                                                                                        <p class="mb-1">可用现金: ${cash.toFixed(2)}</p>
+                                                                                        <p class="mb-1">股票市值: ${totalStockValue.toFixed(2)}</p>
+                                                                                        <p class="fw-bold">总资产: ${totalValue.toFixed(2)}</p>
+                                                                                        <p class="mb-1">盈亏额: <span id="profit-amount-${accountId}" class="${profitAmount > 0 ? 'text-success' : profitAmount < 0 ? 'text-danger' : ''}">${profitAmount.toFixed(2)}</span></p>
+                                                                                                                            <p class="mb-1">盈亏比: <span id="profit-ratio-${accountId}" class="${profitRatio > 0 ? 'text-success' : profitRatio < 0 ? 'text-danger' : ''}">${initialCapital !== 0 ? profitRatio.toFixed(2) + '%' : 'N/A'}</span></p>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-9">
+                                <div>
+                                    <h6 class="text-muted">持仓股票</h6>
+                                    ${stocksHtml}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        return cardHtml;
+    }
+
+    // Load current stock prices
+    $(document).on('mouseenter', '.current-price, .market-value, .profit-amount, .profit-ratio', function() {
+        const code = $(this).data('code');
+        const element = $(this);
+
+        if (!code) return;
+
+        // Check if already loaded
+        if (element.text() !== '加载中...') return;
+
+        $.get(`/api/stock-price/${code}`)
+            .done(function(data) {
+                if (data.price) {
+                    if (element.hasClass('current-price')) {
+                        element.text(data.price.toFixed(2));
+                    } else if (element.hasClass('market-value')) {
+                        const quantity = element.data('quantity');
+                        const marketValue = data.price * quantity;
+                        element.text(marketValue.toFixed(2));
+
+                        // Update the account total value display
+                        updateAccountTotalValue(element, data.price, quantity);
+                    } else if (element.hasClass('profit-amount')) {
+                        const quantity = element.data('quantity');
+                        const cost = parseFloat(element.data('cost'));
+                        const profitAmount = (data.price - cost) * quantity;
+                        element.text(profitAmount.toFixed(2));
+
+                        // Add color based on profit/loss
+                        if (profitAmount > 0) {
+                            element.addClass('text-success');
+                        } else if (profitAmount < 0) {
+                            element.addClass('text-danger');
+                        }
+                    } else if (element.hasClass('profit-ratio')) {
+                        const quantity = element.data('quantity');
+                        const cost = parseFloat(element.data('cost'));
+                        if (cost > 0) {
+                            const profitRatio = ((data.price - cost) / cost) * 100;
+                            element.text(profitRatio.toFixed(2) + '%');
+
+                            // Add color based on profit/loss
+                            if (profitRatio > 0) {
+                                element.addClass('text-success');
+                            } else if (profitRatio < 0) {
+                                element.addClass('text-danger');
+                            }
+                        } else {
+                            element.text('N/A');
+                        }
+                    }
+                } else {
+                    element.text('N/A');
+                }
+            })
+            .fail(function() {
+                element.text('N/A');
+            });
+    });
+
+    // Preload all stock prices when accounts are loaded
+    function preloadStockPrices(stocks) {
+        const uniqueCodes = [...new Set(stocks.map(stock => stock.code))];
+
+        uniqueCodes.forEach(code => {
+            $.get(`/api/stock-price/${code}`)
+                .done(function(data) {
+                    if (data.price) {
+                        // Update all elements with this code
+                        $(`.current-price[data-code="${code}"]`).text(data.price.toFixed(2));
+                        $(`.market-value[data-code="${code}"]`).each(function() {
+                            const quantity = $(this).data('quantity');
+                            const marketValue = data.price * quantity;
+                            $(this).text(marketValue.toFixed(2));
+
+                            // Update the account total value display
+                            updateAccountTotalValue($(this), data.price, quantity);
+                        });
+                        $(`.profit-amount[data-code="${code}"]`).each(function() {
+                            const quantity = $(this).data('quantity');
+                            const cost = parseFloat($(this).data('cost'));
+                            const profitAmount = (data.price - cost) * quantity;
+                            $(this).text(profitAmount.toFixed(2));
+
+                            // Add color based on profit/loss
+                            if (profitAmount > 0) {
+                                $(this).addClass('text-success');
+                            } else if (profitAmount < 0) {
+                                $(this).addClass('text-danger');
+                            }
+                        });
+                        $(`.profit-ratio[data-code="${code}"]`).each(function() {
+                            const quantity = $(this).data('quantity');
+                            const cost = parseFloat($(this).data('cost'));
+                            if (cost > 0) {
+                                const profitRatio = ((data.price - cost) / cost) * 100;
+                                $(this).text(profitRatio.toFixed(2) + '%');
+
+                                // Add color based on profit/loss
+                                if (profitRatio > 0) {
+                                    $(this).addClass('text-success');
+                                } else if (profitRatio < 0) {
+                                    $(this).addClass('text-danger');
+                                }
+                            } else {
+                                $(this).text('N/A');
+                            }
+                        });
+                    }
+                });
+        });
+    }
+
+    // Update account total value when stock prices change
+    function updateAccountTotalValue(marketValueElement, price, quantity) {
+        // Find the parent account card
+        const accountCard = marketValueElement.closest('.card');
+        if (!accountCard) return;
+
+        // Get the account cash value
+        const cashElement = accountCard.find('p.mb-1:contains("可用现金:")');
+        let cash = 0;
+        if (cashElement.length > 0) {
+            const cashText = cashElement.text();
+            const cashMatch = cashText.match(/([\d,.]+)/);
+            if (cashMatch) {
+                cash = parseFloat(cashMatch[1].replace(/,/g, '')) || 0;
+            }
+        }
+
+        // Calculate total stock value for this account
+        let totalStockValue = 0;
+        accountCard.find('.market-value').each(function() {
+            const valueText = $(this).text();
+            if (valueText !== '加载中...' && valueText !== 'N/A') {
+                const value = parseFloat(valueText) || 0;
+                totalStockValue += value;
+            }
+        });
+
+        // Update the stock value display
+        const stockValueElement = accountCard.find('p.mb-1:contains("股票市值:")');
+        if (stockValueElement.length > 0) {
+                    stockValueElement.text(`股票市值: ${totalStockValue.toFixed(2)}`);
+                }
+        
+                // Update the total value display
+                const totalValue = cash + totalStockValue;
+                const totalValueElement = accountCard.find('p.fw-bold:contains("总资产:")');
+                if (totalValueElement.length > 0) {
+                    totalValueElement.text(`总资产: ${totalValue.toFixed(2)}`);
+                }
+        
+                // Update profit/loss information
+                const initialCapitalElement = accountCard.find('p.mb-1:contains("初始资金:")');
+                if (initialCapitalElement.length > 0) {
+                    const initialCapitalText = initialCapitalElement.text();
+                    const initialCapitalMatch = initialCapitalText.match(/([\d,.]+)/);
+                    if (initialCapitalMatch) {
+                        const initialCapital = parseFloat(initialCapitalMatch[1].replace(/,/g, '')) || 0;
+                        const profitAmount = totalValue - initialCapital;
+                        const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
+        
+                        // Update profit amount
+                        const profitAmountElement = accountCard.find('[id^="profit-amount-"]');
+                        if (profitAmountElement.length > 0) {
+                            profitAmountElement.text(profitAmount.toFixed(2));
+                            // Add color based on profit/loss
+                            profitAmountElement.removeClass('text-success text-danger');
+                            if (profitAmount > 0) {
+                                profitAmountElement.addClass('text-success');
+                            } else if (profitAmount < 0) {
+                                profitAmountElement.addClass('text-danger');
+                            }
+                        }
+        
+                        // Update profit ratio
+                        const profitRatioElement = accountCard.find('[id^="profit-ratio-"]');
+                        if (profitRatioElement.length > 0) {
+                            profitRatioElement.text(profitRatio.toFixed(2) + '%');
+                            // Add color based on profit/loss
+                            profitRatioElement.removeClass('text-success text-danger');
+                            if (profitRatio > 0) {
+                                profitRatioElement.addClass('text-success');
+                            } else if (profitRatio < 0) {
+                                profitRatioElement.addClass('text-danger');
+                            }
+                        }
+                    }
+        }
+    }
+
+    // Handle sell stock button click
+    $(document).on('click', '.sell-stock-btn', function() {
+        const accountId = $(this).data('account-id');
+        const accountName = $(this).data('account-name');
+        const stockCode = $(this).data('stock-code');
+        const stockName = $(this).data('stock-name');
+        const quantity = $(this).data('quantity');
+        const cost = $(this).data('cost');
+
+        // Set modal values
+        $('#sellStockCode').val(stockCode);
+        $('#sellStockName').val(stockName);
+        $('#holdingQuantity').val(quantity);
+
+        // Set default date to today
+        const today = new Date().toISOString().split('T')[0];
+        $('#sellDate').val(today);
+
+        // Set selected account in dropdown
+        loadAccountsForSell(accountId);
+
+        // Load current price
+        $.get(`/api/stock-price/${stockCode}`)
+            .done(function(data) {
+                if (data.price) {
+                    $('#sellPrice').val(data.price.toFixed(2));
+                } else {
+                    $('#sellPrice').val('');
+                }
+            })
+            .fail(function() {
+                $('#sellPrice').val('');
+            });
+
+        // Set max quantity
+        $('#sellQuantity').attr('max', quantity);
+        $('#sellQuantity').val(quantity);
+
+        // Show modal
+        const sellModal = new bootstrap.Modal(document.getElementById('sellStockModal'));
+        sellModal.show();
+    });
+
+    // Load accounts for sell modal
+    function loadAccountsForSell(selectedAccountId) {
+        $.get('/api/accounts')
+            .done(function(accounts) {
+                const accountSelect = $('#sellAccountSelect');
+                accountSelect.empty();
+                accountSelect.append('<option value="">请选择账户</option>');
+
+                accounts.forEach(function(account) {
+                    const option = $('<option></option>');
+                    option.val(account._id);
+                    option.text(account.name);
+                    if (account._id === selectedAccountId) {
+                        option.prop('selected', true);
+                    }
+                    accountSelect.append(option);
+                });
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load accounts:', error);
+            });
+    }
+
+    // Handle confirm sell button click
+    $('#confirmSellBtn').click(function() {
+        // Get form values
+        const date = $('#sellDate').val();
+        const accountId = $('#sellAccountSelect').val();
+        const accountName = $('#sellAccountSelect option:selected').text();
+        const stockCode = $('#sellStockCode').val();
+        const stockName = $('#sellStockName').val();
+        const sellPrice = parseFloat($('#sellPrice').val());
+        const sellQuantity = parseInt($('#sellQuantity').val());
+        const holdingQuantity = parseInt($('#holdingQuantity').val());
+
+        // Validate input
+        if (!date || !accountId || !stockCode || !stockName || isNaN(sellPrice) || sellPrice <= 0 || isNaN(sellQuantity) || sellQuantity <= 0 || sellQuantity > holdingQuantity) {
+            alert('请输入有效的卖出信息');
+            return;
+        }
+
+        // Get system configuration to calculate commission
+        $.get('/api/config')
+            .done(function(config) {
+                const commissionRate = config.commission || 0.001; // Default to 0.1% if not set
+                const totalPrice = sellPrice * sellQuantity;
+                const commission = totalPrice * commissionRate;
+                const netAmount = totalPrice - commission;
+
+                // Create order data (negative quantity for selling)
+                const orderData = {
+                    date: date,
+                    account_id: accountId,
+                    account_name: accountName,
+                    code: stockCode,
+                    name: stockName,
+                    price: sellPrice,
+                    quantity: -sellQuantity, // Negative quantity for selling
+                    commission: commission, // Add commission to order data
+                    net_amount: netAmount // Add net amount to order data
+                };
+
+                // Submit sell order
+                $.ajax({
+                    url: '/api/orders',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(orderData),
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alert('卖出订单创建成功，手续费: ' + commission.toFixed(2) + '元');
+                            // Hide modal
+                            const sellModalElement = document.getElementById('sellStockModal');
+                            const sellModal = bootstrap.Modal.getInstance(sellModalElement);
+                            if (sellModal) {
+                                sellModal.hide();
+                            } else {
+                                const modal = new bootstrap.Modal(sellModalElement);
+                                modal.hide();
+                            }
+                            // Reload accounts to reflect changes
+                            loadAccounts();
+                        } else {
+                            alert('卖出订单创建失败: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Failed to create sell order:', error);
+                        alert('卖出订单创建失败: ' + error);
+                    }
+                });
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to get system config:', error);
+                alert('获取系统配置失败，将使用默认手续费率');
+
+                // Use default commission rate
+                const commissionRate = 0.001; // Default to 0.1%
+                const totalPrice = sellPrice * sellQuantity;
+                const commission = totalPrice * commissionRate;
+                const netAmount = totalPrice - commission;
+
+                // Create order data (negative quantity for selling)
+                const orderData = {
+                    date: date,
+                    account_id: accountId,
+                    account_name: accountName,
+                    code: stockCode,
+                    name: stockName,
+                    price: sellPrice,
+                    quantity: -sellQuantity, // Negative quantity for selling
+                    commission: commission, // Add commission to order data
+                    net_amount: netAmount // Add net amount to order data
+                };
+
+                // Submit sell order
+                $.ajax({
+                    url: '/api/orders',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify(orderData),
+                    success: function(response) {
+                        if (response.status === 'success') {
+                            alert('卖出订单创建成功，手续费: ' + commission.toFixed(2) + '元');
+                            // Hide modal
+                            const sellModalElement = document.getElementById('sellStockModal');
+                            const sellModal = bootstrap.Modal.getInstance(sellModalElement);
+                            if (sellModal) {
+                                sellModal.hide();
+                            } else {
+                                const modal = new bootstrap.Modal(sellModalElement);
+                                modal.hide();
+                            }
+                            // Reload accounts to reflect changes
+                            loadAccounts();
+                        } else {
+                            alert('卖出订单创建失败: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Failed to create sell order:', error);
+                        alert('卖出订单创建失败: ' + error);
+                    }
+                });
+            });
+    });
+</script>
+{% endblock %}
+
