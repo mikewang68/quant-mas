@@ -6,15 +6,17 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
-            <h1>
-                <i class="fas fa-tachometer-alt"></i> 系统仪表板
-                            <div class="float-end d-flex align-items-center">
+            <div class="d-flex justify-content-between align-items-center">
+                            <h1 class="mb-0">
+                                <i class="fas fa-tachometer-alt"></i> 系统仪表板
+                            </h1>
+                            <div class="d-flex align-items-center">
                                 <label for="accountSelect" class="form-label me-2 mb-0" style="font-size: 1rem;">选择账户:</label>
                                 <select class="form-select d-inline-block w-auto" id="accountSelect" style="font-size: 1rem; padding: 0.25rem 0.5rem;">
-                            <option value="">加载中...</option>
-                        </select>
-                    </div>
-                </h1>
+                                    <option value="">加载中...</option>
+                                </select>
+                            </div>
+                        </div>
                 <hr>
             </div>
     </div>
@@ -296,6 +298,26 @@
     // Load accounts when page loads
     $(document).ready(function() {
         loadAccounts();
+    
+            // Set default account to 'wdg' and load its data
+            setTimeout(function() {
+                const accountSelect = $('#accountSelect');
+                const wdgOption = accountSelect.find('option').filter(function() {
+                    return $(this).text() === 'wdg';
+                });
+    
+                if (wdgOption.length > 0) {
+                    const accountId = wdgOption.val();
+                    accountSelect.val(accountId).trigger('change');
+                } else if (accountSelect.find('option').length > 1) {
+                    // If 'wdg' not found, select the first account (excluding the "请选择账户" option)
+                    const firstAccountOption = accountSelect.find('option[value!=""]').first();
+                    if (firstAccountOption.length > 0) {
+                        firstAccountOption.prop('selected', true);
+                        accountSelect.trigger('change');
+                    }
+                }
+            }, 500); // Small delay to ensure accounts are loaded
     });
 
     // Load all accounts
