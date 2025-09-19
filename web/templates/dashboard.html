@@ -1,200 +1,300 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Quant Trading System{% endblock %}
+{% block title %}仪表板 - 量化交易系统{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h1>
-            <i class="fas fa-tachometer-alt"></i> System Dashboard
-        </h1>
-        <hr>
-    </div>
-</div>
-
-<div class="row">
-    <!-- System Status Card -->
-    <div class="col-md-3 mb-4">
-        <div class="card text-white bg-info">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-server"></i> System Status
-                </h5>
-                <p class="card-text display-6" id="system-status">Running</p>
-                <small class="text-white">Last updated: <span id="last-update">Just now</span></small>
-            </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1>
+                <i class="fas fa-tachometer-alt"></i> 系统仪表板
+            </h1>
+            <hr>
         </div>
     </div>
 
-    <!-- Portfolio Value Card -->
-    <div class="col-md-3 mb-4">
-        <div class="card text-white bg-success">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-wallet"></i> Portfolio Value
-                </h5>
-                <p class="card-text display-6" id="portfolio-value">¥1,000,000</p>
-                <small class="text-white">Initial: ¥1,000,000</small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Today's P&L Card -->
-    <div class="col-md-3 mb-4">
-        <div class="card text-white bg-warning">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-chart-line"></i> Today's P&L
-                </h5>
-                <p class="card-text display-6 text-success" id="today-pnl">+¥2,500</p>
-                <small class="text-white">Return: <span id="today-return">+0.25%</span></small>
-            </div>
-        </div>
-    </div>
-
-    <!-- Positions Card -->
-    <div class="col-md-3 mb-4">
-        <div class="card text-white bg-primary">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-chart-pie"></i> Positions
-                </h5>
-                <p class="card-text display-6" id="positions-count">5</p>
-                <small class="text-white">Active positions</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <!-- Portfolio Chart -->
-    <div class="col-md-8 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5>
-                    <i class="fas fa-chart-area"></i> Portfolio Performance
-                </h5>
-            </div>
-            <div class="card-body">
-                <canvas id="portfolio-chart" height="300"></canvas>
-            </div>
-        </div>
-    </div>
-
-    <!-- Recent Trades -->
-    <div class="col-md-4 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5>
-                    <i class="fas fa-exchange-alt"></i> Recent Trades
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped table-hover">
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Symbol</th>
-                                <th>Action</th>
-                                <th>Price</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recent-trades">
-                            <tr>
-                                <td>10:30:15</td>
-                                <td>000001</td>
-                                <td class="text-success">BUY</td>
-                                <td>15.23</td>
-                            </tr>
-                            <tr>
-                                <td>09:45:22</td>
-                                <td>600000</td>
-                                <td class="text-danger">SELL</td>
-                                <td>9.87</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row">
-    <!-- Strategy Performance -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5>
-                    <i class="fas fa-robot"></i> Agent Performance
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Agent</th>
-                                <th>Status</th>
-                                <th>Last Run</th>
-                                <th>Performance</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>Weekly Selector</td>
-                                <td><span class="badge bg-success">Active</span></td>
-                                <td>2023-06-15</td>
-                                <td class="text-success">+1.2%</td>
-                            </tr>
-                            <tr>
-                                <td>Daily Trader</td>
-                                <td><span class="badge bg-success">Active</span></td>
-                                <td>Today</td>
-                                <td class="text-success">+0.25%</td>
-                            </tr>
-                        </tbody>
-                    </table>
+    <!-- Account Selection -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            <label for="accountSelect" class="form-label">选择账户:</label>
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-select" id="accountSelect">
+                                <option value="">加载中...</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Market Overview -->
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h5>
-                    <i class="fas fa-globe-asia"></i> Market Overview
-                </h5>
+    <!-- Account Overview Section -->
+    <div class="row mb-4" id="accountOverviewSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5><i class="fas fa-wallet"></i> 账户总览</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Net Asset Value -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-primary">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-primary">账户净值</h6>
+                                    <h4 class="card-text" id="accountNetValue">¥0.00</h4>
+                                    <p class="mb-0" id="accountNetValueChange">+¥0.00 <span id="accountNetValueChangePercent">(+0.00%)</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Returns -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-success">收益率</h6>
+                                    <h4 class="card-text" id="cumulativeReturn">0.00%</h4>
+                                    <p class="mb-0" id="annualizedReturn">年化: 0.00%</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Max Drawdown -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-warning">最大回撤</h6>
+                                    <h4 class="card-text" id="maxDrawdown">¥0.00</h4>
+                                    <p class="mb-0" id="maxDrawdownPercent">0.00%</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sharpe Ratio -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-info">夏普比率</h6>
+                                    <h4 class="card-text" id="sharpeRatio">0.00</h4>
+                                    <p class="mb-0">风险调整收益</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Win Rate -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-success">胜率</h6>
+                                    <h4 class="card-text" id="winRate">0.00%</h4>
+                                    <p class="mb-0">盈利交易占比</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Profit/Loss Ratio -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-info">盈亏比</h6>
+                                    <h4 class="card-text" id="profitLossRatio">0.00</h4>
+                                    <p class="mb-0">平均盈亏比率</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Volatility -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-warning">波动率</h6>
+                                    <h4 class="card-text" id="volatility">0.00%</h4>
+                                    <p class="mb-0">日波动率</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- VaR -->
+                        <div class="col-md-3 mb-3">
+                            <div class="card border-danger">
+                                <div class="card-body text-center">
+                                    <h6 class="card-title text-danger">VaR</h6>
+                                    <h4 class="card-text" id="varValue">¥0.00</h4>
+                                    <p class="mb-0">95%置信度日VaR</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Index</th>
-                                <th>Value</th>
-                                <th>Change</th>
-                                <th>Change %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>上证指数</td>
-                                <td>3,200.12</td>
-                                <td class="text-success">+15.23</td>
-                                <td class="text-success">+0.48%</td>
-                            </tr>
-                            <tr>
-                                <td>深证成指</td>
-                                <td>11,500.45</td>
-                                <td class="text-danger">-25.67</td>
-                                <td class="text-danger">-0.22%</td>
-                            </tr>
-                        </tbody>
-                    </table>
+        </div>
+    </div>
+
+    <!-- Portfolio Performance Chart -->
+    <div class="row mb-4" id="portfolioChartSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5><i class="fas fa-chart-line"></i> 历史收益曲线</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="portfolioChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Positions and Risk Monitoring Section -->
+    <div class="row mb-4" id="positionsRiskSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <ul class="nav nav-tabs card-header-tabs" id="positionsRiskTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="positions-tab" data-bs-toggle="tab" href="#positions">持仓信息</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="risk-tab" data-bs-toggle="tab" href="#risk">风险监控</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Positions Tab -->
+                        <div class="tab-pane fade show active" id="positions">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h5><i class="fas fa-chart-pie"></i> 当前持仓</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>标的代码</th>
+                                                    <th>标的名称</th>
+                                                    <th>持仓数量</th>
+                                                    <th>当前市值</th>
+                                                    <th>持仓盈亏</th>
+                                                    <th>持仓天数</th>
+                                                    <th>止损/止盈线</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="positionsTableBody">
+                                                <!-- Positions will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <h6>持仓占比</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="positionRatio">0%</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>现金占比</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="cashRatio">0%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risk Monitoring Tab -->
+                        <div class="tab-pane fade" id="risk">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h5><i class="fas fa-exclamation-triangle"></i> 风险监控</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>持仓标的</th>
+                                                    <th>波动率</th>
+                                                    <th>VaR</th>
+                                                    <th>止损/止盈线</th>
+                                                    <th>市场风险提示</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="riskMonitoringTableBody">
+                                                <!-- Risk monitoring data will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Records Section -->
+    <div class="row mb-4" id="tradingRecordsSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <ul class="nav nav-tabs card-header-tabs" id="tradingRecordsTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="recent-trades-tab" data-bs-toggle="tab" href="#recentTrades">最近交易</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="open-trades-tab" data-bs-toggle="tab" href="#openTrades">未结交易</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Recent Trades Tab -->
+                        <div class="tab-pane fade show active" id="recentTrades">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>交易时间</th>
+                                            <th>标的代码</th>
+                                            <th>标的名称</th>
+                                            <th>交易类型</th>
+                                            <th>交易数量</th>
+                                            <th>交易价格</th>
+                                            <th>交易盈亏</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentTradesTableBody">
+                                        <!-- Recent trades will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Open Trades Tab -->
+                        <div class="tab-pane fade" id="openTrades">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>标的代码</th>
+                                            <th>标的名称</th>
+                                            <th>持仓数量</th>
+                                            <th>成本价格</th>
+                                            <th>当前价格</th>
+                                            <th>预期收益/亏损</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="openTradesTableBody">
+                                        <!-- Open trades will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -205,36 +305,297 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Initialize portfolio chart
-    const ctx = document.getElementById('portfolio-chart').getContext('2d');
-    const portfolioChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            datasets: [{
-                label: 'Portfolio Value',
-                data: [1000000, 1020000, 980000, 1050000, 1080000, 1100000],
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: false
+    let portfolioChart = null;
+
+    // Load accounts when page loads
+    $(document).ready(function() {
+        loadAccounts();
+    });
+
+    // Load all accounts
+    function loadAccounts() {
+        $.get('/api/accounts')
+            .done(function(accounts) {
+                const accountSelect = $('#accountSelect');
+                accountSelect.empty();
+
+                if (accounts.length === 0) {
+                    accountSelect.append('<option value="">暂无账户</option>');
+                    return;
                 }
-            }
+
+                // Add default option
+                accountSelect.append('<option value="">请选择账户</option>');
+
+                // Add all accounts
+                accounts.forEach(function(account) {
+                    const option = $('<option></option>');
+                    option.val(account._id);
+                    option.text(account.name || '未命名账户');
+                    accountSelect.append(option);
+                });
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load accounts:', error);
+                $('#accountSelect').html('<option value="">加载失败</option>');
+            });
+    }
+
+    // Handle account selection change
+    $('#accountSelect').change(function() {
+        const accountId = $(this).val();
+        if (accountId) {
+            loadAccountData(accountId);
+        } else {
+            // Hide all sections if no account selected
+            $('#accountOverviewSection').hide();
+            $('#portfolioChartSection').hide();
+            $('#positionsRiskSection').hide();
+            $('#tradingRecordsSection').hide();
         }
     });
 
-    // Update system status periodically
-    setInterval(function() {
-        const now = new Date();
-        document.getElementById('last-update').textContent = now.toLocaleTimeString();
-    }, 30000);
+    // Load account data
+    function loadAccountData(accountId) {
+        // Show all sections
+        $('#accountOverviewSection').show();
+        $('#portfolioChartSection').show();
+        $('#positionsRiskSection').show();
+        $('#tradingRecordsSection').show();
+
+        // Load account overview
+        loadAccountOverview(accountId);
+
+        // Load positions
+        loadPositions(accountId);
+
+        // Load trading records
+        loadTradingRecords(accountId);
+
+        // Load risk monitoring data
+        loadRiskMonitoringData(accountId);
+    }
+
+    // Load account overview data
+    function loadAccountOverview(accountId) {
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    // Calculate account metrics
+                    const initialCapital = account.initial_capital || 0;
+                    const cash = account.cash || 0;
+                    const stocks = account.stocks || [];
+
+                    // Calculate total stock value (using cost price for now, would need real-time prices)
+                    let totalStockValue = 0;
+                    stocks.forEach(stock => {
+                        totalStockValue += (stock.cost || 0) * (stock.quantity || 0);
+                    });
+
+                    const totalValue = cash + totalStockValue;
+                    const profitAmount = totalValue - initialCapital;
+                    const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
+
+                    // Update UI
+                    $('#accountNetValue').text(`¥${totalValue.toFixed(2)}`);
+                    $('#accountNetValueChange').html(`${profitAmount >= 0 ? '+' : ''}${profitAmount.toFixed(2)} <span id="accountNetValueChangePercent">(${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)</span>`);
+                    $('#accountNetValueChangePercent').removeClass('text-success text-danger').addClass(profitAmount >= 0 ? 'text-success' : 'text-danger');
+
+                    // Set other metrics to default values (would be calculated in real implementation)
+                    $('#cumulativeReturn').text(`${profitRatio.toFixed(2)}%`).removeClass('text-success text-danger').addClass(profitRatio >= 0 ? 'text-success' : 'text-danger');
+                    $('#annualizedReturn').text(`年化: ${(profitRatio * 12).toFixed(2)}%`);
+                    $('#maxDrawdown').text('¥0.00');
+                    $('#maxDrawdownPercent').text('0.00%');
+                    $('#sharpeRatio').text('0.00');
+                    $('#winRate').text('0.00%');
+                    $('#profitLossRatio').text('0.00');
+                    $('#volatility').text('0.00%');
+                    $('#varValue').text('¥0.00');
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load account overview:', error);
+            });
+    }
+
+    // Load positions data
+    function loadPositions(accountId) {
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const stocks = account.stocks || [];
+                    const positionsTableBody = $('#positionsTableBody');
+                    positionsTableBody.empty();
+
+                    if (stocks.length === 0) {
+                        positionsTableBody.append('<tr><td colspan="7" class="text-center">暂无持仓</td></tr>');
+                        return;
+                    }
+
+                    // Calculate total value for position ratio
+                    const initialCapital = account.initial_capital || 0;
+                    const cash = account.cash || 0;
+                    let totalStockValue = 0;
+                    stocks.forEach(stock => {
+                        totalStockValue += (stock.cost || 0) * (stock.quantity || 0);
+                    });
+                    const totalValue = cash + totalStockValue;
+
+                    stocks.forEach(function(stock) {
+                        const marketValue = (stock.cost || 0) * (stock.quantity || 0);
+                        const profitAmount = marketValue - ((stock.cost || 0) * (stock.quantity || 0)); // Would need real-time prices
+                        const profitRatio = (stock.cost || 0) !== 0 ? (profitAmount / ((stock.cost || 0) * (stock.quantity || 0))) * 100 : 0;
+
+                        const row = `
+                            <tr>
+                                <td>${stock.code}</td>
+                                <td>${stock.name}</td>
+                                <td>${stock.quantity}</td>
+                                <td>¥${marketValue.toFixed(2)}</td>
+                                <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                                    ${profitAmount >= 0 ? '+' : ''}${profitAmount.toFixed(2)} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                                </td>
+                                <td>0</td>
+                                <td>¥${(stock.cost * 0.95).toFixed(2)} / ¥${(stock.cost * 1.05).toFixed(2)}</td>
+                            </tr>
+                        `;
+                        positionsTableBody.append(row);
+                    });
+
+                    // Update position and cash ratios
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load positions:', error);
+                $('#positionsTableBody').html('<tr><td colspan="7" class="text-center text-danger">加载持仓信息失败</td></tr>');
+            });
+    }
+
+    // Load trading records
+    function loadTradingRecords(accountId) {
+        $.get('/api/orders')
+            .done(function(orders) {
+                // Filter orders for this account
+                const accountOrders = orders.filter(order => order.account_id === accountId);
+
+                // Recent trades (last 10)
+                const recentTrades = accountOrders.slice(0, 10);
+                const recentTradesTableBody = $('#recentTradesTableBody');
+                recentTradesTableBody.empty();
+
+                if (recentTrades.length === 0) {
+                    recentTradesTableBody.append('<tr><td colspan="7" class="text-center">暂无交易记录</td></tr>');
+                } else {
+                    recentTrades.forEach(function(order) {
+                        const row = `
+                            <tr>
+                                <td>${order.date}</td>
+                                <td>${order.code}</td>
+                                <td>${order.name}</td>
+                                <td class="${order.quantity > 0 ? 'text-success' : 'text-danger'}">${order.quantity > 0 ? '买入' : '卖出'}</td>
+                                <td>${Math.abs(order.quantity)}</td>
+                                <td>¥${order.price.toFixed(2)}</td>
+                                <td class="text-muted">待计算</td>
+                            </tr>
+                        `;
+                        recentTradesTableBody.append(row);
+                    });
+                }
+
+                // Open trades (would need to calculate from positions)
+                const openTradesTableBody = $('#openTradesTableBody');
+                openTradesTableBody.empty();
+                openTradesTableBody.append('<tr><td colspan="6" class="text-center">暂无未结交易</td></tr>');
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load trading records:', error);
+                $('#recentTradesTableBody').html('<tr><td colspan="7" class="text-center text-danger">加载交易记录失败</td></tr>');
+                $('#openTradesTableBody').html('<tr><td colspan="6" class="text-center text-danger">加载未结交易失败</td></tr>');
+            });
+    }
+
+    // Load risk monitoring data
+    function loadRiskMonitoringData(accountId) {
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const stocks = account.stocks || [];
+                    const riskMonitoringTableBody = $('#riskMonitoringTableBody');
+                    riskMonitoringTableBody.empty();
+
+                    if (stocks.length === 0) {
+                        riskMonitoringTableBody.append('<tr><td colspan="5" class="text-center">暂无持仓</td></tr>');
+                        return;
+                    }
+
+                    stocks.forEach(function(stock) {
+                        const row = `
+                            <tr>
+                                <td>${stock.code} (${stock.name})</td>
+                                <td>0.00%</td>
+                                <td>¥0.00</td>
+                                <td>¥${(stock.cost * 0.95).toFixed(2)} / ¥${(stock.cost * 1.05).toFixed(2)}</td>
+                                <td class="text-warning">无特殊风险提示</td>
+                            </tr>
+                        `;
+                        riskMonitoringTableBody.append(row);
+                    });
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load risk monitoring data:', error);
+                $('#riskMonitoringTableBody').html('<tr><td colspan="5" class="text-center text-danger">加载风险监控数据失败</td></tr>');
+            });
+    }
+
+    // Initialize portfolio chart
+    function initPortfolioChart() {
+        const ctx = document.getElementById('portfolioChart').getContext('2d');
+        if (portfolioChart) {
+            portfolioChart.destroy();
+        }
+        portfolioChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
+                datasets: [{
+                    label: '账户净值',
+                    data: [1000000, 1020000, 980000, 1050000, 1080000, 1100000],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+    }
+
+    // Initialize chart when portfolio chart section is shown
+    $('#portfolioChartSection').on('shown.bs.collapse', function() {
+        initPortfolioChart();
+    });
+
+    // Initialize chart on page load if section is visible
+    if ($('#portfolioChartSection').is(':visible')) {
+        initPortfolioChart();
+    }
 </script>
 {% endblock %}
 

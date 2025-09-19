@@ -106,6 +106,11 @@ def register_routes(app: Flask):
         """Settings page"""
         return render_template("settings.html")
 
+    @app.route("/positions")
+    def positions():
+        """Positions page"""
+        return render_template("positions.html")
+
     @app.route("/stock-kline")
     def stock_kline_page():
         """Stock K-line chart page"""
@@ -140,6 +145,27 @@ def register_routes(app: Flask):
         ]
         return jsonify(stocks)
 
+    @app.route("/api/stock-name/<code>")
+    def get_stock_name(code):
+        """Get stock name by code from code collection"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({"error": "Database connection not available"}), 500
+
+            # Find stock by code in the code collection
+            stock_record = app.config["MONGO_DB"].code.find_one({"code": code})
+
+            if stock_record and "name" in stock_record:
+                return jsonify({"code": code, "name": stock_record["name"]}), 200
+            else:
+                return jsonify({"code": code, "name": ""}), 200
+
+        except Exception as e:
+            logger.error(f"Error getting stock name for {code}: {e}")
+            return jsonify({"error": f"Failed to get stock name: {str(e)}"}), 500
+
     @app.route("/api/stock-price/<code>")
     def get_stock_price(code):
         """Get real-time stock price by code"""
@@ -168,16 +194,69 @@ def register_routes(app: Flask):
                     # Fallback to mock data if Binance API fails
                     return jsonify({"code": code, "price": 0.0})
             else:
-                # Get real-time data using akshare for stocks
-                stock_data = ak.stock_bid_ask_em(symbol=code)
+                # Get latest closing price using AkshareClient for stocks
+                try:
+                    # Initialize AkshareClient
+                    akshare_client = AkshareClient()
 
-                # Extract the current price (based on your example, it's at index 20 in the 'value' column)
-                current_price = stock_data.iloc[20]["value"]
+                    # Get recent daily K-line data (last 5 days to ensure we get data)
+                    from datetime import datetime, timedelta
+                    end_date = datetime.now().strftime('%Y-%m-%d')
+                    start_date = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
 
-                if current_price is not None:
-                    return jsonify({"code": code, "price": float(current_price)})
-                else:
-                    return jsonify({"error": "Failed to get current price"}), 404
+                    k_data = akshare_client.get_daily_k_data(code, start_date, end_date)
+
+                    if not k_data.empty and len(k_data) > 0:
+                        # Get the latest closing price
+                        latest_close = k_data.iloc[-1]['close']
+
+                        if latest_close is not None:
+                            return jsonify({"code": code, "price": float(latest_close)})
+                        else:
+                            return jsonify({"error": "Failed to get closing price"}), 404
+                    else:
+                        return jsonify({"error": "No K-line data found for stock"}), 404
+
+                except Exception as akshare_error:
+                    logger.error(
+                        f"Error getting stock price from Akshare for {code}: {akshare_error}"
+                    )
+                    # Fallback to real-time data if K-line data fails
+                    try:
+                        # Initialize AkshareClient
+                        akshare_client = AkshareClient()
+
+                        # Get real-time data for the stock
+                        realtime_data = akshare_client.get_realtime_data([code])
+
+                        if not realtime_data.empty and len(realtime_data) > 0:
+                            # Extract the current price (latest price)
+                            current_price = realtime_data.iloc[0]['price']
+
+                            if current_price is not None:
+                                return jsonify({"code": code, "price": float(current_price)})
+                            else:
+                                return jsonify({"error": "Failed to get current price"}), 404
+                        else:
+                            return jsonify({"error": "No data found for stock"}), 404
+                    except Exception as fallback_error:
+                        logger.error(
+                            f"Fallback method also failed for {code}: {fallback_error}"
+                        )
+                        # Last fallback to old method
+                        try:
+                            stock_data = ak.stock_bid_ask_em(symbol=code)
+                            current_price = stock_data.iloc[20]["value"]
+
+                            if current_price is not None:
+                                return jsonify({"code": code, "price": float(current_price)})
+                            else:
+                                return jsonify({"error": "Failed to get current price"}), 404
+                        except Exception as last_fallback_error:
+                            logger.error(
+                                f"Last fallback method also failed for {code}: {last_fallback_error}"
+                            )
+                            return jsonify({"error": f"Failed to get stock price: {str(last_fallback_error)}"}), 500
 
         except Exception as e:
             logger.error(f"Error getting stock price for {code}: {e}")
@@ -1414,6 +1493,27 @@ def register_routes(app: Flask):
             return jsonify({"error": f"Failed to get pool data: {str(e)}"}), 500
 
 
+    @app.route("/api/orders", methods=["GET"])
+    def get_orders():
+        """Get all orders"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify([]), 500
+
+            # Fetch orders from MongoDB
+            orders_cursor = app.config["MONGO_DB"].orders.find().sort("date", -1)
+            orders = []
+            for order in orders_cursor:
+                # Convert ObjectId to string for JSON serialization
+                order["_id"] = str(order["_id"])
+                orders.append(order)
+            return jsonify(orders)
+        except Exception as e:
+            logger.error(f"Error fetching orders: {e}")
+            return jsonify([]), 500
+    
     @app.route("/api/orders", methods=["POST"])
     def create_order():
         """Create a new order"""
@@ -1435,6 +1535,10 @@ def register_routes(app: Flask):
                         {"status": "error", "message": f"Missing required field: {field}"}
                     ), 400
 
+            # Determine action based on quantity (positive = buy, negative = sell)
+            quantity = int(data["quantity"])
+            action = "buy" if quantity > 0 else "sell" if quantity < 0 else "unknown"
+
             # Prepare order document
             order = {
                 "date": data["date"],
@@ -1443,13 +1547,47 @@ def register_routes(app: Flask):
                 "code": data["code"],
                 "name": data["name"],
                 "price": float(data["price"]),
-                "quantity": int(data["quantity"]),
-                "total_amount": float(data["price"]) * int(data["quantity"]),
+                "quantity": quantity,
+                "action": action,  # Add action field
                 "created_at": datetime.now()
             }
 
+            # Add commission if provided
+            if "commission" in data:
+                order["commission"] = float(data["commission"])
+
+            # Calculate total_amount based on action and commission
+            base_amount = float(data["price"]) * abs(quantity)
+            if "commission" in data:
+                commission = float(data["commission"])
+                if action == "buy":
+                    # For buying, total_amount includes commission
+                    order["total_amount"] = base_amount + commission
+                else:
+                    # For selling, total_amount is the base amount
+                    order["total_amount"] = base_amount
+            else:
+                # If no commission, total_amount is base amount
+                order["total_amount"] = base_amount
+
+            # Add net_amount if provided or calculate it
+            if "net_amount" in data:
+                order["net_amount"] = float(data["net_amount"])
+            elif "commission" in data:
+                commission = float(data["commission"])
+                if action == "buy":
+                    # For buying, net amount is the base amount (what you get for the stocks)
+                    order["net_amount"] = base_amount
+                else:
+                    # For selling, net amount is base amount minus commission
+                    order["net_amount"] = base_amount - commission
+
             # Save order to MongoDB
             result = app.config["MONGO_DB"].orders.insert_one(order)
+
+            # Update account cash and stock holdings
+            update_account_holdings(data["account_id"], data["code"], data["name"],
+                                  float(data["price"]), quantity, order.get("commission", 0))
 
             if result.inserted_id:
                 # Add the inserted ID to the response
@@ -1470,6 +1608,87 @@ def register_routes(app: Flask):
             return jsonify(
                 {"status": "error", "message": f"Failed to create order: {str(e)}"}
             ), 500
+
+    def update_account_holdings(account_id, stock_code, stock_name, price, quantity, commission=0):
+        """Update account cash and stock holdings after an order"""
+        try:
+            # Get account information
+            account = app.config["MONGO_DB"].accounts.find_one({"_id": ObjectId(account_id)})
+            if not account:
+                logger.error(f"Account {account_id} not found")
+                return False
+
+            # Calculate order value (positive for selling, negative for buying)
+            order_value = price * quantity  # For selling, quantity is negative, so order_value is positive
+
+            # Update cash
+            # For buying: subtract (order_value + commission)
+            # For selling: add (order_value - commission)
+            cash_change = -order_value  # Base change (negative for buying, positive for selling)
+            if commission > 0:
+                cash_change -= commission  # Deduct commission for both buying and selling
+
+            new_cash = account.get("cash", 0) + cash_change
+
+            # Update stock holdings
+            stocks = account.get("stocks", [])
+            stock_found = False
+
+            if quantity < 0:  # Selling stocks
+                # Find the stock in holdings and reduce quantity
+                for stock in stocks:
+                    if stock["code"] == stock_code:
+                        stock_found = True
+                        new_quantity = stock["quantity"] + quantity  # quantity is negative
+                        if new_quantity <= 0:
+                            # Remove stock if quantity is zero or negative
+                            stocks.remove(stock)
+                        else:
+                            # Update quantity
+                            stock["quantity"] = new_quantity
+                        break
+            else:  # Buying stocks
+                # Find the stock in holdings and increase quantity or add new stock
+                for stock in stocks:
+                    if stock["code"] == stock_code:
+                        stock_found = True
+                        # Update quantity and cost (weighted average)
+                        total_quantity = stock["quantity"] + quantity
+                        total_value = (stock["quantity"] * stock["cost"]) + (quantity * price)
+                        stock["quantity"] = total_quantity
+                        stock["cost"] = total_value / total_quantity if total_quantity > 0 else 0
+                        break
+
+                # If stock not found, add it to holdings
+                if not stock_found:
+                    stocks.append({
+                        "code": stock_code,
+                        "name": stock_name,
+                        "quantity": quantity,
+                        "cost": price
+                    })
+
+            # Update account in database
+            update_data = {
+                "cash": new_cash,
+                "stocks": stocks
+            }
+
+            result = app.config["MONGO_DB"].accounts.update_one(
+                {"_id": ObjectId(account_id)},
+                {"$set": update_data}
+            )
+
+            if result.modified_count > 0:
+                logger.info(f"Successfully updated account {account_id} holdings")
+                return True
+            else:
+                logger.warning(f"No changes made to account {account_id} holdings")
+                return False
+
+        except Exception as e:
+            logger.error(f"Error updating account holdings: {e}")
+            return False
 
 
 # Example usage
