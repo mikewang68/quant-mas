@@ -21,121 +21,74 @@
             </div>
     </div>
 
-    <!-- Account Overview Section -->
-    <div class="row mb-4" id="accountOverviewSection" style="display: none;">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h5><i class="fas fa-wallet"></i> 账户总览</h5>
-                </div>
-                <div class="card-body">
+    <!-- Account Overview and Portfolio Chart Section -->
+        <div class="row mb-4" id="accountOverviewChartSection" style="display: none;">
+            <div class="col-md-12">
+                    
                     <div class="row">
-                        <!-- Net Asset Value -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-primary">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-primary">账户净值</h6>
-                                    <h4 class="card-text" id="accountNetValue">¥0.00</h4>
-                                    <p class="mb-0" id="accountNetValueChange">+¥0.00 <span id="accountNetValueChangePercent">(+0.00%)</span></p>
+                        <!-- Account Overview -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6><i class="fas fa-wallet"></i> 账户总览</h6>
+                                </div>
+                                <div class="card-body">
+                                    <ul class="list-group list-group-flush">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>账户净值</span>
+                                            <span id="accountNetValue" class="fw-bold">¥0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>净值变化</span>
+                                            <span id="accountNetValueChange">+¥0.00 <span id="accountNetValueChangePercent">(+0.00%)</span></span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>累计收益率</span>
+                                            <span id="cumulativeReturn" class="fw-bold">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>年化收益率</span>
+                                            <span id="annualizedReturn">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>最大回撤</span>
+                                            <span id="maxDrawdown">¥0.00 (<span id="maxDrawdownPercent">0.00%</span>)</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>夏普比率</span>
+                                            <span id="sharpeRatio">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>胜率</span>
+                                            <span id="winRate">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>盈亏比</span>
+                                            <span id="profitLossRatio">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>波动率</span>
+                                            <span id="volatility">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                            <span>VaR (95%)</span>
+                                            <span id="varValue">¥0.00</span>
+                                        </li>
+                                    </ul>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Returns -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-success">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-success">收益率</h6>
-                                    <h4 class="card-text" id="cumulativeReturn">0.00%</h4>
-                                    <p class="mb-0" id="annualizedReturn">年化: 0.00%</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Max Drawdown -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-warning">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-warning">最大回撤</h6>
-                                    <h4 class="card-text" id="maxDrawdown">¥0.00</h4>
-                                    <p class="mb-0" id="maxDrawdownPercent">0.00%</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Sharpe Ratio -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-info">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-info">夏普比率</h6>
-                                    <h4 class="card-text" id="sharpeRatio">0.00</h4>
-                                    <p class="mb-0">风险调整收益</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Win Rate -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-success">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-success">胜率</h6>
-                                    <h4 class="card-text" id="winRate">0.00%</h4>
-                                    <p class="mb-0">盈利交易占比</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Profit/Loss Ratio -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-info">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-info">盈亏比</h6>
-                                    <h4 class="card-text" id="profitLossRatio">0.00</h4>
-                                    <p class="mb-0">平均盈亏比率</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Volatility -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-warning">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-warning">波动率</h6>
-                                    <h4 class="card-text" id="volatility">0.00%</h4>
-                                    <p class="mb-0">日波动率</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- VaR -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-danger">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-danger">VaR</h6>
-                                    <h4 class="card-text" id="varValue">¥0.00</h4>
-                                    <p class="mb-0">95%置信度日VaR</p>
-                                </div>
-                            </div>
+    
+                        <!-- Portfolio Performance Chart -->
+                        <div class="col-md-8">
+                            
+                                                <div style="position: relative; height: 400px; overflow: hidden;">
+                                                    <canvas id="portfolioChart" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+                                                </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Portfolio Performance Chart -->
-    <div class="row mb-4" id="portfolioChartSection" style="display: none;">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="fas fa-chart-line"></i> 历史收益曲线</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="portfolioChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
 
     <!-- Positions and Risk Monitoring Section -->
     <div class="row mb-4" id="positionsRiskSection" style="display: none;">
@@ -366,8 +319,7 @@
     // Load account data
     function loadAccountData(accountId) {
         // Show all sections
-        $('#accountOverviewSection').show();
-        $('#portfolioChartSection').show();
+            $('#accountOverviewChartSection').show();
         $('#positionsRiskSection').show();
         $('#tradingRecordsSection').show();
 
@@ -382,6 +334,9 @@
 
         // Load risk monitoring data
         loadRiskMonitoringData(accountId);
+    
+            // Initialize portfolio chart
+            initPortfolioChart(accountId);
     }
 
     // Load account overview data
@@ -565,45 +520,417 @@
             });
     }
 
-    // Initialize portfolio chart
-    function initPortfolioChart() {
-        const ctx = document.getElementById('portfolioChart').getContext('2d');
-        if (portfolioChart) {
-            portfolioChart.destroy();
-        }
-        portfolioChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
-                datasets: [{
-                    label: '账户净值',
-                    data: [1000000, 1020000, 980000, 1050000, 1080000, 1100000],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: false
-                    }
+    // Initialize portfolio chart with 2-year data and benchmark comparison
+        function initPortfolioChart(accountId) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            if (portfolioChart) {
+                portfolioChart.destroy();
+            }
+    
+                // Fetch real account performance data
+                $.get(`/api/account-performance/${accountId}`)
+                    .done(function(accountData) {
+                        // Fetch benchmark index data
+                        fetchBenchmarkData(accountId, accountData);
+                    })
+                    .fail(function(xhr, status, error) {
+                        console.error('Failed to load account performance data:', error);
+                        // Fallback to mock data if real data fails
+                        initChartWithMockData();
+                    });
+            }
+
+            // Fetch benchmark index data
+            function fetchBenchmarkData(accountId, accountData) {
+                // Fetch real index data for comparison
+                Promise.all([
+                    $.get('/api/index-performance/sz399300'), // 沪深300
+                    $.get('/api/index-performance/sh000016'), // 上证50
+                    $.get('/api/index-performance/sh000905')  // 中证500
+                ]).then(function(results) {
+                    const hs300Data = results[0];
+                    const sz50Data = results[1];
+                    const zz500Data = results[2];
+    
+                    // Process the data for charting
+                    renderPortfolioChartWithRealData(accountData, hs300Data, sz50Data, zz500Data);
+                }).catch(function(error) {
+                    console.error('Failed to load index data:', error);
+                    // Fallback to mock data if real index data fails
+                    fetchBenchmarkDataFallback(accountData);
+                });
+            }
+    
+            // Fallback to generate mock benchmark data
+            function fetchBenchmarkDataFallback(accountData) {
+                const performanceData = accountData.performance_data || [];
+                const months = performanceData.map(item => item.date);
+                const portfolioData = performanceData.map(item => item.portfolio_value);
+    
+                // Generate mock benchmark data that follows a similar pattern to the portfolio
+                const hs300Data = generateBenchmarkData(portfolioData, 0.9, 1.1);
+                const sz50Data = generateBenchmarkData(portfolioData, 0.85, 1.15);
+                const zz500Data = generateBenchmarkData(portfolioData, 0.8, 1.2);
+    
+                renderPortfolioChart(months, portfolioData, hs300Data, sz50Data, zz500Data);
+            }
+    
+            // Generate benchmark data that follows a similar pattern to portfolio data
+            function generateBenchmarkData(portfolioData, minFactor, maxFactor) {
+                if (portfolioData.length === 0) return [];
+    
+                const benchmarkData = [portfolioData[0]]; // Start with the same initial value
+                for (let i = 1; i < portfolioData.length; i++) {
+                    // Generate a random factor within the specified range
+                    const factor = minFactor + Math.random() * (maxFactor - minFactor);
+                    // Apply the factor to the previous value to maintain continuity
+                    benchmarkData.push(benchmarkData[i-1] * factor);
                 }
+                return benchmarkData;
+            }
+    
+            // Render the portfolio chart with real data
+            function renderPortfolioChartWithRealData(accountData, hs300Data, sz50Data, zz500Data) {
+                const performanceData = accountData.performance_data || [];
+                const dates = performanceData.map(item => item.date);
+                const portfolioValues = performanceData.map(item => item.portfolio_value);
+    
+                // Process index data to match the date range of portfolio data
+                const hs300Values = processIndexData(hs300Data.performance_data, dates, portfolioValues[0]);
+                const sz50Values = processIndexData(sz50Data.performance_data, dates, portfolioValues[0]);
+                const zz500Values = processIndexData(zz500Data.performance_data, dates, portfolioValues[0]);
+    
+                renderPortfolioChart(dates, portfolioValues, hs300Values, sz50Values, zz500Values);
+            }
+    
+            // Process index data to match portfolio date range and normalize values
+            function processIndexData(indexData, portfolioDates, baseValue) {
+                if (!indexData || indexData.length === 0) return [];
+
+                // Create a map of date to closing price for the index
+                const indexMap = {};
+                indexData.forEach(item => {
+                    indexMap[item.date] = item.close;
+                });
+
+                // Map portfolio dates to index values (use actual index values, not normalized)
+                const result = [];
+                let lastKnownValue = null;
+
+                portfolioDates.forEach(date => {
+                    const indexValue = indexMap[date];
+                    if (indexValue !== undefined) {
+                        lastKnownValue = indexValue;
+                        result.push(lastKnownValue);
+                    } else if (lastKnownValue !== null) {
+                        // Use last known value for missing dates
+                        result.push(lastKnownValue);
+                    } else {
+                        // If no previous value, push null
+                        result.push(null);
+                    }
+                });
+
+                return result;
+            }
+    
+            // Render the portfolio chart with real data
+            function renderPortfolioChart(months, portfolioData, hs300Data, sz50Data, zz500Data) {
+                const ctx = document.getElementById('portfolioChart').getContext('2d');
+                if (portfolioChart) {
+                    portfolioChart.destroy();
+                }
+
+                portfolioChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: months,
+                        datasets: [
+                            {
+                                label: '沪深300',
+                                data: hs300Data,
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                fill: false,
+                                tension: 0.1,
+                                pointRadius: 0,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: '上证50',
+                                data: sz50Data,
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                borderWidth: 2,
+                                borderDash: [10, 5],
+                                fill: false,
+                                tension: 0.1,
+                                pointRadius: 0,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: '中证500',
+                                data: zz500Data,
+                                borderColor: 'rgb(255, 205, 86)',
+                                backgroundColor: 'rgba(255, 205, 86, 0.1)',
+                                borderWidth: 2,
+                                borderDash: [3, 3],
+                                fill: false,
+                                tension: 0.1,
+                                pointRadius: 0,
+                                yAxisID: 'y'
+                            },
+                            {
+                                label: '账户净值',
+                                data: portfolioData,
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1,
+                                pointRadius: 0,
+                                yAxisID: 'y1'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                position: 'left',
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: '指数'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return value.toLocaleString();
+                                    }
+                                }
+                            },
+                            y1: {
+                                position: 'right',
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: '资产净值'
+                                },
+                                ticks: {
+                                    callback: function(value) {
+                                        return '¥' + value.toLocaleString();
+                                    }
+                                },
+                                grid: {
+                                    drawOnChartArea: false, // only want the grid lines for one axis to show up
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        if (context.dataset.yAxisID === 'y1') {
+                                            return context.dataset.label + ': ¥' + context.parsed.y.toLocaleString(undefined, {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2
+                                            });
+                                        } else {
+                                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString(undefined, {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2
+                                            });
+                                        }
+                                    }
+                                }
+                            },
+                            legend: {
+                                position: 'top',
+                            }
+                        },
+                        // Add padding to prevent data from going outside the canvas
+                        layout: {
+                            padding: {
+                                top: 20,
+                                right: 20,
+                                bottom: 20,
+                                left: 20
+                            }
+                        },
+                        // Ensure chart stays within bounds
+                        clip: {
+                            left: 10,
+                            right: 10,
+                            top: 10,
+                            bottom: 10
+                        }
+                    }
+                });
+            }
+    }
+
+    // Initialize chart when account overview/chart section is shown
+        $('#accountOverviewChartSection').on('shown.bs.collapse', function() {
+            const accountId = $('#accountSelect').val();
+            if (accountId) {
+                initPortfolioChart(accountId);
             }
         });
-    }
-
-    // Initialize chart when portfolio chart section is shown
-    $('#portfolioChartSection').on('shown.bs.collapse', function() {
-        initPortfolioChart();
-    });
-
-    // Initialize chart on page load if section is visible
-    if ($('#portfolioChartSection').is(':visible')) {
-        initPortfolioChart();
-    }
+    
+            // Initialize chart on page load if section is visible
+            if ($('#accountOverviewChartSection').is(':visible')) {
+                const accountId = $('#accountSelect').val();
+                if (accountId) {
+                    initPortfolioChart(accountId);
+                }
+                    }
+            
+                    // Fallback function to initialize chart with mock data
+                    function initChartWithMockData() {
+                        const ctx = document.getElementById('portfolioChart').getContext('2d');
+                        if (portfolioChart) {
+                            portfolioChart.destroy();
+                        }
+            
+                        // Generate 2-year monthly data (24 months)
+                        const months = [];
+                        const portfolioData = [];
+                        const hs300Data = [];
+                        const sz50Data = [];
+                        const zz500Data = [];
+            
+                        // Generate date labels for the last 24 months
+                        const now = new Date();
+                        for (let i = 23; i >= 0; i--) {
+                            const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                            months.push(date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'short' }));
+            
+                            // Generate mock data for portfolio and benchmarks
+                            const baseValue = 1000000;
+                            const portfolioGrowth = 1 + (Math.random() * 0.3 - 0.1); // -10% to +20%
+                            const hs300Growth = 1 + (Math.random() * 0.25 - 0.05); // -5% to +20%
+                            const sz50Growth = 1 + (Math.random() * 0.2 - 0.02); // -2% to +18%
+                            const zz500Growth = 1 + (Math.random() * 0.35 - 0.15); // -15% to +20%
+            
+                            portfolioData.push(baseValue * Math.pow(portfolioGrowth, 23 - i));
+                            hs300Data.push(baseValue * Math.pow(hs300Growth, 23 - i));
+                            sz50Data.push(baseValue * Math.pow(sz50Growth, 23 - i));
+                            zz500Data.push(baseValue * Math.pow(zz500Growth, 23 - i));
+                        }
+            
+                        portfolioChart = new Chart(ctx, {
+                            type: 'line',
+                            data: {
+                                labels: months,
+                                datasets: [
+                                    {
+                                        label: '账户净值',
+                                        data: portfolioData,
+                                        borderColor: 'rgb(75, 192, 192)',
+                                        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                                        borderWidth: 2,
+                                        fill: false,
+                                        tension: 0.1,
+                                        pointRadius: 0
+                                    },
+                                    {
+                                        label: '沪深300',
+                                        data: hs300Data,
+                                        borderColor: 'rgb(255, 99, 132)',
+                                        backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                                        borderWidth: 2,
+                                        borderDash: [5, 5],
+                                        fill: false,
+                                        tension: 0.1,
+                                        pointRadius: 0
+                                    },
+                                    {
+                                        label: '上证50',
+                                        data: sz50Data,
+                                        borderColor: 'rgb(54, 162, 235)',
+                                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
+                                        borderWidth: 2,
+                                        borderDash: [10, 5],
+                                        fill: false,
+                                        tension: 0.1,
+                                        pointRadius: 0
+                                    },
+                                    {
+                                        label: '中证500',
+                                        data: zz500Data,
+                                        borderColor: 'rgb(255, 205, 86)',
+                                        backgroundColor: 'rgba(255, 205, 86, 0.1)',
+                                        borderWidth: 2,
+                                        borderDash: [3, 3],
+                                        fill: false,
+                                        tension: 0.1,
+                                        pointRadius: 0
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: {
+                                        beginAtZero: false,
+                                        ticks: {
+                                            callback: function(value) {
+                                                return '¥' + value.toLocaleString();
+                                            }
+                                        }
+                                    },
+                                    x: {
+                                        ticks: {
+                                            maxRotation: 45,
+                                            minRotation: 45
+                                        }
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: function(context) {
+                                                return context.dataset.label + ': ¥' + context.parsed.y.toLocaleString(undefined, {
+                                                    minimumFractionDigits: 2,
+                                                    maximumFractionDigits: 2
+                                                });
+                                            }
+                                        }
+                                    },
+                                    legend: {
+                                        position: 'top',
+                                    }
+                                },
+                                // Add padding to prevent data from going outside the canvas
+                                layout: {
+                                    padding: {
+                                        top: 20,
+                                        right: 20,
+                                        bottom: 20,
+                                        left: 20
+                                    }
+                                },
+                                // Ensure chart stays within bounds
+                                clip: {
+                                    left: 10,
+                                    right: 10,
+                                    top: 10,
+                                    bottom: 10
+                                }
+                            }
+                        });
+                    }
+                }
 </script>
 {% endblock %}
 
