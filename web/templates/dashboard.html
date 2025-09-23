@@ -343,13 +343,24 @@
         $.get(`/api/account-performance/${accountId}`)
             .done(function(performanceData) {
                 if (performanceData && performanceData.length > 0) {
-                    // Extract data for chart
-                    const dates = performanceData.map(item => item.date);
-                    const values = performanceData.map(item => item.total_value);
-                    const cashValues = performanceData.map(item => item.cash);
+                    // Filter data for the last 2 years
+                    const twoYearsAgo = new Date();
+                    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
 
-                    // Update chart
-                    updatePortfolioChart(dates, values, cashValues);
+                    const filteredData = performanceData.filter(item => {
+                        const itemDate = new Date(item.date);
+                        return itemDate >= twoYearsAgo;
+                    });
+
+                    if (filteredData.length > 0) {
+                        // Extract data for chart
+                        const dates = filteredData.map(item => item.date);
+                        const values = filteredData.map(item => item.total_value);
+                        const cashValues = filteredData.map(item => item.cash);
+
+                        // Update chart
+                        updatePortfolioChart(dates, values, cashValues);
+                    }
                 }
             })
             .fail(function(xhr, status, error) {
