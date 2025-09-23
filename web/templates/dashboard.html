@@ -21,12 +21,12 @@
             </div>
     </div>
 
-    <!-- Account Overview Section -->
+    <!-- Account Overview and Portfolio Performance Chart Section -->
     <div class="row mb-4" id="accountOverviewSection" style="display: none;">
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5><i class="fas fa-wallet"></i> 账户总览</h5>
+                    <h5><i class="fas fa-wallet"></i> 账户总览及历史收益曲线</h5>
                 </div>
                 <div class="card-body">
                     <div class="row">
@@ -67,25 +67,25 @@
                                 </li>
                             </ul>
                         </div>
+
+                        <!-- Portfolio Performance Chart (3/4 width) -->
+                        <div class="col-md-9">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="fas fa-chart-line"></i> 资产收益曲线</h5>
+                                </div>
+                                <div class="card-body">
+                                    <canvas id="portfolioChart" height="300"></canvas>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Portfolio Performance Chart Section -->
-    <div class="row mb-4" id="portfolioChartSection" style="display: none;">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="fas fa-chart-line"></i> 历史收益曲线</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="portfolioChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Remove the separate portfolio chart section -->
 
     <!-- Remove the separate portfolio chart section -->
 
@@ -319,7 +319,6 @@
     function loadAccountData(accountId) {
         // Show all sections
         $('#accountOverviewSection').show();
-        $('#portfolioChartSection').show();
         $('#positionsRiskSection').show();
         $('#tradingRecordsSection').show();
 
