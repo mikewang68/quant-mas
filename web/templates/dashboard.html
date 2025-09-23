@@ -72,6 +72,18 @@
                         <div class="col-md-9">
                             <div class="card">
                                 <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h5 class="card-title mb-0">资产收益曲线</h5>
+                                        <div>
+                                            <label for="benchmarkSelect" class="form-label me-2 mb-0">对比标的:</label>
+                                            <select class="form-select d-inline-block w-auto" id="benchmarkSelect">
+                                                <option value="none">无对比</option>
+                                                <option value="000016">上证50</option>
+                                                <option value="000300" selected>沪深300</option>
+                                                <option value="000905">中证500</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                     <canvas id="portfolioChart" height="300"></canvas>
                                 </div>
                             </div>
@@ -377,6 +389,14 @@
                 updatePortfolioChart([], [], []);
             });
     }
+
+    // Handle benchmark selection change
+    $('#benchmarkSelect').change(function() {
+        const accountId = $('#accountSelect').val();
+        if (accountId) {
+            loadPortfolioPerformance(accountId);
+        }
+    });
 
     // Update portfolio chart
     function updatePortfolioChart(dates, values, cashValues) {
