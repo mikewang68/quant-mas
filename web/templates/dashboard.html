@@ -357,11 +357,24 @@
 
                         // Update chart
                         updatePortfolioChart(dates, values, cashValues);
+                    } else {
+                        // If no data in the last 2 years, show all data
+                        const dates = performanceData.map(item => item.date);
+                        const values = performanceData.map(item => item.total_value);
+                        const cashValues = performanceData.map(item => item.cash);
+
+                        // Update chart
+                        updatePortfolioChart(dates, values, cashValues);
                     }
+                } else {
+                    // Clear chart if no data
+                    updatePortfolioChart([], [], []);
                 }
             })
             .fail(function(xhr, status, error) {
                 console.error('Failed to load portfolio performance data:', error);
+                // Clear chart on error
+                updatePortfolioChart([], [], []);
             });
     }
 
