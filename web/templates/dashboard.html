@@ -70,8 +70,8 @@
 
                         <!-- Portfolio Performance Chart (3/4 width) -->
                         <div class="col-md-9">
-                            <div class="card">
-                                <div class="card-body">
+                            <div class="card h-100">
+                                <div class="card-body d-flex flex-column">
                                     <div class="d-flex justify-content-between align-items-center mb-3">
                                         <h5 class="card-title mb-0">资产收益曲线</h5>
                                         <div>
@@ -84,7 +84,9 @@
                                             </select>
                                         </div>
                                     </div>
-                                    <canvas id="portfolioChart" height="300"></canvas>
+                                    <div class="chart-container flex-grow-1">
+                                        <canvas id="portfolioChart"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
