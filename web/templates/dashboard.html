@@ -21,7 +21,7 @@
             </div>
     </div>
 
-    <!-- Account Overview Section -->
+    <!-- Account Overview and Portfolio Performance Chart Section -->
     <div class="row mb-4" id="accountOverviewSection" style="display: none;">
         <div class="col-md-12">
             <div class="card">
@@ -30,90 +30,52 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <!-- Net Asset Value -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-primary">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-primary">账户净值</h6>
-                                    <h4 class="card-text" id="accountNetValue">¥0.00</h4>
-                                    <p class="mb-0" id="accountNetValueChange">+¥0.00 <span id="accountNetValueChangePercent">(+0.00%)</span></p>
-                                </div>
-                            </div>
+                        <!-- Account Overview List (1/4 width) -->
+                        <div class="col-md-3">
+                            <ul class="list-group">
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    账户净值
+                                    <span class="badge bg-primary rounded-pill" id="accountNetValue">¥0.00</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    收益率
+                                    <span class="badge bg-success rounded-pill" id="cumulativeReturn">0.00%</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    最大回撤
+                                    <span class="badge bg-warning rounded-pill" id="maxDrawdown">¥0.00</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    夏普比率
+                                    <span class="badge bg-info rounded-pill" id="sharpeRatio">0.00</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    胜率
+                                    <span class="badge bg-success rounded-pill" id="winRate">0.00%</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    盈亏比
+                                    <span class="badge bg-info rounded-pill" id="profitLossRatio">0.00</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    波动率
+                                    <span class="badge bg-warning rounded-pill" id="volatility">0.00%</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    VaR
+                                    <span class="badge bg-danger rounded-pill" id="varValue">¥0.00</span>
+                                </li>
+                            </ul>
                         </div>
 
-                        <!-- Returns -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-success">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-success">收益率</h6>
-                                    <h4 class="card-text" id="cumulativeReturn">0.00%</h4>
-                                    <p class="mb-0" id="annualizedReturn">年化: 0.00%</p>
+                        <!-- Portfolio Performance Chart (3/4 width) -->
+                        <div class="col-md-9">
+                            <div class="card">
+                                <div class="card-header bg-success text-white">
+                                    <h5><i class="fas fa-chart-line"></i> 历史收益曲线</h5>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Max Drawdown -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-warning">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-warning">最大回撤</h6>
-                                    <h4 class="card-text" id="maxDrawdown">¥0.00</h4>
-                                    <p class="mb-0" id="maxDrawdownPercent">0.00%</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Sharpe Ratio -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-info">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-info">夏普比率</h6>
-                                    <h4 class="card-text" id="sharpeRatio">0.00</h4>
-                                    <p class="mb-0">风险调整收益</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Win Rate -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-success">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-success">胜率</h6>
-                                    <h4 class="card-text" id="winRate">0.00%</h4>
-                                    <p class="mb-0">盈利交易占比</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Profit/Loss Ratio -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-info">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-info">盈亏比</h6>
-                                    <h4 class="card-text" id="profitLossRatio">0.00</h4>
-                                    <p class="mb-0">平均盈亏比率</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Volatility -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-warning">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-warning">波动率</h6>
-                                    <h4 class="card-text" id="volatility">0.00%</h4>
-                                    <p class="mb-0">日波动率</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- VaR -->
-                        <div class="col-md-3 mb-3">
-                            <div class="card border-danger">
-                                <div class="card-body text-center">
-                                    <h6 class="card-title text-danger">VaR</h6>
-                                    <h4 class="card-text" id="varValue">¥0.00</h4>
-                                    <p class="mb-0">95%置信度日VaR</p>
+                                <div class="card-body">
+                                    <canvas id="portfolioChart" height="300"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -123,19 +85,7 @@
         </div>
     </div>
 
-    <!-- Portfolio Performance Chart -->
-    <div class="row mb-4" id="portfolioChartSection" style="display: none;">
-        <div class="col-md-12">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5><i class="fas fa-chart-line"></i> 历史收益曲线</h5>
-                </div>
-                <div class="card-body">
-                    <canvas id="portfolioChart" height="300"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- Remove the separate portfolio chart section -->
 
     <!-- Positions and Risk Monitoring Section -->
     <div class="row mb-4" id="positionsRiskSection" style="display: none;">
@@ -367,7 +317,6 @@
     function loadAccountData(accountId) {
         // Show all sections
         $('#accountOverviewSection').show();
-        $('#portfolioChartSection').show();
         $('#positionsRiskSection').show();
         $('#tradingRecordsSection').show();
 
@@ -382,6 +331,97 @@
 
         // Load risk monitoring data
         loadRiskMonitoringData(accountId);
+
+        // Load portfolio performance data
+        loadPortfolioPerformance(accountId);
+    }
+
+    // Load portfolio performance data
+    function loadPortfolioPerformance(accountId) {
+        $.get(`/api/account-performance/${accountId}`)
+            .done(function(performanceData) {
+                if (performanceData && performanceData.length > 0) {
+                    // Extract data for chart
+                    const dates = performanceData.map(item => item.date);
+                    const values = performanceData.map(item => item.total_value);
+                    const cashValues = performanceData.map(item => item.cash);
+
+                    // Update chart
+                    updatePortfolioChart(dates, values, cashValues);
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load portfolio performance data:', error);
+            });
+    }
+
+    // Update portfolio chart
+    function updatePortfolioChart(dates, values, cashValues) {
+        const ctx = document.getElementById('portfolioChart').getContext('2d');
+
+        if (portfolioChart) {
+            portfolioChart.destroy();
+        }
+
+        portfolioChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [
+                    {
+                        label: '账户总值',
+                        data: values,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '现金余额',
+                        data: cashValues,
+                        borderColor: 'rgb(255, 99, 132)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        tension: 0.1,
+                        yAxisID: 'y'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: '金额 (¥)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '日期'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += '¥' + context.parsed.y.toFixed(2);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
     }
 
     // Load account overview data
@@ -407,14 +447,10 @@
 
                     // Update UI
                     $('#accountNetValue').text(`¥${totalValue.toFixed(2)}`);
-                    $('#accountNetValueChange').html(`${profitAmount >= 0 ? '+' : ''}${profitAmount.toFixed(2)} <span id="accountNetValueChangePercent">(${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)</span>`);
-                    $('#accountNetValueChangePercent').removeClass('text-success text-danger').addClass(profitAmount >= 0 ? 'text-success' : 'text-danger');
 
                     // Set other metrics to default values (would be calculated in real implementation)
                     $('#cumulativeReturn').text(`${profitRatio.toFixed(2)}%`).removeClass('text-success text-danger').addClass(profitRatio >= 0 ? 'text-success' : 'text-danger');
-                    $('#annualizedReturn').text(`年化: ${(profitRatio * 12).toFixed(2)}%`);
                     $('#maxDrawdown').text('¥0.00');
-                    $('#maxDrawdownPercent').text('0.00%');
                     $('#sharpeRatio').text('0.00');
                     $('#winRate').text('0.00%');
                     $('#profitLossRatio').text('0.00');
@@ -563,36 +599,6 @@
                 console.error('Failed to load risk monitoring data:', error);
                 $('#riskMonitoringTableBody').html('<tr><td colspan="5" class="text-center text-danger">加载风险监控数据失败</td></tr>');
             });
-    }
-
-    // Initialize portfolio chart
-    function initPortfolioChart() {
-        const ctx = document.getElementById('portfolioChart').getContext('2d');
-        if (portfolioChart) {
-            portfolioChart.destroy();
-        }
-        portfolioChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['1月', '2月', '3月', '4月', '5月', '6月'],
-                datasets: [{
-                    label: '账户净值',
-                    data: [1000000, 1020000, 980000, 1050000, 1080000, 1100000],
-                    borderColor: 'rgb(75, 192, 192)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    tension: 0.1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: false
-                    }
-                }
-            }
-        });
     }
 
     // Initialize chart when portfolio chart section is shown
