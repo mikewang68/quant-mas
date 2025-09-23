@@ -1691,6 +1691,189 @@ def register_routes(app: Flask):
             return False
 
 
+    @app.route("/api/account-performance/<string:account_id>", methods=["GET"])
+    def get_account_performance(account_id):
+        """Get account performance data for charting (last 2 years)"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({"error": "Database connection not available"}), 500
+
+            # Get account information
+            from bson import ObjectId
+            account = app.config["MONGO_DB"].accounts.find_one({"_id": ObjectId(account_id)})
+            if not account:
+                return jsonify({"error": "Account not found"}), 404
+
+            # Calculate date range (last 2 years)
+            from datetime import datetime, timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=730)  # 2 years = 365*2 = 730 days
+
+            # Get orders for this account within the last 2 years, sorted by date
+            orders_cursor = app.config["MONGO_DB"].orders.find({
+                "account_id": account_id,
+                "date": {"$gte": start_date.strftime("%Y-%m-%d")}
+            }).sort("date", 1)
+            orders = list(orders_cursor)
+
+            # Get all unique stock codes from orders
+            all_stock_codes = set()
+            for order in orders:
+                all_stock_codes.add(order["code"])
+
+            # Get historical data for all stocks
+            stock_historical_data = {}
+            from utils.akshare_client import AkshareClient
+            akshare_client = AkshareClient()
+
+            for stock_code in all_stock_codes:
+                try:
+                    # Get historical data for the last 2 years
+                    hist_data = akshare_client.get_daily_k_data(
+                        stock_code,
+                        start_date.strftime('%Y-%m-%d'),
+                        end_date.strftime('%Y-%m-%d')
+                    )
+
+                    if not hist_data.empty:
+                        # Convert to dictionary with date as key
+                        stock_historical_data[stock_code] = {}
+                        for _, row in hist_data.iterrows():
+                            stock_historical_data[stock_code][row['date'].strftime('%Y-%m-%d')] = float(row['close'])
+                except Exception as e:
+                    logger.warning(f"Error getting historical data for {stock_code}: {e}")
+                    stock_historical_data[stock_code] = {}
+
+            # Sort orders by date
+            orders.sort(key=lambda x: x["date"])
+
+            # Process each day forward to calculate portfolio value
+            performance_data = []
+            current_date = start_date
+
+            # Initialize with initial capital
+            current_cash = float(account.get("initial_capital", 0))
+            current_holdings = {}  # code -> {"quantity": quantity, "cost": cost}
+
+            while current_date <= end_date:
+                date_str = current_date.strftime("%Y-%m-%d")
+
+                # Update holdings and cash based on orders for this date
+                for order in orders:
+                    if order["date"] == date_str:
+                        code = order["code"]
+                        quantity = order["quantity"]
+                        price = order["price"]
+                        commission = order.get("commission", 0)
+                        cash_after = order.get("cash", current_cash)
+
+                        # Update cash to the value from the order record
+                        current_cash = cash_after
+
+                        # Update stock holdings
+                        if quantity < 0:  # Selling
+                            if code in current_holdings:
+                                current_holdings[code]["quantity"] += quantity
+                                if current_holdings[code]["quantity"] <= 0:
+                                    del current_holdings[code]
+                        else:  # Buying
+                            if code in current_holdings:
+                                # Update with weighted average cost
+                                total_quantity = current_holdings[code]["quantity"] + quantity
+                                total_value = (current_holdings[code]["quantity"] * current_holdings[code]["cost"]) + (quantity * price)
+                                current_holdings[code]["quantity"] = total_quantity
+                                current_holdings[code]["cost"] = total_value / total_quantity if total_quantity > 0 else 0
+                            else:
+                                current_holdings[code] = {
+                                    "quantity": quantity,
+                                    "cost": price
+                                }
+
+                # Calculate portfolio value for this date
+                portfolio_value = current_cash
+                stock_value = 0
+                for stock_code, stock_info in current_holdings.items():
+                    # Get historical price for this date
+                    stock_price = None
+                    if stock_code in stock_historical_data and date_str in stock_historical_data[stock_code]:
+                        stock_price = stock_historical_data[stock_code][date_str]
+                    elif stock_code in stock_historical_data:
+                        # Find the closest available price
+                        available_dates = list(stock_historical_data[stock_code].keys())
+                        if available_dates:
+                            # Find closest date
+                            from datetime import datetime
+                            closest_date = min(available_dates, key=lambda x: abs(datetime.strptime(x, "%Y-%m-%d") - current_date))
+                            stock_price = stock_historical_data[stock_code][closest_date]
+
+                    if stock_price is not None:
+                        stock_value_for_this_stock = stock_info["quantity"] * stock_price
+                        portfolio_value += stock_value_for_this_stock
+                        stock_value += stock_value_for_this_stock
+                    else:
+                        # Fallback to cost price if no historical data
+                        stock_value_for_this_stock = stock_info["quantity"] * stock_info["cost"]
+                        portfolio_value += stock_value_for_this_stock
+                        stock_value += stock_value_for_this_stock
+
+                # Add market price information to holdings
+                holdings_with_prices = {}
+                for code, info in current_holdings.items():
+                    # Get historical price for this date
+                    stock_price = None
+                    if code in stock_historical_data and date_str in stock_historical_data[code]:
+                        stock_price = stock_historical_data[code][date_str]
+                    elif code in stock_historical_data:
+                        # Find the closest available price
+                        available_dates = list(stock_historical_data[code].keys())
+                        if available_dates:
+                            # Find closest date
+                            from datetime import datetime
+                            closest_date = min(available_dates, key=lambda x: abs(datetime.strptime(x, "%Y-%m-%d") - current_date))
+                            stock_price = stock_historical_data[code][closest_date]
+
+                    # Get stock name from code collection
+                    stock_name = code
+                    try:
+                        code_record = app.config["MONGO_DB"].code.find_one({"code": code})
+                        if code_record and "name" in code_record:
+                            stock_name = code_record["name"]
+                    except Exception as e:
+                        logger.warning(f"Error getting stock name for {code}: {e}")
+
+                    # Create holdings info with market price
+                    holdings_with_prices[code] = {
+                        "name": stock_name,
+                        "quantity": info["quantity"],
+                        "cost": info["cost"],
+                        "market_price": stock_price if stock_price is not None else info["cost"]  # Use cost price as fallback
+                    }
+
+                performance_data.append({
+                    "date": date_str,
+                    "portfolio_value": portfolio_value,
+                    "cash": current_cash,
+                    "stock_value": stock_value,
+                    "holdings": holdings_with_prices  # Add holdings information with market prices
+                })
+
+                # Move to next day
+                current_date += timedelta(days=1)
+
+            return jsonify({
+                "account_id": account_id,
+                "account_name": account.get("name", ""),
+                "initial_capital": account.get("initial_capital", 0),
+                "performance_data": performance_data
+            }), 200
+
+        except Exception as e:
+            logger.error(f"Error fetching account performance data: {e}")
+            return jsonify({"error": f"Failed to fetch account performance data: {str(e)}"}), 500
+
+
 # Example usage
 if __name__ == "__main__":
     # Configure logging
