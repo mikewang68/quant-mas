@@ -26,67 +26,67 @@
         <div class="col-md-12">
             <div class="card">
                 <div class="card-header bg-primary text-white">
-                    <h5><i class="fas fa-wallet"></i> 账户总览及历史收益曲线</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-wallet"></i> 账户总览及历史收益曲线</h5>
+                        <div>
+                            <label for="benchmarkSelect" class="form-label me-2 mb-0 text-white">对比标的:</label>
+                            <select class="form-select d-inline-block w-auto" id="benchmarkSelect">
+                                <option value="000016">上证50</option>
+                                <option value="000300" selected>沪深300</option>
+                                <option value="000905">中证500</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 <div class="card-body">
-                    <div class="row">
+                    <div class="row g-0">
                         <!-- Account Overview List (1/4 width) -->
                         <div class="col-md-3">
-                            <ul class="list-group">
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    账户净值
-                                    <span class="badge bg-primary rounded-pill" id="accountNetValue">¥0.00</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    收益率
-                                    <span class="badge bg-success rounded-pill" id="cumulativeReturn">0.00%</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    最大回撤
-                                    <span class="badge bg-warning rounded-pill" id="maxDrawdown">¥0.00</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    夏普比率
-                                    <span class="badge bg-info rounded-pill" id="sharpeRatio">0.00</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    胜率
-                                    <span class="badge bg-success rounded-pill" id="winRate">0.00%</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    盈亏比
-                                    <span class="badge bg-info rounded-pill" id="profitLossRatio">0.00</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    波动率
-                                    <span class="badge bg-warning rounded-pill" id="volatility">0.00%</span>
-                                </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center">
-                                    VaR
-                                    <span class="badge bg-danger rounded-pill" id="varValue">¥0.00</span>
-                                </li>
-                            </ul>
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <ul class="list-group">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            账户净值
+                                            <span class="badge bg-primary rounded-pill fs-6" id="accountNetValue">¥0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            收益率
+                                            <span class="badge bg-success rounded-pill fs-6" id="cumulativeReturn">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            最大回撤
+                                            <span class="badge bg-warning rounded-pill fs-6" id="maxDrawdown">¥0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            夏普比率
+                                            <span class="badge bg-info rounded-pill fs-6" id="sharpeRatio">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            胜率
+                                            <span class="badge bg-success rounded-pill fs-6" id="winRate">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            盈亏比
+                                            <span class="badge bg-info rounded-pill fs-6" id="profitLossRatio">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            波动率
+                                            <span class="badge bg-warning rounded-pill fs-6" id="volatility">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            VaR
+                                            <span class="badge bg-danger rounded-pill fs-6" id="varValue">¥0.00</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Portfolio Performance Chart (3/4 width) -->
                         <div class="col-md-9">
                             <div class="card h-100">
-                                <div class="card-body d-flex flex-column">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <h5 class="card-title mb-0">资产收益曲线</h5>
-                                        <div>
-                                            <label for="benchmarkSelect" class="form-label me-2 mb-0">对比标的:</label>
-                                            <select class="form-select d-inline-block w-auto" id="benchmarkSelect">
-                                                <option value="none">无对比</option>
-                                                <option value="000016">上证50</option>
-                                                <option value="000300" selected>沪深300</option>
-                                                <option value="000905">中证500</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div class="chart-container flex-grow-1">
-                                        <canvas id="portfolioChart"></canvas>
-                                    </div>
+                                <div class="card-body">
+                                    <canvas id="portfolioChart" height="300"></canvas>
                                 </div>
                             </div>
                         </div>
@@ -371,34 +371,13 @@
 
                         // Update chart
                         updatePortfolioChart(dates, values, cashValues);
-                    } else {
-                        // If no data in the last 2 years, show all data
-                        const dates = performanceData.map(item => item.date);
-                        const values = performanceData.map(item => item.total_value);
-                        const cashValues = performanceData.map(item => item.cash);
-
-                        // Update chart
-                        updatePortfolioChart(dates, values, cashValues);
                     }
-                } else {
-                    // Clear chart if no data
-                    updatePortfolioChart([], [], []);
                 }
             })
             .fail(function(xhr, status, error) {
                 console.error('Failed to load portfolio performance data:', error);
-                // Clear chart on error
-                updatePortfolioChart([], [], []);
             });
     }
-
-    // Handle benchmark selection change
-    $('#benchmarkSelect').change(function() {
-        const accountId = $('#accountSelect').val();
-        if (accountId) {
-            loadPortfolioPerformance(accountId);
-        }
-    });
 
     // Update portfolio chart
     function updatePortfolioChart(dates, values, cashValues) {
