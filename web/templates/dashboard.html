@@ -85,8 +85,8 @@
                         <!-- Portfolio Performance Chart (3/4 width) -->
                         <div class="col-md-9">
                             <div class="card h-100">
-                                <div class="card-body">
-                                    <canvas id="portfolioChart" height="300"></canvas>
+                                <div class="card-body p-0">
+                                    <div id="portfolioChart" style="width: 100%; height: 100%; min-height: 300px;"></div>
                                 </div>
                             </div>
                         </div>
@@ -255,6 +255,7 @@
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
 <script>
     let portfolioChart = null;
 
@@ -326,6 +327,15 @@
         }
     });
 
+    // Handle benchmark selection change
+    $('#benchmarkSelect').change(function() {
+        const accountId = $('#accountSelect').val();
+        if (accountId) {
+            // Reload portfolio performance with new benchmark
+            loadPortfolioPerformance(accountId);
+        }
+    });
+
     // Load account data
     function loadAccountData(accountId) {
         // Show all sections
@@ -351,99 +361,467 @@
 
     // Load portfolio performance data
     function loadPortfolioPerformance(accountId) {
-        $.get(`/api/account-performance/${accountId}`)
-            .done(function(performanceData) {
-                if (performanceData && performanceData.length > 0) {
-                    // Filter data for the last 2 years
-                    const twoYearsAgo = new Date();
-                    twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+        // First load account data to get initial cash
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const initialCash = account.initial_capital || 0;
 
-                    const filteredData = performanceData.filter(item => {
-                        const itemDate = new Date(item.date);
-                        return itemDate >= twoYearsAgo;
-                    });
+                    // Then load orders to calculate historical performance
+                    $.get('/api/orders')
+                        .done(function(orders) {
+                            // Filter orders for this account
+                            const accountOrders = orders.filter(order => order.account_id === accountId);
 
-                    if (filteredData.length > 0) {
-                        // Extract data for chart
-                        const dates = filteredData.map(item => item.date);
-                        const values = filteredData.map(item => item.total_value);
-                        const cashValues = filteredData.map(item => item.cash);
-
-                        // Update chart
-                        updatePortfolioChart(dates, values, cashValues);
-                    }
+                            if (accountOrders.length > 0) {
+                                // Calculate historical asset data
+                                calculateHistoricalAssetData(accountOrders, initialCash, accountId);
+                            } else {
+                                console.log('No orders found for this account');
+                                // Create empty chart if no orders
+                                createDualAxisChart([], []);
+                            }
+                        })
+                        .fail(function(xhr, status, error) {
+                            console.error('Failed to load orders:', error);
+                        });
                 }
             })
             .fail(function(xhr, status, error) {
-                console.error('Failed to load portfolio performance data:', error);
+                console.error('Failed to load account data:', error);
             });
     }
 
-    // Update portfolio chart
-    function updatePortfolioChart(dates, values, cashValues) {
-        const ctx = document.getElementById('portfolioChart').getContext('2d');
+    // Calculate historical asset data from orders
+    async function calculateHistoricalAssetData(orders, initialCash, accountId) {
+        try {
+            // Sort orders by date
+            const sortedOrders = orders.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        if (portfolioChart) {
-            portfolioChart.destroy();
+            // Get first buy date
+            const firstBuyDate = sortedOrders[0].date;
+
+            // Get all unique stock codes from orders
+            const stockCodes = [...new Set(sortedOrders.map(order => order.code))];
+
+            // Get benchmark index data
+            const benchmarkSymbol = $('#benchmarkSelect').val();
+            const benchmarkData = await fetchIndexData(benchmarkSymbol, firstBuyDate);
+
+            // Get stock price data for all stocks
+            const stockPriceData = {};
+            for (const code of stockCodes) {
+                const prices = await fetchStockPriceData(code, firstBuyDate);
+                stockPriceData[code] = prices;
+            }
+
+            // Calculate daily asset values
+            const assetData = calculateDailyAssetValues(sortedOrders, initialCash, stockPriceData, firstBuyDate);
+
+            // Create ECharts chart with dual y-axes
+            createDualAxisChart(assetData, benchmarkData);
+
+        } catch (error) {
+            console.error('Error calculating historical asset data:', error);
         }
+    }
 
-        portfolioChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: dates,
-                datasets: [
-                    {
-                        label: '账户总值',
-                        data: values,
-                        borderColor: 'rgb(75, 192, 192)',
-                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                        tension: 0.1,
-                        yAxisID: 'y'
-                    },
-                    {
-                        label: '现金余额',
-                        data: cashValues,
-                        borderColor: 'rgb(255, 99, 132)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        tension: 0.1,
-                        yAxisID: 'y'
+    // Fetch index data using akshare
+    async function fetchIndexData(symbol, startDate) {
+        try {
+            const response = await $.ajax({
+                url: '/api/akshare/index-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: symbol,
+                    start_date: startDate,
+                    end_date: new Date().toISOString().split('T')[0]
+                })
+            });
+            return response.data || [];
+        } catch (error) {
+            console.error('Error fetching index data:', error);
+            return [];
+        }
+    }
+
+    // Fetch stock price data using akshare
+    async function fetchStockPriceData(code, startDate) {
+        try {
+            const response = await $.ajax({
+                url: '/api/akshare/stock-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: code,
+                    start_date: startDate,
+                    end_date: new Date().toISOString().split('T')[0]
+                })
+            });
+            return response.data || [];
+        } catch (error) {
+            console.error('Error fetching stock price data:', error);
+            return [];
+        }
+    }
+
+    // Calculate daily asset values
+    function calculateDailyAssetValues(orders, initialCash, stockPriceData, startDate) {
+        const assetData = [];
+        let currentCash = initialCash;
+        const holdings = {}; // {code: {quantity: number, cost: number}}
+
+        // Get all trading dates from stock price data
+        const allDates = new Set();
+        Object.values(stockPriceData).forEach(prices => {
+            prices.forEach(price => allDates.add(price.date));
+        });
+
+        // Add order dates to ensure we don't miss any trading days
+        orders.forEach(order => allDates.add(order.date));
+
+        const sortedDates = Array.from(allDates).sort();
+
+        let orderIndex = 0;
+
+        for (const date of sortedDates) {
+            // Process orders for this date
+            while (orderIndex < orders.length && orders[orderIndex].date <= date) {
+                const order = orders[orderIndex];
+
+                if (order.quantity > 0) {
+                    // Buy order
+                    const cost = order.price * order.quantity;
+                    const commission = order.commission || 0;
+                    currentCash -= (cost + commission);
+
+                    if (!holdings[order.code]) {
+                        holdings[order.code] = { quantity: 0, totalCost: 0 };
                     }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: false,
-                        title: {
-                            display: true,
-                            text: '金额 (¥)'
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: '日期'
-                        }
-                    }
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += '¥' + context.parsed.y.toFixed(2);
-                                }
-                                return label;
-                            }
+                    holdings[order.code].quantity += order.quantity;
+                    holdings[order.code].totalCost += cost;
+                } else {
+                    // Sell order
+                    const quantity = Math.abs(order.quantity);
+                    const revenue = order.price * quantity;
+                    const commission = order.commission || 0;
+                    currentCash += (revenue - commission);
+
+                    if (holdings[order.code]) {
+                        holdings[order.code].quantity -= quantity;
+                        // Proportionally reduce total cost
+                        const costPerShare = holdings[order.code].totalCost / (holdings[order.code].quantity + quantity);
+                        holdings[order.code].totalCost -= costPerShare * quantity;
+
+                        if (holdings[order.code].quantity <= 0) {
+                            delete holdings[order.code];
                         }
                     }
                 }
+
+                orderIndex++;
+            }
+
+            // Calculate current portfolio value using market prices
+            let portfolioValue = 0;
+            const stockDetails = [];
+
+            for (const [code, holding] of Object.entries(holdings)) {
+                // Find the closest price data for this date
+                let priceData = stockPriceData[code]?.find(p => p.date === date);
+
+                // If no exact match, find the most recent price before this date
+                if (!priceData && stockPriceData[code]) {
+                    const availablePrices = stockPriceData[code].filter(p => p.date <= date);
+                    if (availablePrices.length > 0) {
+                        priceData = availablePrices[availablePrices.length - 1];
+                    }
+                }
+
+                if (priceData && holding.quantity > 0) {
+                    const marketValue = priceData.close * holding.quantity;
+                    const avgCost = holding.totalCost / holding.quantity;
+                    portfolioValue += marketValue;
+                    stockDetails.push({
+                        code: code,
+                        close: priceData.close,
+                        quantity: holding.quantity,
+                        marketValue: marketValue,
+                        avgCost: avgCost,
+                        totalCost: holding.totalCost
+                    });
+                }
+            }
+
+            const totalAssets = portfolioValue + currentCash;
+
+            assetData.push({
+                date: date,
+                cash: currentCash,
+                portfolioValue: portfolioValue,
+                totalAssets: totalAssets,
+                stocks: stockDetails
+            });
+        }
+
+        return assetData;
+    }
+
+    // Create ECharts chart with dual y-axes
+    function createDualAxisChart(assetData, benchmarkData) {
+        const chartDom = document.getElementById('portfolioChart');
+        if (portfolioChart) {
+            portfolioChart.dispose();
+        }
+        portfolioChart = echarts.init(chartDom);
+
+        if (assetData.length === 0) {
+            // Show empty chart message
+            const option = {
+                title: {
+                    text: '暂无数据',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: {
+                        color: '#999',
+                        fontSize: 16
+                    }
+                }
+            };
+            portfolioChart.setOption(option);
+            return;
+        }
+
+        // Prepare data
+        const dates = assetData.map(item => item.date);
+        const assetValues = assetData.map(item => item.totalAssets / 10000); // Convert to W units
+
+        // Align benchmark data with asset dates and normalize to start at same point
+        const benchmarkValues = [];
+        const benchmarkMap = new Map(benchmarkData.map(item => [item.date, item.close]));
+
+        let firstBenchmarkValue = null;
+        let firstAssetValue = assetValues[0] || 1;
+
+        for (const date of dates) {
+            const benchmarkValue = benchmarkMap.get(date);
+            if (benchmarkValue !== undefined) {
+                if (firstBenchmarkValue === null) {
+                    firstBenchmarkValue = benchmarkValue;
+                }
+                benchmarkValues.push(benchmarkValue);
+            } else {
+                // Find the closest available benchmark value
+                let closestValue = null;
+                let minDiff = Infinity;
+                for (const [benchDate, benchValue] of benchmarkMap) {
+                    const diff = Math.abs(new Date(benchDate) - new Date(date));
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestValue = benchValue;
+                    }
+                }
+                benchmarkValues.push(closestValue);
+                if (firstBenchmarkValue === null && closestValue !== null) {
+                    firstBenchmarkValue = closestValue;
+                }
+            }
+        }
+
+        // Normalize benchmark to start at same point as assets
+        const normalizedBenchmarkValues = benchmarkValues.map(value =>
+            value !== null && firstBenchmarkValue !== null ?
+            (value / firstBenchmarkValue) * firstAssetValue : null
+        );
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross'
+                },
+                formatter: function(params) {
+                    let result = '<div style="text-align: left;">';
+                    result += '<strong>' + params[0].axisValueLabel + '</strong><br/>';
+
+                    // Get asset data for this date
+                    const dataIndex = params[0].dataIndex;
+                    const assetDataForDate = assetData[dataIndex];
+
+                    params.forEach(function(item) {
+                        if (item.seriesName === '账户资产(万)') {
+                            result += item.marker + item.seriesName + ': ' + item.value.toFixed(2) + '万<br/>';
+                        } else if (item.seriesName === '对标指数') {
+                            // Show the original index value
+                            const originalValue = benchmarkValues[item.dataIndex];
+                            if (originalValue !== null) {
+                                result += item.marker + item.seriesName + ': ' + originalValue.toFixed(2) + '<br/>';
+                            }
+                        }
+                    });
+
+                    // Add detailed asset information
+                    if (assetDataForDate) {
+                        result += '<br/><strong>详细信息:</strong><br/>';
+                        result += '日期: ' + assetDataForDate.date + '<br/>';
+                        result += '现金: ' + (assetDataForDate.cash / 10000).toFixed(2) + '万<br/>';
+                        result += '持仓金额: ' + (assetDataForDate.portfolioValue / 10000).toFixed(2) + '万<br/>';
+                        result += '总资产: ' + (assetDataForDate.totalAssets / 10000).toFixed(2) + '万<br/>';
+
+                        if (assetDataForDate.stocks && assetDataForDate.stocks.length > 0) {
+                            result += '<br/><strong>持仓股票:</strong><br/>';
+                            assetDataForDate.stocks.forEach(function(stock) {
+                                result += '<strong>' + stock.code + '</strong>: ' + stock.quantity + '股<br/>';
+                                result += '&nbsp;&nbsp;当前价格: ' + stock.close.toFixed(2) + '<br/>';
+                                result += '&nbsp;&nbsp;成本价格: ' + stock.avgCost.toFixed(2) + '<br/>';
+                                result += '&nbsp;&nbsp;持仓市值: ' + (stock.marketValue / 10000).toFixed(2) + '万<br/>';
+                                result += '&nbsp;&nbsp;持仓成本: ' + (stock.totalCost / 10000).toFixed(2) + '万<br/>';
+                                const profitLoss = stock.marketValue - stock.totalCost;
+                                const profitLossPercent = (profitLoss / stock.totalCost) * 100;
+                                const profitLossColor = profitLoss >= 0 ? 'green' : 'red';
+                                result += '&nbsp;&nbsp;<span style="color:' + profitLossColor + '">盈亏: ' + (profitLoss / 10000).toFixed(2) + '万 (' + (profitLoss >= 0 ? '+' : '') + profitLossPercent.toFixed(2) + '%)</span><br/>';
+                            });
+                        }
+                    }
+
+                    result += '</div>';
+                    return result;
+                }
+            },
+            legend: {
+                data: ['账户资产(万)', '对标指数'],
+                textStyle: {
+                    color: function(params) {
+                        if (params.name === '账户资产(万)') {
+                            return '#ffff00';
+                        } else if (params.name === '对标指数') {
+                            return '#ffffff';
+                        }
+                        return '#ffffff';
+                    }
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%',
+                containLabel: true,
+                show: true,
+                borderWidth: 1,
+                borderColor: '#333',
+                backgroundColor: 'transparent'
+            },
+            toolbox: {
+                feature: {
+                    dataZoom: {
+                        yAxisIndex: 'none'
+                    },
+                    restore: {},
+                    saveAsImage: {}
+                }
+            },
+            dataZoom: [{
+                type: 'inside',
+                start: Math.max(0, 100 - (365 / dates.length * 100)), // Default to show last 1 year
+                end: 100
+            }, {
+                type: 'slider',
+                bottom: '5%',
+                start: Math.max(0, 100 - (365 / dates.length * 100)),
+                end: 100
+            }],
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: dates,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#333',
+                        type: 'solid'
+                    }
+                }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: '指数',
+                    position: 'left',
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#ffffff'
+                        }
+                    },
+                    axisLabel: {
+                        formatter: '{value}'
+                    },
+                    splitLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#333',
+                            type: 'solid'
+                        }
+                    }
+                },
+                {
+                    type: 'value',
+                    name: '资产(万)',
+                    position: 'right',
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#ffff00'
+                        }
+                    },
+                    axisLabel: {
+                        formatter: '{value}万'
+                    },
+                    splitLine: {
+                        show: false
+                    }
+                }
+            ],
+            series: [
+                {
+                    name: '账户资产(万)',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: assetValues,
+                    smooth: true,
+                    lineStyle: {
+                        width: 2,
+                        color: '#ffff00'
+                    },
+                    itemStyle: {
+                        color: '#ffff00'
+                    }
+                },
+                {
+                    name: '对标指数',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: normalizedBenchmarkValues,
+                    smooth: true,
+                    lineStyle: {
+                        width: 2,
+                        color: '#ffffff'
+                    },
+                    itemStyle: {
+                        color: '#ffffff'
+                    }
+                }
+            ]
+        };
+
+        portfolioChart.setOption(option);
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (portfolioChart) {
+                portfolioChart.resize();
             }
         });
     }

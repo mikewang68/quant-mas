@@ -1493,6 +1493,103 @@ def register_routes(app: Flask):
             return jsonify({"error": f"Failed to get pool data: {str(e)}"}), 500
 
 
+    @app.route("/api/akshare/index-data", methods=["POST"])
+    def get_akshare_index_data():
+        """Get historical index data from Akshare"""
+        try:
+            data = request.get_json()
+            symbol = data.get("symbol", "000300")  # Default to CSI 300
+            start_date = data.get("start_date", "20230101")
+            end_date = data.get("end_date", datetime.now().strftime("%Y%m%d"))
+            period = data.get("period", "daily")
+
+            # Convert date format if needed (YYYY-MM-DD to YYYYMMDD)
+            if "-" in start_date:
+                start_date = start_date.replace("-", "")
+            if "-" in end_date:
+                end_date = end_date.replace("-", "")
+
+            # Get index data using Akshare
+            index_data = ak.index_zh_a_hist(
+                symbol=symbol,
+                period=period,
+                start_date=start_date,
+                end_date=end_date
+            )
+
+            if index_data.empty:
+                return jsonify({"error": "No index data found"}), 404
+
+            # Format the data
+            formatted_data = []
+            for _, row in index_data.iterrows():
+                formatted_data.append({
+                    "date": row["日期"].strftime("%Y-%m-%d") if hasattr(row["日期"], 'strftime') else str(row["日期"]),
+                    "open": float(row["开盘"]),
+                    "high": float(row["最高"]),
+                    "low": float(row["最低"]),
+                    "close": float(row["收盘"]),
+                    "volume": float(row["成交量"]),
+                    "amount": float(row["成交额"])
+                })
+
+            return jsonify({"data": formatted_data}), 200
+
+        except Exception as e:
+            logger.error(f"Error fetching index data: {e}")
+            return jsonify({"error": f"Failed to fetch index data: {str(e)}"}), 500
+
+    @app.route("/api/akshare/stock-data", methods=["POST"])
+    def get_akshare_stock_data():
+        """Get historical stock data from Akshare"""
+        try:
+            data = request.get_json()
+            symbol = data.get("symbol")
+            start_date = data.get("start_date", "20230101")
+            end_date = data.get("end_date", datetime.now().strftime("%Y%m%d"))
+            period = data.get("period", "daily")
+            adjust = data.get("adjust", "qfq")  # Default to forward adjustment
+
+            if not symbol:
+                return jsonify({"error": "Symbol is required"}), 400
+
+            # Convert date format if needed (YYYY-MM-DD to YYYYMMDD)
+            if "-" in start_date:
+                start_date = start_date.replace("-", "")
+            if "-" in end_date:
+                end_date = end_date.replace("-", "")
+
+            # Get stock data using Akshare
+            stock_data = ak.stock_zh_a_hist(
+                symbol=symbol,
+                period=period,
+                start_date=start_date,
+                end_date=end_date,
+                adjust=adjust
+            )
+
+            if stock_data.empty:
+                return jsonify({"error": "No stock data found"}), 404
+
+            # Format the data
+            formatted_data = []
+            for _, row in stock_data.iterrows():
+                formatted_data.append({
+                    "date": row["日期"].strftime("%Y-%m-%d") if hasattr(row["日期"], 'strftime') else str(row["日期"]),
+                    "open": float(row["开盘"]),
+                    "high": float(row["最高"]),
+                    "low": float(row["最低"]),
+                    "close": float(row["收盘"]),
+                    "volume": float(row["成交量"]),
+                    "amount": float(row["成交额"])
+                })
+
+            return jsonify({"data": formatted_data}), 200
+
+        except Exception as e:
+            logger.error(f"Error fetching stock data: {e}")
+            return jsonify({"error": f"Failed to fetch stock data: {str(e)}"}), 500
+
     @app.route("/api/orders", methods=["GET"])
     def get_orders():
         """Get all orders"""

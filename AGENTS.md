@@ -296,6 +296,24 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **ADDED**: Trading records section with recent trades and open trades tabs
 - **ENHANCED**: Responsive design with tabbed interfaces for better user experience
 
+### Historical Performance Chart Enhancement and Optimization
+- **IMPLEMENTED**: Advanced historical performance chart with dual y-axis display
+- **ADDED**: Real-time asset calculation from first stock purchase date using akshare data
+- **ENHANCED**: Benchmark comparison with selectable indices (上证50, 沪深300, 中证500)
+- **OPTIMIZED**: Chart styling with dark grid lines (#333), white index curve, and yellow asset curve
+- **IMPROVED**: Legend colors matching curve colors for better visual consistency
+- **SYNCHRONIZED**: Two curves start from the same point at account's first stock purchase for accurate performance comparison
+- **ENHANCED**: Comprehensive tooltip information including:
+  - Date, cash, total assets
+  - Stock holdings with codes, quantities, current prices, cost prices
+  - Market values, total costs, profit/loss calculations with color coding
+  - Real-time profit/loss analysis with percentage calculations
+- **IMPLEMENTED**: True dual y-axis system with left axis showing real index values and right axis showing assets in 万 units
+- **ENHANCED**: Interactive features with zoom controls defaulting to last 1 year view
+- **ADDED**: API endpoints for akshare data integration (/api/akshare/index-data, /api/akshare/stock-data)
+- **OPTIMIZED**: Grid lines using dark theme for better visual clarity
+- **IMPROVED**: Tooltip formatting with detailed asset breakdown and profit/loss color coding
+
 ## Usage Patterns
 
 ### Running Agents
