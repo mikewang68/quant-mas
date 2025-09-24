@@ -562,7 +562,8 @@
                 cash: currentCash,
                 portfolioValue: portfolioValue,
                 totalAssets: totalAssets,
-                stocks: stockDetails
+                stocks: stockDetails,
+                initialCapital: initialCash
             });
         }
 
@@ -669,6 +670,14 @@
                         result += '现金: ' + (assetDataForDate.cash / 10000).toFixed(2) + '万<br/>';
                         result += '持仓金额: ' + (assetDataForDate.portfolioValue / 10000).toFixed(2) + '万<br/>';
                         result += '总资产: ' + (assetDataForDate.totalAssets / 10000).toFixed(2) + '万<br/>';
+
+                        // Calculate asset profit/loss based on initial capital
+                        if (assetDataForDate.initialCapital) {
+                            const assetProfitLoss = assetDataForDate.totalAssets - assetDataForDate.initialCapital;
+                            const assetProfitLossPercent = (assetProfitLoss / assetDataForDate.initialCapital) * 100;
+                            const assetProfitLossColor = assetProfitLoss >= 0 ? 'green' : 'red';
+                            result += '<span style="color:' + assetProfitLossColor + '">资产盈亏: ' + (assetProfitLoss / 10000).toFixed(2) + '万 (' + (assetProfitLoss >= 0 ? '+' : '') + assetProfitLossPercent.toFixed(2) + '%)</span><br/>';
+                        }
 
                         if (assetDataForDate.stocks && assetDataForDate.stocks.length > 0) {
                             result += '<br/><strong>持仓股票:</strong><br/>';
