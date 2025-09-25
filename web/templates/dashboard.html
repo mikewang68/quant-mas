@@ -615,19 +615,14 @@
         const dates = assetData.map(item => item.date);
         const assetValues = assetData.map(item => item.totalAssets / 10000); // Convert to W units
 
-        // Align benchmark data with asset dates and normalize to start at same point
+        // Align benchmark data with asset dates and normalize to start from same point
         const benchmarkValues = [];
         const benchmarkMap = new Map(benchmarkData.map(item => [item.date, item.close]));
 
-        let firstBenchmarkValue = null;
-        let firstAssetValue = assetValues[0] || 1;
-
+        // First, collect all benchmark values aligned with dates
         for (const date of dates) {
             const benchmarkValue = benchmarkMap.get(date);
             if (benchmarkValue !== undefined) {
-                if (firstBenchmarkValue === null) {
-                    firstBenchmarkValue = benchmarkValue;
-                }
                 benchmarkValues.push(benchmarkValue);
             } else {
                 // Find the closest available benchmark value
@@ -641,17 +636,48 @@
                     }
                 }
                 benchmarkValues.push(closestValue);
-                if (firstBenchmarkValue === null && closestValue !== null) {
-                    firstBenchmarkValue = closestValue;
-                }
             }
         }
 
-        // Normalize benchmark to start at same point as assets
+        // Find the first valid benchmark value that corresponds to the first asset value
+        let firstBenchmarkValue = null;
+        let firstAssetValue = null;
+
+        for (let i = 0; i < Math.min(benchmarkValues.length, assetValues.length); i++) {
+            if (benchmarkValues[i] !== null && assetValues[i] !== null) {
+                firstBenchmarkValue = benchmarkValues[i];
+                firstAssetValue = assetValues[i];
+                break;
+            }
+        }
+
+        // Normalize benchmark to start at same point as assets - ensure exact same starting point
         const normalizedBenchmarkValues = benchmarkValues.map(value =>
-            value !== null && firstBenchmarkValue !== null ?
+            value !== null && firstBenchmarkValue !== null && firstAssetValue !== null ?
             (value / firstBenchmarkValue) * firstAssetValue : null
         );
+
+        // Calculate y-axis ranges to avoid starting from 0
+        const validAssetValues = assetValues.filter(v => v !== null && v !== undefined);
+        const validBenchmarkValues = benchmarkValues.filter(v => v !== null && v !== undefined);
+        const validNormalizedBenchmarkValues = normalizedBenchmarkValues.filter(v => v !== null && v !== undefined);
+
+        const assetMin = Math.min(...validAssetValues);
+        const assetMax = Math.max(...validAssetValues);
+        const assetRange = assetMax - assetMin;
+        const assetPadding = assetRange * 0.1; // 10% padding
+
+        // Use original benchmark values for left axis range calculation
+        const benchmarkMin = Math.min(...validBenchmarkValues);
+        const benchmarkMax = Math.max(...validBenchmarkValues);
+        const benchmarkRange = benchmarkMax - benchmarkMin;
+        const benchmarkPadding = benchmarkRange * 0.1; // 10% padding
+
+        // Use normalized values for right axis range calculation (combined with assets)
+        const rightAxisMin = Math.min(...validAssetValues, ...validNormalizedBenchmarkValues);
+        const rightAxisMax = Math.max(...validAssetValues, ...validNormalizedBenchmarkValues);
+        const rightAxisRange = rightAxisMax - rightAxisMin;
+        const rightAxisPadding = rightAxisRange * 0.1; // 10% padding
 
         const option = {
             tooltip: {
@@ -777,6 +803,12 @@
                     type: 'value',
                     name: '指数',
                     position: 'left',
+                    min: function(value) {
+                        return Math.max(0, benchmarkMin - benchmarkPadding);
+                    },
+                    max: function(value) {
+                        return benchmarkMax + benchmarkPadding;
+                    },
                     axisLine: {
                         show: true,
                         lineStyle: {
@@ -785,13 +817,15 @@
                     },
                     axisLabel: {
                         show: true,
-                        formatter: '{value}',
+                        formatter: function(value) {
+                            return Math.round(value);
+                        },
                         color: '#ffffff'
                     },
                     splitLine: {
                         show: true,
                         lineStyle: {
-                            color: '#444',
+                            color: '#333',
                             type: 'solid'
                         }
                     }
@@ -800,6 +834,12 @@
                     type: 'value',
                     name: '资产(万)',
                     position: 'right',
+                    min: function(value) {
+                        return Math.max(0, rightAxisMin - rightAxisPadding);
+                    },
+                    max: function(value) {
+                        return rightAxisMax + rightAxisPadding;
+                    },
                     axisLine: {
                         show: true,
                         lineStyle: {
@@ -807,7 +847,10 @@
                         }
                     },
                     axisLabel: {
-                        formatter: '{value}万'
+                        formatter: function(value) {
+                            return Math.round(value) + '万';
+                        },
+                        color: '#ffff00'
                     },
                     splitLine: {
                         show: false
@@ -832,8 +875,8 @@
                 {
                     name: '对标指数',
                     type: 'line',
-                    yAxisIndex: 0,
-                    data: benchmarkValues,
+                    yAxisIndex: 1,
+                    data: normalizedBenchmarkValues,
                     smooth: true,
                     lineStyle: {
                         width: 2,
@@ -842,6 +885,23 @@
                     itemStyle: {
                         color: '#ffffff'
                     }
+                },
+                {
+                    name: '指数刻度参考',
+                    type: 'line',
+                    yAxisIndex: 0,
+                    data: benchmarkValues,
+                    smooth: true,
+                    lineStyle: {
+                        width: 0,
+                        color: 'transparent'
+                    },
+                    itemStyle: {
+                        color: 'transparent'
+                    },
+                    showSymbol: false,
+                    silent: true,
+                    legendHoverLink: false
                 }
             ]
         };
