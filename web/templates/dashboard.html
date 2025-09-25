@@ -7,9 +7,9 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center">
-                            <h1 class="mb-0">
-                                <i class="fas fa-tachometer-alt"></i> 系统仪表板
-                            </h1>
+                <h1 class="mb-0" style="font-size: 1.67rem; line-height: 1.2;">
+                    <i class="fas fa-tachometer-alt" style="font-size: 0.67em;"></i> 系统仪表板
+                </h1>
                             <div class="d-flex align-items-center">
                                 <label for="accountSelect" class="form-label me-2 mb-0" style="font-size: 1rem;">选择账户:</label>
                                 <select class="form-select d-inline-block w-auto" id="accountSelect" style="font-size: 1rem; padding: 0.25rem 0.5rem;">
@@ -29,8 +29,8 @@
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-wallet"></i> 账户总览及历史收益曲线</h5>
                         <div>
-                            <label for="benchmarkSelect" class="form-label me-2 mb-0 text-white">对比标的:</label>
-                            <select class="form-select d-inline-block w-auto" id="benchmarkSelect">
+                            <label for="benchmarkSelect" class="form-label me-2 mb-0 text-white" style="font-size: 1rem;">对比标的:</label>
+                            <select class="form-select d-inline-block w-auto" id="benchmarkSelect" style="font-size: 1rem; padding: 0.25rem 0.5rem;">
                                 <option value="000016">上证50</option>
                                 <option value="000300" selected>沪深300</option>
                                 <option value="000905">中证500</option>
@@ -45,6 +45,18 @@
                             <div class="card h-100">
                                 <div class="card-body">
                                     <ul class="list-group">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            初始资金
+                                            <span class="badge bg-secondary rounded-pill fs-6" id="initialCapital">¥0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            持仓市值
+                                            <span class="badge bg-info rounded-pill fs-6" id="portfolioValue">¥0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            现金
+                                            <span class="badge bg-success rounded-pill fs-6" id="cashValue">¥0.00</span>
+                                        </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             账户净值
                                             <span class="badge bg-primary rounded-pill fs-6" id="accountNetValue">¥0.00</span>
@@ -765,12 +777,14 @@
                         }
                     },
                     axisLabel: {
-                        formatter: '{value}'
+                        show: true,
+                        formatter: '{value}',
+                        color: '#ffffff'
                     },
                     splitLine: {
                         show: true,
                         lineStyle: {
-                            color: '#333',
+                            color: '#444',
                             type: 'solid'
                         }
                     }
@@ -811,8 +825,8 @@
                 {
                     name: '对标指数',
                     type: 'line',
-                    yAxisIndex: 1,
-                    data: normalizedBenchmarkValues,
+                    yAxisIndex: 0,
+                    data: benchmarkValues,
                     smooth: true,
                     lineStyle: {
                         width: 2,
@@ -857,6 +871,9 @@
                     const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
 
                     // Update UI
+                    $('#initialCapital').text(`¥${initialCapital.toFixed(2)}`);
+                    $('#portfolioValue').text(`¥${totalStockValue.toFixed(2)}`);
+                    $('#cashValue').text(`¥${cash.toFixed(2)}`);
                     $('#accountNetValue').text(`¥${totalValue.toFixed(2)}`);
 
                     // Set other metrics to default values (would be calculated in real implementation)
