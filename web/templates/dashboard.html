@@ -871,7 +871,7 @@
 
                     if (stockCount === 0) {
                         // No stocks, update UI immediately
-                        updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash);
+                        updateAccountOverviewUI(initialCapital, cash, 0, cash);
                         return;
                     }
 
@@ -881,7 +881,7 @@
                         if (!code) {
                             processedStocks++;
                             if (processedStocks === stockCount) {
-                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash + totalStockValue);
+                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalStockValue + cash);
                             }
                             return;
                         }
@@ -906,7 +906,7 @@
                             }
                             processedStocks++;
                             if (processedStocks === stockCount) {
-                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash + totalStockValue);
+                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalStockValue + cash);
                             }
                         }).fail(function() {
                             // If failed to get price, use cost price as fallback
@@ -915,7 +915,7 @@
                             totalStockValue += costPrice * quantity;
                             processedStocks++;
                             if (processedStocks === stockCount) {
-                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash + totalStockValue);
+                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalStockValue + cash);
                             }
                         });
                     });
@@ -1045,14 +1045,20 @@
 
     // Helper function to update account overview UI
     function updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalValue) {
-        const profitAmount = totalValue - initialCapital;
+        // 1. 账户净值 = 持仓市值 + 现金
+        const accountNetValue = totalStockValue + cash;
+
+        // 2. 账户盈亏 = 账户净值 - 初始资金
+        const profitAmount = accountNetValue - initialCapital;
+
+        // 3. 收益率 = (账户盈亏 / 初始资金) * 100%
         const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
 
         // Update UI
         $('#initialCapital').text(initialCapital.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         $('#portfolioValue').text(totalStockValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         $('#cashValue').text(cash.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
-        $('#accountNetValue').text(totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#accountNetValue').text(accountNetValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
         $('#accountProfit').text(profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}))
             .removeClass('bg-success bg-danger')
             .addClass(profitAmount >= 0 ? 'bg-success' : 'bg-danger');
