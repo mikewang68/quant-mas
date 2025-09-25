@@ -39,11 +39,11 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="row g-0">
+                    <div class="row">
                         <!-- Account Overview List (1/4 width) -->
-                        <div class="col-md-3">
-                            <div class="card h-100">
-                                <div class="card-body">
+                        <div class="col-md-3 p-0">
+                            <div class="card h-100 m-0 border-0">
+                                <div class="card-body p-0">
                                     <ul class="list-group">
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             初始资金
@@ -60,6 +60,10 @@
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             账户净值
                                             <span class="badge bg-primary rounded-pill fs-6" id="accountNetValue">¥0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            账户盈亏
+                                                                                    <span class="badge bg-secondary rounded-pill fs-6" id="accountProfit">¥0.00</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             收益率
@@ -860,30 +864,61 @@
                     const cash = account.cash || 0;
                     const stocks = account.stocks || [];
 
-                    // Calculate total stock value (using cost price for now, would need real-time prices)
+                    // Calculate total stock value using latest prices from akshare
                     let totalStockValue = 0;
-                    stocks.forEach(stock => {
-                        totalStockValue += (stock.cost || 0) * (stock.quantity || 0);
+                    let processedStocks = 0;
+                    let stockCount = stocks.length;
+
+                    if (stockCount === 0) {
+                        // No stocks, update UI immediately
+                        updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash);
+                        return;
+                    }
+
+                    // For each stock, fetch latest price from akshare
+                    stocks.forEach(function(stock) {
+                        const code = stock.code || '';
+                        if (!code) {
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash + totalStockValue);
+                            }
+                            return;
+                        }
+
+                        // Fetch latest price data using akshare
+                        $.ajax({
+                            url: '/api/akshare/stock-data',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                symbol: code,
+                                start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 7 days
+                                end_date: new Date().toISOString().split('T')[0]
+                            })
+                        }).done(function(response) {
+                            const priceData = response.data || [];
+                            if (priceData.length > 0) {
+                                // Use the latest closing price
+                                const latestPrice = priceData[priceData.length - 1].close || 0;
+                                const quantity = stock.quantity || 0;
+                                totalStockValue += latestPrice * quantity;
+                            }
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash + totalStockValue);
+                            }
+                        }).fail(function() {
+                            // If failed to get price, use cost price as fallback
+                            const costPrice = stock.cost || 0;
+                            const quantity = stock.quantity || 0;
+                            totalStockValue += costPrice * quantity;
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, initialCapital + cash + totalStockValue);
+                            }
+                        });
                     });
-
-                    const totalValue = cash + totalStockValue;
-                    const profitAmount = totalValue - initialCapital;
-                    const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
-
-                    // Update UI
-                    $('#initialCapital').text(`¥${initialCapital.toFixed(2)}`);
-                    $('#portfolioValue').text(`¥${totalStockValue.toFixed(2)}`);
-                    $('#cashValue').text(`¥${cash.toFixed(2)}`);
-                    $('#accountNetValue').text(`¥${totalValue.toFixed(2)}`);
-
-                    // Set other metrics to default values (would be calculated in real implementation)
-                    $('#cumulativeReturn').text(`${profitRatio.toFixed(2)}%`).removeClass('text-success text-danger').addClass(profitRatio >= 0 ? 'text-success' : 'text-danger');
-                    $('#maxDrawdown').text('¥0.00');
-                    $('#sharpeRatio').text('0.00');
-                    $('#winRate').text('0.00%');
-                    $('#profitLossRatio').text('0.00');
-                    $('#volatility').text('0.00%');
-                    $('#varValue').text('¥0.00');
                 }
             })
             .fail(function(xhr, status, error) {
@@ -910,39 +945,53 @@
                     const initialCapital = account.initial_capital || 0;
                     const cash = account.cash || 0;
                     let totalStockValue = 0;
-                    stocks.forEach(stock => {
-                        totalStockValue += (stock.cost || 0) * (stock.quantity || 0);
-                    });
-                    const totalValue = cash + totalStockValue;
+                    let processedStocks = 0;
+                    let stockCount = stocks.length;
 
+                    // First pass: calculate total stock value using akshare prices
                     stocks.forEach(function(stock) {
-                        const marketValue = (stock.cost || 0) * (stock.quantity || 0);
-                        const profitAmount = marketValue - ((stock.cost || 0) * (stock.quantity || 0)); // Would need real-time prices
-                        const profitRatio = (stock.cost || 0) !== 0 ? (profitAmount / ((stock.cost || 0) * (stock.quantity || 0))) * 100 : 0;
+                        const code = stock.code || '';
+                        if (!code) {
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updatePositionsTable(stocks, account, totalStockValue, cash);
+                            }
+                            return;
+                        }
 
-                        const row = `
-                            <tr>
-                                <td>${stock.code}</td>
-                                <td>${stock.name}</td>
-                                <td>${stock.quantity}</td>
-                                <td>¥${marketValue.toFixed(2)}</td>
-                                <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
-                                    ${profitAmount >= 0 ? '+' : ''}${profitAmount.toFixed(2)} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
-                                </td>
-                                <td>0</td>
-                                <td>¥${(stock.cost * 0.95).toFixed(2)} / ¥${(stock.cost * 1.05).toFixed(2)}</td>
-                            </tr>
-                        `;
-                        positionsTableBody.append(row);
+                        // Fetch latest price data using akshare
+                        $.ajax({
+                            url: '/api/akshare/stock-data',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                symbol: code,
+                                start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 7 days
+                                end_date: new Date().toISOString().split('T')[0]
+                            })
+                        }).done(function(response) {
+                            const priceData = response.data || [];
+                            if (priceData.length > 0) {
+                                // Use the latest closing price
+                                const latestPrice = priceData[priceData.length - 1].close || 0;
+                                const quantity = stock.quantity || 0;
+                                totalStockValue += latestPrice * quantity;
+                            }
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updatePositionsTable(stocks, account, totalStockValue, cash);
+                            }
+                        }).fail(function() {
+                            // If failed to get price, use cost price as fallback
+                            const costPrice = stock.cost || 0;
+                            const quantity = stock.quantity || 0;
+                            totalStockValue += costPrice * quantity;
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updatePositionsTable(stocks, account, totalStockValue, cash);
+                            }
+                        });
                     });
-
-                    // Update position and cash ratios
-                    if (totalValue > 0) {
-                        const positionRatio = (totalStockValue / totalValue) * 100;
-                        const cashRatio = (cash / totalValue) * 100;
-                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
-                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
-                    }
                 }
             })
             .fail(function(xhr, status, error) {
@@ -974,7 +1023,7 @@
                                 <td>${order.name}</td>
                                 <td class="${order.quantity > 0 ? 'text-success' : 'text-danger'}">${order.quantity > 0 ? '买入' : '卖出'}</td>
                                 <td>${Math.abs(order.quantity)}</td>
-                                <td>¥${order.price.toFixed(2)}</td>
+                                <td>${order.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td class="text-muted">待计算</td>
                             </tr>
                         `;
@@ -992,6 +1041,143 @@
                 $('#recentTradesTableBody').html('<tr><td colspan="7" class="text-center text-danger">加载交易记录失败</td></tr>');
                 $('#openTradesTableBody').html('<tr><td colspan="6" class="text-center text-danger">加载未结交易失败</td></tr>');
             });
+    }
+
+    // Helper function to update account overview UI
+    function updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalValue) {
+        const profitAmount = totalValue - initialCapital;
+        const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
+
+        // Update UI
+        $('#initialCapital').text(initialCapital.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#portfolioValue').text(totalStockValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#cashValue').text(cash.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#accountNetValue').text(totalValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#accountProfit').text(profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}))
+            .removeClass('bg-success bg-danger')
+            .addClass(profitAmount >= 0 ? 'bg-success' : 'bg-danger');
+
+        // Set other metrics to default values (would be calculated in real implementation)
+        $('#cumulativeReturn').text(`${profitRatio.toFixed(2)}%`)
+            .removeClass('bg-success bg-danger')
+            .addClass(profitRatio >= 0 ? 'bg-success' : 'bg-danger');
+        $('#maxDrawdown').text('0.00');
+        $('#sharpeRatio').text('0.00');
+        $('#winRate').text('0.00%');
+        $('#profitLossRatio').text('0.00');
+        $('#volatility').text('0.00%');
+        $('#varValue').text('0.00');
+    }
+
+    // Helper function to update positions table
+    function updatePositionsTable(stocks, account, totalStockValue, cash) {
+        const positionsTableBody = $('#positionsTableBody');
+        positionsTableBody.empty();
+
+        // Second pass: populate table with akshare prices
+        let processedStocks = 0;
+        let stockCount = stocks.length;
+
+        if (stockCount === 0) {
+            positionsTableBody.append('<tr><td colspan="7" class="text-center">暂无持仓</td></tr>');
+            return;
+        }
+
+        stocks.forEach(function(stock) {
+            const code = stock.code || '';
+            if (!code) {
+                processedStocks++;
+                return;
+            }
+
+            // Fetch latest price data using akshare
+            $.ajax({
+                url: '/api/akshare/stock-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: code,
+                    start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 7 days
+                    end_date: new Date().toISOString().split('T')[0]
+                })
+            }).done(function(response) {
+                const priceData = response.data || [];
+                let currentPrice = 0;
+                if (priceData.length > 0) {
+                    // Use the latest closing price
+                    currentPrice = priceData[priceData.length - 1].close || 0;
+                } else {
+                    // Fallback to cost price if akshare fails
+                    currentPrice = stock.cost || 0;
+                }
+
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>0</td>
+                        <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            }).fail(function() {
+                // If failed to get price, use cost price as fallback
+                const currentPrice = stock.cost || 0;
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>0</td>
+                        <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            });
+        });
     }
 
     // Load risk monitoring data
@@ -1014,8 +1200,8 @@
                             <tr>
                                 <td>${stock.code} (${stock.name})</td>
                                 <td>0.00%</td>
-                                <td>¥0.00</td>
-                                <td>¥${(stock.cost * 0.95).toFixed(2)} / ¥${(stock.cost * 1.05).toFixed(2)}</td>
+                                <td>0.00</td>
+                                <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                                 <td class="text-warning">无特殊风险提示</td>
                             </tr>
                         `;
