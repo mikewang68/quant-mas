@@ -278,32 +278,14 @@
     // Load accounts when page loads
     $(document).ready(function() {
         loadAccounts();
-    
-            // Set default account to 'wdg' and load its data
-            setTimeout(function() {
-                const accountSelect = $('#accountSelect');
-                const wdgOption = accountSelect.find('option').filter(function() {
-                    return $(this).text() === 'wdg';
-                });
-    
-                if (wdgOption.length > 0) {
-                    const accountId = wdgOption.val();
-                    accountSelect.val(accountId).trigger('change');
-                } else if (accountSelect.find('option').length > 1) {
-                    // If 'wdg' not found, select the first account (excluding the "请选择账户" option)
-                    const firstAccountOption = accountSelect.find('option[value!=""]').first();
-                    if (firstAccountOption.length > 0) {
-                        firstAccountOption.prop('selected', true);
-                        accountSelect.trigger('change');
-                    }
-                }
-            }, 500); // Small delay to ensure accounts are loaded
     });
 
     // Load all accounts
     function loadAccounts() {
-        $.get('/api/accounts')
-            .done(function(accounts) {
+            console.log('Loading accounts...');
+            $.get('/api/accounts')
+                .done(function(accounts) {
+                    console.log('Accounts loaded:', accounts);
                 const accountSelect = $('#accountSelect');
                 accountSelect.empty();
 
@@ -322,14 +304,29 @@
                     option.text(account.name || '未命名账户');
                     accountSelect.append(option);
                 });
+
+                // Set default account to 'wdg' and load its data
+                const wdgOption = accountSelect.find('option').filter(function() {
+                    return $(this).text() === 'wdg';
+                });
+
+                if (wdgOption.length > 0) {
+                    const accountId = wdgOption.val();
+                    accountSelect.val(accountId).trigger('change');
+                } else if (accountSelect.find('option').length > 1) {
+                    // If 'wdg' not found, select the first account (excluding the "请选择账户" option)
+                    const firstAccountOption = accountSelect.find('option[value!=""]').first();
+                    if (firstAccountOption.length > 0) {
+                        firstAccountOption.prop('selected', true);
+                        accountSelect.trigger('change');
+                    }
+                }
             })
             .fail(function(xhr, status, error) {
                 console.error('Failed to load accounts:', error);
                 $('#accountSelect').html('<option value="">加载失败</option>');
             });
     }
-
-    // Handle account selection change
     $('#accountSelect').change(function() {
         const accountId = $(this).val();
         if (accountId) {
@@ -337,7 +334,6 @@
         } else {
             // Hide all sections if no account selected
             $('#accountOverviewSection').hide();
-            $('#portfolioChartSection').hide();
             $('#positionsRiskSection').hide();
             $('#tradingRecordsSection').hide();
         }
@@ -956,7 +952,7 @@
                             contentType: 'application/json',
                             data: JSON.stringify({
                                 symbol: code,
-                                start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 7 days
+                                start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
                                 end_date: new Date().toISOString().split('T')[0]
                             })
                         }).done(function(response) {
@@ -991,6 +987,7 @@
 
     // Load positions data
     function loadPositions(accountId) {
+        // First get account data
         $.get(`/api/accounts`)
             .done(function(accounts) {
                 const account = accounts.find(acc => acc._id === accountId);
@@ -1004,57 +1001,69 @@
                         return;
                     }
 
-                    // Calculate total value for position ratio
-                    const initialCapital = account.initial_capital || 0;
-                    const cash = account.cash || 0;
-                    let totalStockValue = 0;
-                    let processedStocks = 0;
-                    let stockCount = stocks.length;
+                    // Get orders for this account to calculate holding days and stop/take profit lines
+                    $.get('/api/orders')
+                        .done(function(orders) {
+                            // Filter orders for this account
+                            const accountOrders = orders.filter(order => order.account_id === accountId);
 
-                    // First pass: calculate total stock value using akshare prices
-                    stocks.forEach(function(stock) {
-                        const code = stock.code || '';
-                        if (!code) {
-                            processedStocks++;
-                            if (processedStocks === stockCount) {
-                                updatePositionsTable(stocks, account, totalStockValue, cash);
-                            }
-                            return;
-                        }
+                            // Calculate total value for position ratio
+                            const initialCapital = account.initial_capital || 0;
+                            const cash = account.cash || 0;
+                            let totalStockValue = 0;
+                            let processedStocks = 0;
+                            let stockCount = stocks.length;
 
-                        // Fetch latest price data using akshare
-                        $.ajax({
-                            url: '/api/akshare/stock-data',
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({
-                                symbol: code,
-                                start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 7 days
-                                end_date: new Date().toISOString().split('T')[0]
-                            })
-                        }).done(function(response) {
-                            const priceData = response.data || [];
-                            if (priceData.length > 0) {
-                                // Use the latest closing price
-                                const latestPrice = priceData[priceData.length - 1].close || 0;
-                                const quantity = stock.quantity || 0;
-                                totalStockValue += latestPrice * quantity;
-                            }
-                            processedStocks++;
-                            if (processedStocks === stockCount) {
-                                updatePositionsTable(stocks, account, totalStockValue, cash);
-                            }
-                        }).fail(function() {
-                            // If failed to get price, use cost price as fallback
-                            const costPrice = stock.cost || 0;
-                            const quantity = stock.quantity || 0;
-                            totalStockValue += costPrice * quantity;
-                            processedStocks++;
-                            if (processedStocks === stockCount) {
-                                updatePositionsTable(stocks, account, totalStockValue, cash);
-                            }
+                            // First pass: calculate total stock value using akshare prices
+                            stocks.forEach(function(stock) {
+                                const code = stock.code || '';
+                                if (!code) {
+                                    processedStocks++;
+                                    if (processedStocks === stockCount) {
+                                        updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders);
+                                    }
+                                    return;
+                                }
+
+                                // Fetch latest price data using akshare
+                                $.ajax({
+                                    url: '/api/akshare/stock-data',
+                                    method: 'POST',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({
+                                        symbol: code,
+                                        start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
+                                        end_date: new Date().toISOString().split('T')[0]
+                                    })
+                                }).done(function(response) {
+                                    const priceData = response.data || [];
+                                    if (priceData.length > 0) {
+                                        // Use the latest closing price
+                                        const latestPrice = priceData[priceData.length - 1].close || 0;
+                                        const quantity = stock.quantity || 0;
+                                        totalStockValue += latestPrice * quantity;
+                                    }
+                                    processedStocks++;
+                                    if (processedStocks === stockCount) {
+                                        updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders);
+                                    }
+                                }).fail(function() {
+                                    // If failed to get price, use cost price as fallback
+                                    const costPrice = stock.cost || 0;
+                                    const quantity = stock.quantity || 0;
+                                    totalStockValue += costPrice * quantity;
+                                    processedStocks++;
+                                    if (processedStocks === stockCount) {
+                                        updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders);
+                                    }
+                                });
+                            });
+                        })
+                        .fail(function(xhr, status, error) {
+                            console.error('Failed to load orders:', error);
+                            // Fallback to original method if orders can't be loaded
+                            updatePositionsTable(stocks, account, 0, account.cash || 0);
                         });
-                    });
                 }
             })
             .fail(function(xhr, status, error) {
@@ -1138,7 +1147,174 @@
         $('#varValue').text('0.00');
     }
 
-    // Helper function to update positions table
+    // Helper function to calculate holding days, stop-loss, and take-profit lines
+    function calculateHoldingAndLimits(stockOrders, cost, priceData) {
+        // Sort orders by date
+        stockOrders.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Calculate holding days (days since first purchase)
+        let holdingDays = 0;
+            let firstPurchaseDate = null;
+            if (stockOrders.length > 0) {
+                firstPurchaseDate = new Date(stockOrders[0].date);
+            const today = new Date();
+            holdingDays = Math.floor((today - firstPurchaseDate) / (1000 * 60 * 60 * 24));
+        }
+
+        // Calculate stop-loss line (cost basis * 0.95)
+        const stopLossLine = (cost || 0) * 0.95;
+
+        // Calculate take-profit line (highest price since opening position * 0.93)
+        let takeProfitLine = (cost || 0) * 1.05; // Default to 5% above cost if no price data
+
+        // Process orders to track highest price since opening position
+            if (stockOrders.length > 0 && priceData.length > 0 && firstPurchaseDate) {
+                // Find the highest price since the first purchase
+                let highestPrice = 0;
+                priceData.forEach(item => {
+                    const itemDate = new Date(item.date);
+                    if (itemDate >= firstPurchaseDate && item.high > highestPrice) {
+                        highestPrice = item.high;
+                }
+            });
+
+            // If we found a higher price, use it for take-profit calculation
+            if (highestPrice > 0) {
+                takeProfitLine = highestPrice * 0.93;
+            }
+        }
+
+        return { holdingDays, stopLossLine, takeProfitLine };
+    }
+
+    // Helper function to update positions table with order data
+    function updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders) {
+        const positionsTableBody = $('#positionsTableBody');
+        positionsTableBody.empty();
+
+        if (stocks.length === 0) {
+            positionsTableBody.append('<tr><td colspan="7" class="text-center">暂无持仓</td></tr>');
+            return;
+        }
+
+        // Process each stock to calculate holding days, stop-loss, and take-profit lines
+        let processedStocks = 0;
+        let stockCount = stocks.length;
+
+        stocks.forEach(function(stock) {
+            const code = stock.code || '';
+            if (!code) {
+                processedStocks++;
+                return;
+            }
+
+            // Determine the first purchase date for this stock
+            const stockOrders = accountOrders.filter(order => order.code === code);
+            let firstPurchaseDate = null;
+            if (stockOrders.length > 0) {
+                // Sort orders by date to find the earliest purchase
+                stockOrders.sort((a, b) => new Date(a.date) - new Date(b.date));
+                firstPurchaseDate = new Date(stockOrders[0].date);
+            }
+
+            // Fetch price data from first purchase date to today
+            const startDate = firstPurchaseDate ? firstPurchaseDate.toISOString().split('T')[0] : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            const endDate = new Date().toISOString().split('T')[0];
+
+            $.ajax({
+                url: '/api/akshare/stock-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: code,
+                    start_date: startDate,
+                    end_date: endDate
+                })
+            }).done(function(response) {
+                const priceData = response.data || [];
+                let currentPrice = 0;
+                if (priceData.length > 0) {
+                    // Use the latest closing price
+                    currentPrice = priceData[priceData.length - 1].close || 0;
+                } else {
+                    // Fallback to cost price if akshare fails
+                    currentPrice = stock.cost || 0;
+                }
+
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                // Calculate holding days, stop-loss, and take-profit lines based on orders
+                const stockOrders = accountOrders.filter(order => order.code === code);
+                const { holdingDays, stopLossLine, takeProfitLine } = calculateHoldingAndLimits(stockOrders, stock.cost, priceData);
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>${holdingDays}</td>
+                        <td>${stopLossLine.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${takeProfitLine.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            }).fail(function() {
+                // If failed to get price, use cost price as fallback
+                const currentPrice = stock.cost || 0;
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>0</td>
+                        <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            });
+        });
+    }
+
+    // Helper function to update positions table (fallback)
     function updatePositionsTable(stocks, account, totalStockValue, cash) {
         const positionsTableBody = $('#positionsTableBody');
         positionsTableBody.empty();
@@ -1166,7 +1342,7 @@
                 contentType: 'application/json',
                 data: JSON.stringify({
                     symbol: code,
-                    start_date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 7 days
+                    start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
                     end_date: new Date().toISOString().split('T')[0]
                 })
             }).done(function(response) {
@@ -1284,15 +1460,10 @@
             });
     }
 
-    // Initialize chart when portfolio chart section is shown
-    $('#portfolioChartSection').on('shown.bs.collapse', function() {
-        initPortfolioChart();
-    });
-
-    // Initialize chart on page load if section is visible
-    if ($('#portfolioChartSection').is(':visible')) {
-        initPortfolioChart();
-    }
+    // Initialize chart when account overview section is shown
+        $('#accountOverviewSection').on('shown.bs.collapse', function() {
+            // Chart will be initialized when account data is loaded
+});
 </script>
 {% endblock %}
 
