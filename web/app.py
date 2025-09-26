@@ -86,6 +86,11 @@ def register_routes(app: Flask):
         """Dashboard page"""
         return render_template("dashboard.html")
 
+    @app.route("/test-accounts")
+    def test_accounts():
+        """Test accounts page"""
+        return render_template("test_accounts.html")
+
     @app.route("/strategies")
     def strategies():
         """Strategies page"""
