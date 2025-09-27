@@ -157,7 +157,6 @@ def write_k_daily(db):
                         {"$set": row},
                         upsert=True,
                     )
-                time.sleep(8)
             else:
                 print(f"Warning: No data found for code {code}. Skipping...")
 
