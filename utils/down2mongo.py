@@ -15,6 +15,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the MongoDB configuration from the project
 from config.mongodb_config import MongoDBConfig
 
+# Import the router control function
+try:
+    from utils.enhanced_router_control import switch_ip
+    ROUTER_CONTROL_AVAILABLE = True
+except ImportError:
+    print("Warning: Router control module not available. IP switching will be disabled.")
+    ROUTER_CONTROL_AVAILABLE = False
+
 
 # 连接mongodb中的stock数据库
 def conn_mongo():
@@ -77,6 +85,10 @@ def write_k_daily(db):
     start_date = get_lastest_date(db)
     # start_date = ""
     end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+
+    # Counter for IP switching
+    stock_counter = 0
+    stocks_since_last_switch = 0
 
     for code in df_code["code"]:
         try:
@@ -148,6 +160,21 @@ def write_k_daily(db):
                 time.sleep(8)
             else:
                 print(f"Warning: No data found for code {code}. Skipping...")
+
+            # Increment counters
+            stock_counter += 1
+            stocks_since_last_switch += 1
+
+            # Switch IP every 100 stocks
+            if ROUTER_CONTROL_AVAILABLE and stocks_since_last_switch >= 100:
+                print(f"Switching IP after processing {stock_counter} stocks...")
+                success = switch_ip(router_ip="192.168.1.1", username="wangdg68", password="wap951020ZJL")
+                if success:
+                    print("IP switch successful")
+                else:
+                    print("IP switch failed")
+                stocks_since_last_switch = 0  # Reset the counter
+
         except KeyError as e:
             print(
                 f"Error: Stock code {code} not found in the dictionary. Skipping this code."
