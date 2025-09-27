@@ -1072,6 +1072,68 @@
             });
     }
 
+    // Helper function to calculate trade profit/loss
+    function calculateTradeProfitLoss(orders, currentOrder) {
+        // Filter orders for the same stock and sort by date
+        const stockOrders = orders.filter(order => order.code === currentOrder.code)
+                                  .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // If this is a buy order, return commission as negative value
+        if (currentOrder.quantity > 0) {
+            const commission = currentOrder.commission || 0;
+            return -commission;
+        }
+
+        // This is a sell order, calculate profit/loss based on average cost
+        let totalQuantity = 0;
+        let totalCost = 0;
+
+        // Process orders chronologically to calculate average cost
+        for (const order of stockOrders) {
+            // Stop processing once we reach the current order
+            if (order._id === currentOrder._id) {
+                break;
+            }
+
+            if (order.quantity > 0) {
+                // Buy order - add to position
+                totalQuantity += order.quantity;
+                totalCost += order.quantity * order.price;
+            } else {
+                // Sell order - reduce position
+                const sellQuantity = Math.abs(order.quantity);
+                if (totalQuantity > 0) {
+                    const averageCost = totalCost / totalQuantity;
+                    totalQuantity -= sellQuantity;
+                    totalCost -= sellQuantity * averageCost;
+
+                    // Ensure we don't go below zero
+                    if (totalQuantity < 0) {
+                        totalQuantity = 0;
+                        totalCost = 0;
+                    }
+                }
+            }
+        }
+
+        // Calculate profit/loss for current sell order
+        if (totalQuantity > 0) {
+            const averageCost = totalCost / totalQuantity;
+            const sellQuantity = Math.abs(currentOrder.quantity);
+            const sellRevenue = sellQuantity * currentOrder.price;
+            const sellCost = sellQuantity * averageCost;
+            const commission = currentOrder.commission || 0;
+            const profitLoss = sellRevenue - sellCost - commission;
+
+            return profitLoss;
+        }
+
+        // No previous buy orders or position already closed
+        // Still consider commission even if no previous buys
+        const commission = currentOrder.commission || 0;
+        return -commission;
+    }
+
     // Load trading records
     function loadTradingRecords(accountId) {
         $.get('/api/orders')
@@ -1088,6 +1150,27 @@
                     recentTradesTableBody.append('<tr><td colspan="7" class="text-center">暂无交易记录</td></tr>');
                 } else {
                     recentTrades.forEach(function(order) {
+                        // Calculate profit/loss for both buy and sell orders
+                        let profitLossText = '';
+                        if (order.quantity < 0) {
+                            // This is a sell order, calculate profit/loss
+                            const profitLoss = calculateTradeProfitLoss(accountOrders, order);
+                            if (profitLoss !== null) {
+                                const formattedProfitLoss = profitLoss.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                const profitLossClass = profitLoss >= 0 ? 'text-success' : 'text-danger';
+                                profitLossText = `<span class="${profitLossClass}">${profitLoss >= 0 ? '+' : ''}${formattedProfitLoss}</span>`;
+                            }
+                        } else {
+                            // This is a buy order, show commission cost as negative value
+                            const commission = order.commission || 0;
+                            if (commission > 0) {
+                                const formattedCommission = commission.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                profitLossText = `<span class="text-danger">-${formattedCommission}</span>`;
+                            } else {
+                                profitLossText = `<span class="text-danger">0.00</span>`;
+                            }
+                        }
+
                         const row = `
                             <tr>
                                 <td>${order.date}</td>
@@ -1096,7 +1179,7 @@
                                 <td class="${order.quantity > 0 ? 'text-success' : 'text-danger'}">${order.quantity > 0 ? '买入' : '卖出'}</td>
                                 <td>${Math.abs(order.quantity)}</td>
                                 <td>${order.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
-                                <td class="text-muted">待计算</td>
+                                <td class="text-end">${profitLossText}</td>
                             </tr>
                         `;
                         recentTradesTableBody.append(row);
