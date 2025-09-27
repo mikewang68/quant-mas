@@ -1,0 +1,2200 @@
+ï»¿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <link rel="shortcut icon" href="favicon.ico"/>
+    <link type="text/css" href="css/widget.css" rel="stylesheet" />
+    <link type="text/css" href="themes/neoteric/css/widget.css" rel="stylesheet" />
+    <link type="text/css" href="themes/neoteric/css/style.css" rel="stylesheet" />
+
+    <script type="text/javascript" src="js/libs/jquery.min.js"></script>
+    <script type="text/javascript" src="js/su/locale.js"></script>
+    <script type="text/javascript">
+    //<![CDATA[
+        try{
+            $.su.locale.URL_LAN_CHECK =  $.su.url("/locale?form=lang");//"./data/lan.json";
+            $.su.locale.get();
+        }catch(error){
+            location.href = "./error.html";
+        };
+    //]]>
+    </script>
+    <script type="text/javascript" src="js/libs/encrypt.js"></script>
+    <script type="text/javascript" src="js/su/su.full.min.js"></script>
+
+    <title>Opening...</title>
+</head>
+
+<body class="login-body">
+
+<noscript>
+    <meta http-equiv="refresh" content="0; url=error.html"/>
+</noscript>
+
+<div class="login-banner">
+    <a href="http://tp-link.com.cn" target="_blank">
+        <div class="logo"></div>
+    </a>
+	<h1></h1>
+</div>
+
+
+
+
+<!-- æªå¼cookieçæä½æç¤º -->
+<div id="no-cookie-msg-container" class="hidden warning">
+    <h4 class="title">
+        <span class="icon"></span>
+        <span class="text" id="no-cookie-text"></span>
+    </h4>
+</div>
+
+
+<script type="text/javascript">
+//<![CDATA[
+$(document).ready(function(e){
+    /*URL*/
+
+    var LOGIN_URL = $.su.url("/login?form=login");
+    var URL_SAVE_CONFIG = $.su.url("/userconfig?form=cfg_save");//"./data/userconfig.json";//
+    var IS_SAR_URL = $.su.url("/login?form=is_sar");
+
+    var ACC_PWD_URL_NEW = "";
+
+    var pwdProxy = "";
+    
+
+    var saveConfigProxy = new $.su.Proxy({
+        url: URL_SAVE_CONFIG
+    });
+
+    var loginProxy = new $.su.Proxy({
+        url: LOGIN_URL
+    });
+
+    var is_sarProxy = new $.su.Proxy({
+        url: IS_SAR_URL
+    });
+
+
+    /*å è½½äº§åä¿¡æ¯*/
+    var MODEL_NAME = $.su.locale.model;
+    var MODEL_DESC = MODEL_NAME.match(/[^ ]*/);
+    if(typeof MODEL_DESC != "string"){
+        MODEL_DESC = MODEL_DESC[0];
+    }
+    document.title = MODEL_DESC;
+
+    is_sarProxy.read({},function(data){ 
+        if(data.is_sar == 1)
+        {
+            $(".login-banner h1").text($.su.CHAR.LOGIN.BANNER_SAR);
+        }
+        else
+        {
+            $(".login-banner h1").text($.su.CHAR.LOGIN.BANNER);
+        }
+    }); 
+    
+    
+
+
+    /*å¤æ­åºå*/
+    saveConfigProxy.read({},function(data){
+        if(data.config_status == "Modify"){
+            var CUR_URL = window.location.href;
+            var is_tplogin = CUR_URL.indexOf("tplogin.cn");
+
+            if(is_tplogin == -1){ //ç´æ¥ç¨IPç»å½ï¼
+                normal_login();
+            }else{//tplogin.cnååç»å½
+                var URL_HAS_OTHER_ROUTER = $.su.url("/login?form=has_other_router");
+                var routerSelectProxy = new $.su.Proxy({
+                    url: URL_HAS_OTHER_ROUTER
+                });
+                
+                routerSelectProxy.read({},function(data){
+                    if(data.state == "yes"){
+                        router_select();
+                    }else{
+                        normal_login(); 
+                    }
+                });
+            }
+        }else{  // data.config_status == "Default"
+            var CUR_URL = window.location.href;
+            var is_tplogin = CUR_URL.indexOf("tplogin.cn");
+
+            if(is_tplogin == -1){ //ç´æ¥ç¨IPç»å½ï¼
+                restore_factory();
+            }else{//tplogin.cnååç»å½
+                var URL_HAS_OTHER_ROUTER = $.su.url("/login?form=has_other_router");
+                var routerSelectProxy = new $.su.Proxy({
+                    url: URL_HAS_OTHER_ROUTER
+                });
+                
+                routerSelectProxy.read({},function(data){
+                    if(data.state == "yes"){
+                        router_select();
+                    }else{
+                        restore_factory();
+                    }
+                });
+            }
+        }
+    });
+
+
+    /*éè¯¯æç¤º*/
+        //to be continued;
+    /*éç½®å¯ç */
+    function restore_factory(){
+        var rtHTML = "";
+        rtHTML += "<div class=\"login-box restore\">";
+        rtHTML += "<h1></h1>";
+        rtHTML += "<div class=\"description\"></div>";
+        rtHTML += "<form id=\"pre-login-form\">";
+        rtHTML += "<input id=\"username\" name=\"username\"/>";
+        rtHTML += "<input id=\"password\" name=\"password\"/>";
+        rtHTML += "</form>";
+        rtHTML += "<form class=\"login-form\">";
+        rtHTML += "<input id=\"old_acc\" name=\"old_acc\"/>";
+        rtHTML += "<input id=\"old_pwd\" name=\"old_pwd\"/>";
+        rtHTML += "<input id=\"new_acc\" name=\"new_acc\"/>";
+        rtHTML += "<input id=\"new_pwd\" name=\"new_pwd\"/>";
+        rtHTML += "<input id=\"cfm_pwd\" name=\"cfm_pwd\"/>";
+        rtHTML += "<h3></h3>";
+        rtHTML += "<div id=\"login-btn\" class=\"login-btn\"></div>";
+        rtHTML += "</form>";
+        rtHTML += "</div>";
+
+        $("body.login-body").append(rtHTML);
+        $(".login-box h1").text($.su.CHAR.LOGIN.ACC_CREATE);
+        $(".login-box .description").text($.su.CHAR.LOGIN.DESCRIPTION);
+
+
+        /*pre-login*/
+        var usernameBox = $("#username").textbox({
+            cls: "login",
+            labelCls: "username",
+            inputCls: "login",
+            showLevel: false,
+        });
+
+
+
+        var passwordBox = $("#password").password({
+            cls: "login",
+            labelCls: "password",
+            inputCls: "login",
+            maxLength: 15,
+            allowBlank: false,
+            showError: false,
+            showLevel: false,
+        });
+
+        usernameBox.textbox("hide");
+        passwordBox.password("hide");
+
+
+        var loginForm = $("form#pre-login-form").form({
+            proxy: loginProxy,
+            showPrompt: false,
+            autoLoad:false,
+            fields: [
+                {name: "username"},
+                {name: "password"}
+            ]
+        });
+
+        loginProxy.read({},function(data){
+            loginForm.form("loadData", data);
+            usernameBox.textbox("setValue", "admin");
+            passwordBox.password("setValue", "admin");
+            passwordBox.password("doEncrypt");
+
+            loginForm.form("submit", {
+                "method": "login"
+            }, function(data){
+                var token = data.stok || (function(){
+                    var stok = "12345",
+                        href = top.location.href;
+                    var stokPos = href.indexOf("stok=");
+                    if (stokPos >= 0){
+                        stok = href.substring(stokPos+5);
+                    };
+                    return stok;
+                })();
+
+                if (localStorage){
+                    localStorage.setItem("token", token);
+                };
+
+                $.su.url.stok = token;
+
+                ACC_PWD_URL_NEW = $.su.url("/admin/administration?form=accountfirstset");
+
+                var pwdProxy = new $.su.Proxy({
+                    url: ACC_PWD_URL_NEW
+                });
+
+                resetForm = $("form.login-form").form({
+                    proxy: pwdProxy,
+                    showPrompt: false,
+                    fields: [
+                        {name: "old_acc"},
+                        {name: "old_pwd"},
+                        {name: "new_acc"},
+                        {name: "new_pwd"},
+                        {name: "cfm_pwd"}
+                    ]
+                });
+
+                
+
+            }, function(error){
+
+            },function(fail){
+
+            });
+        });
+        
+            
+        
+        
+
+        /*acc-set*/
+        var old_acc = $("#old_acc").textbox({
+            cls:"hidden"
+        });
+
+        var old_pwd = $("#old_pwd").password({
+            showLevel:false,
+            cls:"hidden"
+        });
+
+
+
+        var new_acc = $("#new_acc").textbox({
+            cls: "login",
+            labelCls: "username",
+            inputCls: "login",
+            maxLength: 15,
+            allowBlank: false,
+            vtype: "ascii_visible",
+            showError: false,
+            tabindex: 0,
+            hint: $.su.CHAR.LOGIN.NEW_ACC
+        }).on("ev_change", function(e, value, key, keyCode){
+            if (key == "Enter" || keyCode == 13){
+                $("input#new_pwd").focus();
+            }
+        });
+
+        var new_pwd = $("#new_pwd").password({
+            cls: "login",
+            vtype:"ascii_visible",
+            labelCls: "password",
+            inputCls: "login",
+            maxLength: 15,
+            allowBlank: false,
+            showError: false,
+            showLevel: false,
+            allowVisible: true,
+            hint:$.su.CHAR.LOGIN.NEW_PASS
+        }).on("ev_change", function(e, value, key, keyCode){
+            if (key == "Enter" || keyCode == 13){
+                $("input#cfm_pwd").focus();
+            }
+        });
+
+        var cfm_pwd = $("#cfm_pwd").password({
+            cls: "login",
+            vtype:"ascii_visible",
+            labelCls: "password",
+            inputCls: "login",
+            maxLength: 15,
+            allowBlank: false,
+            showError: false,
+            showLevel: false,
+            allowVisible: true,
+            hint:$.su.CHAR.LOGIN.NEW_PASS_CONFIRM
+        }).on("ev_change", function(e, value, key, keyCode){
+            if (key == "Enter" || keyCode == 13){
+                doReset();
+            }
+        });
+
+        var login_btn = $("#login-btn").button({
+            text: $.su.CHAR.LOGIN.CONFIRM,
+            handler:function(){
+                doReset();
+            }
+        });
+
+
+        var resetForm = "";
+
+        /*è°æ´ç»éæ¡é«åº¦*/
+        var actHeight = parseInt(document.documentElement.clientHeight);
+        var marginTop = actHeight * 0.382 - 480 / 2 - 70;
+        marginTop = marginTop < 0 ? 0 : marginTop;
+        $(".login-box").css("marginTop", marginTop);
+
+        
+
+        function doReset(){
+            if (!checkCookie() || $("#login-btn").hasClass("disabled")){
+                return false;
+            }
+            /*validate*/
+            var new_acc_value = new_acc.textbox("getValue");
+            var new_pwd_value = new_pwd.password("getValue");
+            var cfm_pwd_value = cfm_pwd.password("getValue");
+            if(new_acc_value.length > 15){
+                new_acc.textbox("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_USER_LENGTH);
+                return false;
+            }
+            if(!new_acc.textbox("validate")){
+                new_acc.textbox("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_USER_FORMAT);
+                return false;
+            }
+
+
+            if(new_pwd_value.length < 6 || new_pwd_value.length > 15){
+                new_pwd.password("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_PASS_LENGTH);
+                return false;
+            }
+
+            if(!new_pwd.password("validate")){
+                new_pwd.password("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_PASS_FORMAT);
+                return false;
+            }
+
+            if(cfm_pwd_value.length < 6 || cfm_pwd_value.length > 15){
+                cfm_pwd.password("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_PASS_LENGTH);
+                return false;
+            }
+
+            if(!cfm_pwd.password("validate")){
+                cfm_pwd.password("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_PASS_FORMAT);
+                return false;
+            }
+
+            if(cfm_pwd_value != new_pwd_value){
+                cfm_pwd.password("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.PASS_DIFFERENT);
+                return false;
+            }
+
+
+            old_acc.textbox("setValue", "admin");
+            old_pwd.password("setValue","admin");
+            cfm_pwd.password("setValue", new_pwd.password("getValue"));
+            old_pwd.password("doEncrypt");
+            new_pwd.password("doEncrypt");
+            cfm_pwd.password("doEncrypt");
+
+
+
+            $(".login-box h1").text($.su.CHAR.LOGIN.IS_SETTING);
+            $("#login-btn").button("disable");
+            $("#login-btn").addClass("disabled");
+            
+            resetForm.form("submit", {},function(data){
+                $(".login-box h1").text($.su.CHAR.LOGIN.SET_SUCCESS);
+                $(".login-box h3").text($.su.CHAR.LOGIN.SET_SUCCESS_TIPS);
+                setTimeout(function() {
+                    setting_guide();
+                }, 1000);
+            },function(errorcode){
+                if(errorcode == 704 || errorcode == "704"){
+                    errorcode = $.su.CHAR.LOGIN.SET_TIMEOUT;
+                }else if(errorcode == 707 || errorcode == "707"){
+                    errorcode = $.su.CHAR.LOGIN.SET_DUPLICATE;
+                }else if(errorcode == 710 || errorcode == "710"){
+                    errorcode = $.su.CHAR.LOGIN.SET_USERCONFLICT;
+                }else{
+                    errorcode = $.su.CHAR.LOGIN.SET_OTHER;
+                }
+                $(".login-box h3").text(errorcode);
+                setTimeout(function() {
+                    location.href = "./login.html";
+                }, 1000);
+            },function(fail){
+                $(".login-box h3").text($.su.CHAR.LOGIN.SET_FAIL);
+                $("#login-btn").button("enable");
+                $("#login-btn").removeClass("disabled");
+            });
+        }
+
+    }
+
+
+    /*è®¾ç½®åå¯¼*/
+    function setting_guide(){
+        $(".login-box").html("").removeClass("restore").addClass("setting-guide");
+        var gHTML = "";
+        gHTML += "<div class=\"guide-title\">";
+        gHTML +=    "<span class=\"text\"></span>";
+        gHTML +=    "<a class=\"guide-skip\" href=\"#\"></a>";
+        gHTML += "</div>";
+        gHTML += "<div class=\"guide-step\"></div>";
+        gHTML += "<div class=\"guide-main\">";
+        gHTML +=    "<div class=\"guide-content\"></div>";
+        gHTML +=    "<div class=\"guide-control\">";
+        gHTML +=        "<div id=\"guide-notnow\"></div>";
+        gHTML +=        "<button type=\"button\" id=\"guide-prev\"></button>";
+        gHTML +=        "<button type=\"button\" id=\"guide-next\"></button>";
+        gHTML +=    "</div>"
+        gHTML += "</div>";
+        gHTML += "<div id=\"no-password-msg\">";
+        gHTML +=    "<div id=\"no-password-msg-content\"></div>";
+        gHTML += "</div>";
+        gHTML += "<div id=\"exit-msg\">";
+        gHTML +=    "<div id=\"exit-msg-content\"></div>";
+        gHTML += "</div>";
+
+        $(".login-box").html(gHTML);
+        $(".guide-title span.text").text($.su.CHAR.LOGIN.SETTING_GUIDE);
+        $(".guide-control #guide-notnow").text($.su.CHAR.LOGIN.NOTNOW).hide();
+
+        var WIZARDProxy = new $.su.Proxy({
+            url: $.su.url("/admin/wizard?form=routeInfo"),//"./data/wizard.routeInfo.json"
+            async: false
+        });
+
+        WIZARDProxy.read({}, function(data){
+            if(data && data.radio){
+                $.su.radioCount = parseInt(data.radio, 10);
+            }else{
+                $.su.radioCount = 0;
+            }
+
+            /*æ¥å£æ ·å¼*/
+            if(data && data.interfaceModel){
+                $.su.interfaceModel = parseInt(data.interfaceModel, 10);
+            }else{
+                $.su.interfaceModel = -1;
+            }
+
+
+        });
+
+        var stepHTML = "";
+        for(var i = 0; i < 4; i++){  
+            //console.log(i , $.su.radioCount)   
+            if(i == 2 && $.su.radioCount == 0){
+                continue;
+            } 
+            stepHTML += "<div class=\"guide-step-box\" id=\"step-" + i + "\">";
+            stepHTML +=     "<span class=\"icon\"></span>";
+            stepHTML +=     "<span class=\"text\">" + $.su.CHAR.LOGIN["STEP_"+i] + "</span>";
+            if(i < 3){
+               stepHTML +=     "<div class=\"line\"></div>"; 
+            }   
+            stepHTML += "</div>";
+        }
+        $(".guide-step").html(stepHTML);
+
+        $("#step-0").css("marginTop", "60px").addClass("selected");
+
+        
+
+
+        var current_wan = 1;
+        var wan_mode = 1;
+        var current_step = "wan_mode";
+        var guide_data = {};
+        var WIFI_NAME_5 = "";
+        var WIFI_NAME_2 = "";
+        var WIRELESS_URL = $.su.url("/admin/wlan_state?form=main_ssid");
+        var WIRELESS_PROXY = new $.su.Proxy({
+            url: WIRELESS_URL
+        });
+
+        WIRELESS_PROXY.read({}, function(data){
+            guide_data.wireless_info = {};
+            guide_data.wireless_info.name_2_4 = data["2.4G"];
+            guide_data.wireless_info.name_5 = data["5G"];
+            guide_data.wireless_info.pwd_sync = "on";
+            WIFI_NAME_2 = data["2.4G"];
+            WIFI_NAME_5 = data["5G"];
+        });
+
+        var GUIDE_URL = $.su.url('/admin/setup_guide?form=setup_guide');
+
+        var GUIDE_PROXY = new $.su.Proxy({
+            url: GUIDE_URL
+        });
+
+        var LAN_URL = $.su.url('/admin/dhcps?form=lan');
+        var LAN_PROXY = new $.su.Proxy({
+            url: LAN_URL
+        });
+
+        var wanProxy = new $.su.Proxy({
+            url: $.su.url("/admin/interface_wan?form=wanmode"),
+            async:false
+        });
+        wanProxy.read({}, function(data){
+            if(data && data.wanmode){
+                $.su.wanCount = data.wanmode;
+            }
+            if(data && data.interfaceCount){
+                $.su.interfaceCount = parseInt(data.interfaceCount);
+            }
+        });
+
+        var next_btn = $("#guide-next").button({
+            text:$.su.CHAR.LOGIN.NEXT,
+            cls:"inline",
+            handler:function(){
+                switch(current_step){
+                    case "wan_mode":
+                        /*å è½½åä¸é¡µ*/
+                        wan_setting();
+                        current_step = "wan_setting";
+                        prev_btn.button("show");
+                        $(".guide-control #guide-notnow").show();
+                        $("#step-0").removeClass("selected");
+                        $("#step-0").addClass("finished");
+                        $("#step-1").addClass("selected");
+                        guide_data.txt_wan_num = wan_mode;
+                        if(guide_data.wan1_info){
+                            get_wan_data();
+                        }
+                        break;
+                    case "wan_setting":
+                        if(!validate_wan()){
+                            return false;
+                        }
+                        /*æ£æ¥å¹¶ä¿å­å½åé¡µæ°æ®*/
+                        var tmp_wan_data = set_wan_data();
+                        if (tmp_wan_data.connect == "static") {
+                            /* åæ£æ¥æ¯å¦ä¸LANåç½æ®µ */
+                            LAN_PROXY.read({}, function(data){
+                                var lan_ipaddr = data.ipaddr;
+                                var lan_netmask = data.netmask;
+
+                                var smaller_mask = $.su.func.ipToInt(lan_netmask) < $.su.func.ipToInt(tmp_wan_data.mask) 
+                                                        ? $.su.func.ipToInt(lan_netmask) : $.su.func.ipToInt(tmp_wan_data.mask);
+
+                                if (($.su.func.ipToInt(lan_ipaddr) & smaller_mask) != ($.su.func.ipToInt(tmp_wan_data.ip) & smaller_mask))
+                                {
+                                    var wan_check_count = 1;
+                                    var sameip_with_other_wan = 0; /*åæ£æ¥æ¯å¦ä¸å¶ä»WANçéæIPç¸å, ä¸ç¸åä¸º0*/
+                                    for (wan_check_count = 1; wan_check_count <= wan_mode; wan_check_count++)
+                                    {
+                                        if ((guide_data["wan" + wan_check_count + "_info"] != null) &&
+                                            (guide_data["wan" + wan_check_count + "_info"].connect == "static") && 
+                                            (wan_check_count != current_wan))
+                                        {
+                                            if (guide_data["wan" + wan_check_count + "_info"].ip == tmp_wan_data.ip)
+                                            {
+                                                sameip_with_other_wan = 1;
+                                                $("#static-ip").textbox("setError", "æ­¤IPå·²æå¶ä»WANæ¥å£è¿è¡è¿è®¾ç½®");
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (sameip_with_other_wan == 0)
+                                    {
+                                        guide_data["wan" + current_wan + "_info"] = tmp_wan_data;
+                                        if(current_wan < wan_mode){ 
+                                            /*å è½½åä¸é¡µ*/    
+                                            current_step = "wan_setting";
+                                            current_wan++;
+                                            wan_setting();
+                                            if(guide_data["wan" + current_wan + "_info"]){
+                                                get_wan_data();
+                                            }
+                                        }else{
+                                            /*è¿åº¦åæ¢*/
+                                            $("#step-1").removeClass("selected");
+                                            $("#step-1").addClass("finished");
+                                            $("#step-2").addClass("selected");
+                                            /*å è½½åä¸é¡µ*/
+                                            if($.su.radioCount > 0){
+                                                current_step = "wifi_setting";
+                                                wifi_setting();
+                                                if(guide_data.wireless_info){
+                                                    get_wifi_data();
+                                                }
+                                            }else{
+                                                current_step = "finish_setting";
+                                                finish_setting();
+                                                $(".guide-control #guide-notnow").hide();
+                                                /*è¿åº¦åæ¢*/
+                                                $("#step-2").removeClass("selected");
+                                                $("#step-2").addClass("finished");
+                                                $("#step-3").addClass("selected");
+                                                $("#guide-next .text").text($.su.CHAR.LOGIN.FINISH);
+                                            }
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    $("#static-ip").textbox("setError", "ç¦æ­¢è®¾ç½®çIPä¸LANæ¥å£åä¸ç½æ®µã");
+                                }
+                            },function(error){},function(fail){});
+                        }
+                        else
+                        {
+                            guide_data["wan" + current_wan + "_info"] = tmp_wan_data;
+                            if(current_wan < wan_mode){ 
+                                /*å è½½åä¸é¡µ*/    
+                                current_step = "wan_setting";
+                                current_wan++;
+                                wan_setting();
+                                if(guide_data["wan" + current_wan + "_info"]){
+                                    get_wan_data();
+                                }
+                            }else{
+                                /*è¿åº¦åæ¢*/
+                                $("#step-1").removeClass("selected");
+                                $("#step-1").addClass("finished");
+                                $("#step-2").addClass("selected");
+                                /*å è½½åä¸é¡µ*/
+                                if($.su.radioCount > 0){
+                                    current_step = "wifi_setting";
+                                    wifi_setting();
+                                    if(guide_data.wireless_info){
+                                        get_wifi_data();
+                                    }
+                                }else{
+                                    current_step = "finish_setting";
+                                    finish_setting();
+                                    $(".guide-control #guide-notnow").hide();
+                                    /*è¿åº¦åæ¢*/
+                                    $("#step-2").removeClass("selected");
+                                    $("#step-2").addClass("finished");
+                                    $("#step-3").addClass("selected");
+                                    $("#guide-next .text").text($.su.CHAR.LOGIN.FINISH);
+                                }  
+                            }
+                        }
+
+                        break;
+                    case "wifi_setting":
+                        if(!validate_wifi()){
+                            return false;
+                        }
+                        if(no_password_wifi()){
+                            $("#no-password-msg").msg("show");
+                            return false;
+                        }
+                        /*ä¿å­å½åé¡µæ°æ®*/
+                        guide_data.wireless_info = set_wifi_data();
+                        finish_setting();
+                        /*å è½½åä¸é¡µ*/
+                        current_step = "finish_setting";
+                        finish_setting();
+                        $(".guide-control #guide-notnow").hide();
+                        /*è¿åº¦åæ¢*/
+                        $("#step-2").removeClass("selected");
+                        $("#step-2").addClass("finished");
+                        $("#step-3").addClass("selected");
+                        $("#guide-next .text").text($.su.CHAR.LOGIN.FINISH);
+                        break;
+                    case "finish_setting":
+                        prev_btn.button("hide");
+                        next_btn.button("hide");
+                        $("#step-3").removeClass("selected");
+                        $("#step-3").addClass("finished");
+                        $("a.guide-skip").hide();
+                        GUIDE_PROXY.write({params: guide_data});
+                        end_setting();
+
+                }
+            }
+        });
+
+        var prev_btn = $("#guide-prev").button({
+            text:$.su.CHAR.LOGIN.PREV,
+            cls:"inline prev",
+            handler:function(){
+                switch(current_step){
+                    case "wan_setting":         
+                        if(current_wan == 1){
+                            /*ä¿å­å½åé¡µæ°æ®*/
+                            var wan_info = "wan" + current_wan + "_info";
+                            guide_data[wan_info] = set_wan_data(); 
+                            /*è½½å¥åä¸é¡µ*/   
+                            interface_mode();        
+                            current_step = "wan_mode";
+                            prev_btn.button("hide");
+                            $(".guide-control #guide-notnow").hide();
+                            /*è¿åº¦åæ¢*/
+                            $("#step-1").removeClass("selected");
+                            $("#step-0").removeClass("finished");
+                            $("#step-0").addClass("selected");                                      
+                        }else{
+                            /*ä¿å­å½åé¡µæ°æ®*/
+                            guide_data["wan" + current_wan + "_info"] = set_wan_data();
+                            /*è½½å¥åä¸é¡µ*/
+                            current_wan--;
+                            wan_setting(); 
+                            if(!guide_data["wan" + current_wan + "_info"].notset){
+                                get_wan_data();
+                            }
+                            current_step = "wan_setting";
+                            
+                        }     
+                        break;
+                    case "wifi_setting":
+                        /*ä¿å­å½åé¡µæ°æ®*/
+                        guide_data.wireless_info = set_wifi_data();
+                        /*è½½å¥åä¸é¡µ*/
+                        wan_setting();
+                        if(!guide_data["wan" + current_wan + "_info"].notset){
+                            get_wan_data();
+                        }
+                        current_step = "wan_setting";
+                        /*è¿åº¦åæ¢*/
+                        $("#step-2").removeClass("selected");
+                        $("#step-1").removeClass("finished");
+                        $("#step-1").addClass("selected"); 
+                        break;
+                    case "finish_setting":
+                        if($.su.radioCount > 0){
+                            /*è½½å¥åä¸é¡µ*/
+                            wifi_setting();
+                            current_step = "wifi_setting";  
+                            get_wifi_data();                  
+                            /*è¿åº¦åæ¢*/
+                            $("#step-3").removeClass("selected");
+                            $("#step-2").removeClass("finished");
+                            $("#step-2").addClass("selected"); 
+                        }else{
+                            wan_setting();
+                            if(!guide_data["wan" + current_wan + "_info"].notset){
+                                get_wan_data();
+                            }
+                            current_step = "wan_setting";
+                            /*è¿åº¦åæ¢*/
+                            $("#step-3").removeClass("selected");
+                            $("#step-2").removeClass("selected");
+                            $("#step-2").removeClass("finished");
+                            $("#step-1").removeClass("finished");
+                            $("#step-1").addClass("selected"); 
+                        }
+                        $("#guide-next .text").text($.su.CHAR.LOGIN.NEXT);
+                        $(".guide-control #guide-notnow").show();
+                        break;
+                }
+            }
+        });
+
+        /*æä¸è®¾ç½®æé®*/
+        $(".guide-control").delegate("#guide-notnow", "click", function(e){
+            switch(current_step){
+                case "wan_setting":
+                    if(!guide_data["wan" + current_wan + "_info"]){
+                        guide_data["wan" + current_wan + "_info"] = {};
+                    }
+                    guide_data["wan" + current_wan + "_info"].notset = true;
+                    if(current_wan < wan_mode){ 
+                        /*å è½½åä¸é¡µ*/    
+                        current_step = "wan_setting";
+                        current_wan++;
+                        wan_setting();
+                        if(guide_data["wan" + current_wan + "_info"]){
+                            get_wan_data();
+                        }
+                    }else{
+                        /*è¿åº¦åæ¢*/
+                        $("#step-1").removeClass("selected");
+                        $("#step-1").addClass("finished");
+                        $("#step-2").addClass("selected");
+                        /*å è½½åä¸é¡µ*/
+                        if($.su.radioCount > 0){
+                            current_step = "wifi_setting";
+                            wifi_setting();
+                            if(guide_data.wireless_info){
+                                get_wifi_data();
+                            }
+                        }else{
+                            current_step = "finish_setting";
+                            finish_setting();
+                            $("#step-3").addClass("selected");
+                            $("#guide-next .text").text($.su.CHAR.LOGIN.FINISH);
+                            $(".guide-control #guide-notnow").hide();
+                        }
+                        
+                        
+                    }
+                    break;
+                case "wifi_setting":
+                    /*ä¿å­å½åé¡µæ°æ®*/
+                    guide_data.wireless_info.name_2_4 = WIFI_NAME_2;
+                    guide_data.wireless_info.name_5 = WIFI_NAME_5;
+                    guide_data.wireless_info.notset = true;
+                    
+                    /*å è½½åä¸é¡µ*/
+                    current_step = "finish_setting";
+                    finish_setting();
+                    $(".guide-control #guide-notnow").hide();
+                    
+                    /*è¿åº¦åæ¢*/
+                    $("#step-2").removeClass("selected");
+                    $("#step-2").addClass("finished");
+                    $("#step-3").addClass("selected");
+
+                    $("#guide-next .text").text($.su.CHAR.LOGIN.FINISH);
+                    break;
+            }
+        });
+
+        prev_btn.button("hide");
+
+
+        $("#no-password-msg").msg({
+            showHead: true,
+            title: $.su.CHAR.LOGIN.NO_PASSWD_MSG_TITLE,
+            type: "confirm",
+            cls: "l",
+            yesText:$.su.CHAR.LOGIN.NO_PASSWD_MSG_YES,
+            noText:$.su.CHAR.LOGIN.NO_PASSWD_MSG_NO,
+            noHandler:function(){
+                /*ä¿å­å½åé¡µæ°æ®*/
+                guide_data.wireless_info = set_wifi_data();
+                /*å è½½åä¸é¡µ*/
+                current_step = "finish_setting";
+                finish_setting();
+                $(".guide-control #guide-notnow").hide();
+                /*è¿åº¦åæ¢*/
+                $("#step-2").removeClass("selected");
+                $("#step-2").addClass("finished");
+                $("#step-3").addClass("selected");
+                $("#guide-next .text").text($.su.CHAR.LOGIN.FINISH);
+            },
+            okHandler:function(){
+                
+            }
+        });
+
+        $("#no-password-msg-content").text($.su.CHAR.LOGIN.NO_PASSWD_CONTNET);
+
+        
+
+        var exit_msg = $("#exit-msg").msg({
+            showHead: true,
+            title: $.su.CHAR.LOGIN.EXIT,
+            type: "confirm",
+            cls: "l",
+            yesText:$.su.CHAR.LOGIN.EXIT_YES,
+            noText:$.su.CHAR.LOGIN.EXIT_NO,
+            noHandler:function(){
+                location.href = "./index.html";
+            },
+            okHandler:function(){
+                
+            }
+        });
+
+        $("#exit-msg-content").text($.su.CHAR.LOGIN.EXIT_CONTENT);
+
+        $("a.guide-skip").click(function(e){
+            exit_msg.msg("show");
+        });
+
+        /*steps*/
+        function interface_mode(){
+            var pHTML = "<div class=\"interface-mode-small\"></div>";
+            pHTML += "<input id=\"wan-select\" name=\"wanmode\">";
+
+            $(".guide-content").html(pHTML);
+            
+            var wan_select = $("#wan-select").radio({
+                fieldLabel: $.su.CHAR.WAN_MODE.COUNT,
+                columns:1,              
+                items: [
+                    {boxlabel:$.su.CHAR.WAN_MODE.COUNT1,inputValue:1},
+                    {boxlabel:$.su.CHAR.WAN_MODE.COUNT2,inputValue:2},
+                    {boxlabel:$.su.CHAR.WAN_MODE.COUNT3,inputValue:3},
+                    {boxlabel:$.su.CHAR.WAN_MODE.COUNT4,inputValue:4}
+                ]
+            }).on("ev_change", function(e, oldValue, newValue){
+                refresh_wan(parseInt(newValue), $.su.interfaceCount);
+                if(wan_mode && newValue){
+                    wan_mode = parseInt(newValue);
+                }       
+            });
+            wan_select.radio("setValue", wan_mode);
+        }
+
+
+        function wan_setting(){
+            var wan_id = current_wan || 1;
+            var pHTML = "<div class=\"interface-mode-small\"></div>";
+            pHTML += "<form id=\"wan-form\">";
+            pHTML += "<input id=\"connect-type\" name=\"connect-type\" />";
+            pHTML += "<input id=\"pppoe-user\" name=\"pppoe-user\" />";
+            pHTML += "<input id=\"pppoe-pass\" name=\"pppoe-pass\" />";
+            pHTML += "<input id=\"static-ip\" name=\"static-ip\" />";
+            pHTML += "<input id=\"static-mask\" name=\"static-mask\" />";
+            pHTML += "<input id=\"static-gateway\" name=\"static-gateway\" />";
+            pHTML += "<input id=\"static-dns1\" name=\"static-dns1\" />";
+            pHTML += "<input id=\"static-dns2\" name=\"static-dns2\" />";
+            pHTML += "</form>";
+
+            $(".guide-content").html(pHTML);
+            refresh_all(wan_id, wan_mode, $.su.interfaceCount);
+
+
+            var connect_type = $("#connect-type").combobox({
+                fieldLabel: $.su.CHAR.LOGIN.CONN_TYPE,
+                alwaysTrigger: true,
+                items:[
+                    {name: $.su.CHAR.LOGIN.PPPOE, value:"pppoe", selected:true},
+                    {name: $.su.CHAR.LOGIN.DHCP, value:"dhcp"},
+                    {name: $.su.CHAR.LOGIN.STATIC, value:"static"}
+                ]
+            }).on("ev_change", function(e, oldValue, newValue){
+                pppoe_user.textbox("hide").textbox("disable");
+                pppoe_pass.password("hide").password("disable");
+                static_ip.textbox("hide").textbox("disable");
+                static_mask.textbox("hide").textbox("disable")
+                static_gateway.textbox("hide").textbox("disable");
+                static_dns1.textbox("hide").textbox("disable");
+                static_dns2.textbox("hide").textbox("disable");
+                switch(newValue[0]){
+                    case "pppoe": 
+                        pppoe_user.textbox("show").textbox("enable");
+                        pppoe_pass.password("show").password("enable");
+                        break;
+                    case "static":
+                        static_ip.textbox("show").textbox("enable");
+                        static_mask.textbox("show").textbox("enable");
+                        static_gateway.textbox("show").textbox("enable");
+                        static_dns1.textbox("show").textbox("enable");
+                        static_dns2.textbox("show").textbox("enable");
+                        break;
+                }
+            });
+
+            var pppoe_user = $("#pppoe-user").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.PPPOE_USER,
+                maxLength: 64,
+                vtype:"pppoe_username",
+                allowBlank: false
+            });
+
+            var pppoe_pass = $("#pppoe-pass").password({
+                fieldLabel: $.su.CHAR.LOGIN.PPPOE_PASS,
+                allowVisible: true,
+                allowBlank: false,
+                maxLength: 128,
+                showLevel: false
+            });
+
+
+            var static_ip = $("#static-ip").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.STATIC_IP,
+                allowBlank: false,
+                vtype: "ip"
+            }).textbox("hide");
+
+            var static_mask = $("#static-mask").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.STATIC_MASK,
+                allowBlank: false,
+                vtype: "netmask"
+            }).textbox("hide");
+
+            var static_gateway = $("#static-gateway").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.STATIC_GATEWAY,
+                vtype: "ip",
+                tips: $.su.CHAR.LOGIN.OPTION,
+                tipsCls:"xxs"
+            }).textbox("hide");
+
+            var static_dns1 = $("#static-dns1").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.STATIC_DNS1,
+                vtype: "ip",
+                tips: $.su.CHAR.LOGIN.OPTION,
+                tipsCls:"xxs"
+            }).textbox("hide");
+
+            var static_dns2 = $("#static-dns2").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.STATIC_DNS2,
+                vtype: "ip",
+                tips: $.su.CHAR.LOGIN.OPTION,
+                tipsCls:"xxs"
+            }).textbox("hide");
+
+        }
+
+
+
+        function wifi_setting(){
+            var wHTML = "<div id=\"cloud-wireless-tip-content\"/><br>";
+            wHTML += "<div class=\"wireless-guide\" id=\"wifi-2\">";
+            wHTML += "<h1></h1>";
+            wHTML += "<div class=\"wireless-guide-content\">";
+            
+            wHTML += "<input id=\"wifi-2-name\" name=\"wifi-2-name\"/>";
+            wHTML += "<input id=\"wifi-2-pass\" name=\"wifi-2-pass\"/>";
+            wHTML += "</div>";
+            wHTML += "</div>";
+
+            wHTML += "<div class=\"wireless-guide\" id=\"wifi-5\">";
+            wHTML += "<h1></h1>";
+            wHTML += "<div class=\"wireless-guide-content\">";
+            wHTML += "<input id=\"wifi-5-name\" name=\"wifi-5-name\"/>";
+            wHTML += "<input id=\"wifi-5-pass\" name=\"wifi-5-pass\"/>";
+            wHTML += "<input id=\"wifi-5-same\" name=\"wifi-5-same\"/>";
+            wHTML += "</div>";
+            wHTML += "</div>";
+
+
+
+            $(".guide-content").html(wHTML);
+            $("#cloud-wireless-tip-content").html($.su.CHAR.LOGIN.CLOUD_TIP);
+            $("#wifi-2 h1").text($.su.CHAR.LOGIN.WIFI_2);
+            $("#wifi-5 h1").text($.su.CHAR.LOGIN.WIFI_5);
+
+            if($.su.radioCount == 1){
+                $("#wifi-2 h1").text($.su.CHAR.LOGIN.STEP_2);
+                $("#wifi-5").hide();
+            }
+
+            $("#wifi-2-name").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.WIFI_NAME,
+                vtype:"string_wireless_name",
+                maxLength: 32,
+                allowBlank: false
+            });
+
+            $("#wifi-2-pass").password({
+                fieldLabel: $.su.CHAR.LOGIN.WIFI_PASS,
+                allowVisible: true,
+                vtype:"strange_pwd",
+                validator:function(v){
+                    if(v.length < 8){
+                        return $.su.CHAR.LOGIN.WIFI_PASS_TOO_SHORT;
+                    }
+                    return true;
+                }
+            });
+
+            $("#wifi-5-name").textbox({
+                fieldLabel: $.su.CHAR.LOGIN.WIFI_NAME,
+                maxLength: 32,
+                vtype:"string_wireless_name",
+                allowBlank: false
+            });
+
+            var wifi_5_pass = $("#wifi-5-pass").password({
+                fieldLabel: $.su.CHAR.LOGIN.WIFI_PASS,
+                allowVisible: true,
+                cls:"inline",
+                vtype:"strange_pwd",
+                validator:function(v){
+                    if(v.length < 8){
+                        return $.su.CHAR.LOGIN.WIFI_PASS_TOO_SHORT;
+                    }
+                    return true;
+                }
+            }).password("disable");
+
+            $("#wifi-5-same").checkbox({
+                fieldLabel:"",
+                labelCls:"inline xxxxs",
+                items:[
+                    {boxlabel: $.su.CHAR.LOGIN.WIFI_SAME, inputValue:"same", uncheckedValue:"diff", checked:true}
+                ],
+                cls:"inline"
+            }).on("ev_change", function(e, oldValue, newValue){
+                if(newValue[0] == "wifi-5-same"){
+                    wifi_5_pass.password("disable");
+                }else{
+                    wifi_5_pass.password("enable");
+                }
+            });
+
+            if($.su.radioCount ==1){
+                $("#wifi-5-name").textbox("hide");
+                $("#wifi-5-pass").password("hide");
+                $("#wifi-5-same").checkbox("hide");
+            }
+            
+        }
+
+
+
+        function finish_setting(){
+            var fHTML = "<div class=\"guide-finish\" id=\"interface\">";
+            fHTML += "<h1></h1>";
+            fHTML += "</div>";
+            if($.su.radioCount > 0){
+                fHTML += "<div class=\"guide-finish\" id=\"wireless\">";
+                fHTML += "<h1></h1>";
+                fHTML += "</div>";
+            }
+            
+
+            $(".guide-content").html(fHTML);
+            $(".guide-finish#interface h1").text($.su.CHAR.LOGIN.INTERFACE);
+            if($.su.radioCount > 0){
+                $(".guide-finish#wireless h1").text($.su.CHAR.LOGIN.WIRELESS);
+            }
+            
+
+            
+            for(var i = 0; i < guide_data.txt_wan_num; i++){
+                var data = guide_data["wan" + (i+1) + "_info"];
+                fHTML  = "<table id=\"WAN-" + (i+1) + "\" class=\"interface-wan\">";
+                fHTML += "<tr>";
+                fHTML += "<td class=\"column1\">WAN" + (i+1) + "</td>";
+                if(data && data.connect && !data.notset){
+                    fHTML += "<td class=\"column2\">" + $.su.CHAR.LOGIN[(data.connect).toUpperCase()] + "</td>";
+                }else{
+                    fHTML += "<td class=\"column2\">" + $.su.CHAR.LOGIN.NO_SETTING + "</td>";
+                }
+                
+                fHTML += "</tr>";
+                if(data && data.connect == "pppoe" && !data.notset){
+                    fHTML += "<tr>";
+                    fHTML += "<td class=\"column1\">" + $.su.CHAR.LOGIN.PPPOE_USER + "</td>";
+                    fHTML += "<td class=\"column2\">" + data.user + "</td>";
+                    fHTML += "</tr>";
+                    fHTML += "<tr>";
+                    fHTML += "<td class=\"column1\">" + $.su.CHAR.LOGIN.PPPOE_PASS + "</td>";
+                    fHTML += "<td class=\"column2\">" + data.password + "</td>";
+                    fHTML += "</tr>";
+                }
+                if(data && data.connect == "static" && !data.notset){
+                    fHTML += "<tr>";
+                    fHTML += "<td class=\"column1\">" + $.su.CHAR.LOGIN.STATIC_IP + "</td>";
+                    fHTML += "<td class=\"column2\">" + data.ip + "</td>";
+                    fHTML += "</tr>";
+                    fHTML += "<tr>";
+                    fHTML += "<td class=\"column1\">" + $.su.CHAR.LOGIN.STATIC_MASK + "</td>";
+                    fHTML += "<td class=\"column2\">" + data.mask + "</td>";
+                    fHTML += "</tr>";
+                }
+
+                fHTML += "</table>";
+                $(".guide-finish#interface").append(fHTML);
+            }
+
+            var wifi_data = guide_data.wireless_info;
+            if($.su.radioCount > 1){
+                fHTML  = "<table id=\"wifi-2\" class=\"wifi\">";
+                fHTML += "<tr>";
+                fHTML += "<td class=\"column3\">" + $.su.CHAR.LOGIN.WIFI_2_NAME + "</td>";
+                fHTML += "<td class=\"column4\">" + wifi_data.name_2_4 + "</td>";
+                fHTML += "</tr>";
+                fHTML += "<tr>";
+                fHTML += "<td class=\"column3\">" + $.su.CHAR.LOGIN.WIFI_2_PASS + "</td>";
+                if(wifi_data.notset){
+                    fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_SETTING + "</td>";
+                }else if(wifi_data.pwd_2_4 == ""){
+                    fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_ENCRYPT + "</td>";
+                }else{
+                    fHTML += "<td class=\"column4\">" + wifi_data.pwd_2_4 + "</td>";
+                }
+                fHTML += "</tr>";
+                fHTML += "</table>";
+
+            
+                fHTML += "<table id=\"wifi-5\" class=\"wifi\">";
+                fHTML += "<tr>";
+                fHTML += "<td class=\"column3\">" + $.su.CHAR.LOGIN.WIFI_5_NAME + "</td>";
+                fHTML += "<td class=\"column4\">" + wifi_data.name_5 + "</td>";
+                fHTML += "</tr>";
+                fHTML += "<tr>";
+                fHTML += "<td class=\"column3\">" + $.su.CHAR.LOGIN.WIFI_5_PASS + "</td>";
+                if(wifi_data.pwd_sync == "on"){
+                    if(wifi_data.notset){
+                        fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_SETTING + "</td>";
+                    }else if(wifi_data.pwd_2_4 == ""){
+                        fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_ENCRYPT + "</td>";
+                    }else{
+                        fHTML += "<td class=\"column4\">" + wifi_data.pwd_2_4 + "</td>";
+                    }
+                }else{
+                    if(wifi_data.notset){
+                        fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_SETTING + "</td>";
+                    }else if(wifi_data.pwd_5 == ""){
+                        fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_ENCRYPT + "</td>";
+                    }else{
+                        fHTML += "<td class=\"column4\">" + wifi_data.pwd_5 + "</td>";
+                    }
+                }
+                
+                fHTML += "</tr>";
+                fHTML += "</table>";
+            }else if($.su.radioCount > 0){
+                fHTML  = "<table id=\"wifi-2\" class=\"wifi\">";
+                fHTML += "<tr>";
+                fHTML += "<td class=\"column3\">" + $.su.CHAR.LOGIN.WIFI_NAME + "</td>";
+                fHTML += "<td class=\"column4\">" + wifi_data.name_2_4 + "</td>";
+                fHTML += "</tr>";
+                fHTML += "<tr>";
+                fHTML += "<td class=\"column3\">" + $.su.CHAR.LOGIN.WIFI_PASS + "</td>";
+                if(wifi_data.notset){
+                    fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_SETTING + "</td>";
+                }else if(wifi_data.pwd_2_4 == ""){
+                    fHTML += "<td class=\"column4\">" + $.su.CHAR.LOGIN.NO_ENCRYPT + "</td>";
+                }else{
+                    fHTML += "<td class=\"column4\">" + wifi_data.pwd_2_4 + "</td>";
+                }
+                fHTML += "</tr>";
+                fHTML += "</table>";
+            }
+            
+
+            $(".guide-finish#wireless").append(fHTML);
+        }
+
+        function end_setting(){
+            var eHTML = "<div class=\"end-setting\">";
+            eHTML += "<div id=\"progress-text\"></div>";
+            eHTML += "<div id=\"progress\"></div>";
+            eHTML += "</div>";
+
+            $(".guide-content").html(eHTML);
+
+
+            if(guide_data.txt_wan_num > 1){
+                $("#progress-text").text($.su.CHAR.LOGIN.REBOOT_TEXT);
+                setTimeout(function() {
+                    location.href = "./login.html";
+                }, 200000);
+            }else{
+                $("#progress-text").text($.su.CHAR.LOGIN.SET_TEXT);
+                setTimeout(function() {
+                    location.href = "./index.html";
+                }, 20000);
+            }
+    
+
+            var scan_pro = $("#progress").waitingbar({
+                fieldLabel:"",
+                labelCls:"hidden",
+                barWidth: 400
+            });
+
+            scan_pro.waitingbar("run");
+
+
+        }
+
+
+        /*wan_data*/
+        function set_wan_data(){
+            var conn_type = $("#connect-type").combobox("getValue");
+            conn_type = conn_type[0];
+            var ret = {};
+            ret.connect = conn_type;
+            ret.notset = false;
+            switch(conn_type){
+                case "pppoe":
+                    ret.user = $("#pppoe-user").textbox("getValue");
+                    ret.password = $("#pppoe-pass").password("getValue");
+                    break;
+                case "static":
+                    ret.ip = $("#static-ip").textbox("getValue");
+                    ret.mask = $("#static-mask").textbox("getValue");
+                    ret.gateway = $("#static-gateway").textbox("getValue");
+                    ret.first_dns = $("#static-dns1").textbox("getValue");
+                    ret.second_dns = $("#static-dns2").textbox("getValue");
+                    break;
+            }
+            return ret;
+        }
+
+        function get_wan_data(){
+            var current_data = guide_data["wan" + current_wan + "_info"];
+            if(!current_data){
+                return false;
+            }
+            $("#connect-type").combobox("setValue", current_data.connect);
+            switch(current_data.connect){
+                case "pppoe":
+                    if(current_data.user){
+                        $("#pppoe-user").textbox("setValue", current_data.user);
+                    }
+                    if(current_data.password){
+                        $("#pppoe-pass").password("setValue", current_data.password);
+                    }
+                    break;
+                case "static":
+                    if(current_data.ip){
+                        $("#static-ip").textbox("setValue", current_data.ip);
+                    }
+                    if(current_data.mask){
+                        $("#static-mask").textbox("setValue", current_data.mask);
+                    }
+                    if(current_data.gateway){
+                        $("#static-gateway").textbox("setValue", current_data.gateway);
+                    }
+                    if(current_data.first_dns){
+                        $("#static-dns1").textbox("setValue", current_data.first_dns);
+                    }
+                    if(current_data.second_dns){
+                        $("#static-dns2").textbox("setValue", current_data.second_dns);
+                    }   
+                    break;
+            }
+        }
+
+
+        function set_wifi_data(){
+            var ret = {};
+            ret.name_2_4 = $("#wifi-2-name").textbox("getValue");
+            ret.encode_2_4 = get_ssid_encode(ret.name_2_4);
+            ret.pwd_2_4 = $("#wifi-2-pass").password("getValue");
+            ret.name_5 = $("#wifi-5-name").textbox("getValue");
+            ret.encode_5 = get_ssid_encode(ret.name_5);
+            ret.notset = false;
+            if($("#wifi-5-same").checkbox("getValue1") == "same"){
+                ret.pwd_sync = "on";
+            }else{
+                ret.pwd_5 = $("#wifi-5-pass").password("getValue");
+            }
+
+            return ret;
+        }
+
+        function get_wifi_data(){
+            var wifi_data = guide_data.wireless_info;
+            if(wifi_data.name_2_4){
+                $("#wifi-2-name").textbox("setValue", wifi_data.name_2_4);
+            }
+            if(wifi_data.pwd_2_4){
+                $("#wifi-2-pass").password("setValue", wifi_data.pwd_2_4);
+            }
+            if(wifi_data.name_5){
+                $("#wifi-5-name").textbox("setValue", wifi_data.name_5);
+            }
+            if(wifi_data.pwd_5){
+                $("#wifi-5-pass").password("setValue", wifi_data.pwd_5);
+            }
+            if(wifi_data.pwd_sync){
+                $("#wifi-5-same").checkbox("setValue", "same");
+                $("#wifi-5-pass").password("disable");
+            }else{
+                $("#wifi-5-pass").password("enable");
+                $("#wifi-5-same").checkbox("setValue", "diff");
+            }
+            
+        }
+
+
+
+
+        /*validate function*/
+        function validate_wan(){
+            var conn_type = $("#connect-type").combobox("getValue");
+            conn_type = conn_type[0];
+            switch(conn_type){
+                case "pppoe":
+                    if($("#pppoe-user").textbox("validate") && $("#pppoe-pass").password("validate")){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                    break;
+                case "static":
+                    if($("#static-ip").textbox("validate") && $("#static-mask").textbox("validate") && $("#static-gateway").textbox("validate") && $("#static-dns1").textbox("validate") && $("#static-dns2").textbox("validate")){
+                        return true;
+                    }else{
+                        return false;
+                    }
+                    break;
+                default:
+                    return true;
+            }   
+        }
+
+
+        function validate_wifi(){
+            if(!$("#wifi-2-name").textbox("validate") || (!$("#wifi-5-name").textbox("validate") && ($.su.radioCount > 1)) || !$("#wifi-2-pass").password("validate")){
+                return false;
+            }
+            if($("#wifi-5-same").checkbox("getValue1") != ["same"]){
+                if(!$("#wifi-5-pass").password("validate")){
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        function no_password_wifi(){
+            if($("#wifi-2-pass").password("getValue") == ""){
+                return true;
+            }
+            if($("#wifi-5-same").checkbox("getValue1") != "same" && $("#wifi-5-pass").password("getValue") == ""){
+                return true;
+            }
+            return false;
+        }
+
+
+
+        /*refresh function*/
+        function refresh_wan_normal(lan_count, wan_count, interface_count){
+            var wanHTML = "";
+            var lanHTML = "";
+            for(var i = 1; i <= wan_count; i++){
+                wanHTML +=    "<div class=\"interface-box-small wan\">";
+                wanHTML +=          "<div class=\"icon\"></div>";
+                wanHTML +=          "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+            }
+            $(".interface-mode-small").append(wanHTML);
+
+            for(var i = wan_count + 1; i <= interface_count; i++){
+                lanHTML +=    "<div class=\"interface-box-small lan\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+            }
+            $(".interface-mode-small").append(lanHTML);
+        }
+
+        function refresh_wan_8(lan_count, wan_count, interface_count){
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            $(".interface-mode-small").addClass("eight");
+            $(".interface-mode-small").html(inHTML);
+
+            for(var i = 1; i <= wan_count; i++){
+                wanHTML  =    "<div class=\"interface-box-small wan\">";
+                wanHTML +=          "<div class=\"icon\"></div>";
+                wanHTML +=          "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+
+                $(".row-1").append(wanHTML);
+            }   
+            for(var i = 1; i <= lan_count; i++){
+                lanHTML =    "<div class=\"interface-box-small lan\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                $(".row-1").append(lanHTML);  
+            }
+        }
+
+        function refresh_wan_9_2(lan_count, wan_count, interface_count){
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            inHTML += "<div class=\"row-2\"></div>";
+            $(".interface-mode-small").addClass("nine");
+            $(".interface-mode-small").html(inHTML);
+
+            /* insert an enpty div for 1208 interface model */
+            var empty ="";
+            empty =    "<div class=\"interface-box-small lan\" style=\"visibility:hidden\">";
+            empty +=          "<div class=\"icon\"></div>";
+            empty +=          "<h2>LAN</h2>";
+            empty +=    "</div>";
+            $(".row-1").append(empty);
+            
+            for(var i = 1; i <= wan_count; i++){
+                wanHTML  =    "<div class=\"interface-box-small wan\">";
+                wanHTML +=          "<div class=\"icon\"></div>";
+                wanHTML +=          "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+
+                if(i % 2 == 0 || i == 1){
+                    $(".row-2").append(wanHTML);
+                }else{
+                    $(".row-1").append(wanHTML);
+                }
+            }   
+
+             for(var i = lan_count; i >= 1; i--){
+                lanHTML =    "<div class=\"interface-box-small lan\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                if(i % 2 == 1){
+                    $(".row-1").append(lanHTML);
+                }else{
+                    $(".row-2").append(lanHTML);
+                }   
+            }
+        }
+
+        function refresh_wan_9(lan_count, wan_count, interface_count){
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            inHTML += "<div class=\"row-2\"></div>";
+            $(".interface-mode-small").addClass("nine");
+            $(".interface-mode-small").html(inHTML);
+            for(var i = 1; i <= lan_count; i++){
+                lanHTML =    "<div class=\"interface-box-small lan\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                if(i % 2 == 1){
+                    $(".row-1").append(lanHTML);
+                }else{
+                    $(".row-2").append(lanHTML);
+                }   
+            }
+
+            
+            for(var i = wan_count; i >= 1; i--){
+                wanHTML  =    "<div class=\"interface-box-small wan\">";
+                wanHTML +=          "<div class=\"icon\"></div>";
+                wanHTML +=          "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+
+                if(i % 2 == 0 || i == 1){
+                    $(".row-2").append(wanHTML);
+                }else{
+                    $(".row-1").append(wanHTML);
+                }
+            }      
+        }
+
+        function refresh_wan_line_9(lan_count, wan_count, interface_count){
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            $(".interface-mode-small").addClass("line-nine");
+            $(".interface-mode-small").html(inHTML);
+
+            for(var i = 1; i <= wan_count; i++){
+                wanHTML  =    "<div class=\"interface-box-small wan\">";
+                wanHTML +=          "<div class=\"icon\"></div>";
+                wanHTML +=          "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+
+                $(".row-1").append(wanHTML);
+            }   
+            for(var i = 1; i <= lan_count; i++){
+                lanHTML =    "<div class=\"interface-box-small lan\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                $(".row-1").append(lanHTML);  
+            }
+        }
+
+        function refresh_wan_inverted_line_9(lan_count, wan_count, interface_count){
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            $(".interface-mode-small").addClass("line-nine");
+            $(".interface-mode-small").html(inHTML);
+
+              
+            for(var i = lan_count; i >= 1; i--){
+                lanHTML =    "<div class=\"interface-box-small lan\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                $(".row-1").append(lanHTML);  
+            }
+
+            for(var i = wan_count; i >= 1; i--){
+                wanHTML  =    "<div class=\"interface-box-small wan\">";
+                wanHTML +=          "<div class=\"icon\"></div>";
+                wanHTML +=          "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+
+                $(".row-1").append(wanHTML);
+            } 
+        }
+
+        function refresh_wan(wan_count, interface_count){
+            if(typeof wan_count == "undefined" || !wan_count){
+                var wan_count = 1;
+            }
+            if(typeof interface_count == "undefined" || !interface_count){
+                var interface_count = 5;
+            }
+
+            var lan_count = interface_count - wan_count;
+            /*reset box*/
+            $(".interface-mode-small").html("");
+            /*set box*/
+           
+            if(-1 != $.su.interfaceModel){
+                switch($.su.interfaceModel){
+                    case 1:
+                        refresh_wan_9(lan_count, wan_count, interface_count); 
+                        break;
+                    case 2:
+                        refresh_wan_8(lan_count, wan_count, interface_count);
+                        break;
+                    case 3:
+                        refresh_wan_line_9(lan_count, wan_count, interface_count);
+                        break;
+                    case 4:
+                        refresh_wan_inverted_line_9(lan_count, wan_count, interface_count);
+                        break;
+                    case 11:
+                        refresh_wan_9_2(lan_count, wan_count, interface_count);
+                    break;
+                    default:
+                        refresh_wan_normal(lan_count, wan_count, interface_count);
+                        break;
+                }
+            }else{
+                switch($.su.interfaceCount){
+                    case 8:
+                        refresh_wan_8(lan_count, wan_count, interface_count);
+                        break;
+                    case 9:
+                        refresh_wan_9(lan_count, wan_count, interface_count); 
+                        break;
+                    default:
+                        refresh_wan_normal(lan_count, wan_count, interface_count);
+                        break;
+                }
+            }  
+            
+        }
+
+
+        /*refresh all*/
+        function refresh_all_normal(wan_id, wan_count, interface_count){
+            var lan_count = interface_count - wan_count;
+            var wanHTML = "";
+            var lanHTML = "";
+            for(var i = 1; i <= wan_count; i++){
+                if(wan_id == i){
+                    wanHTML +=    "<div class=\"interface-box-small wan\">";
+                }else{
+                    wanHTML +=    "<div class=\"interface-box-small disabled wan\">";
+                }      
+                wanHTML +=          "<div class=\"icon\"></div>";
+                wanHTML +=          "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+            }
+            $(".interface-mode-small").append(wanHTML);
+
+            for(var i = wan_count + 1; i <= interface_count; i++){
+                lanHTML +=    "<div class=\"interface-box-small lan disabled\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+            }
+            $(".interface-mode-small").append(lanHTML);   
+        }
+
+        function refresh_all_8(wan_id, wan_count, interface_count){
+            var lan_count = interface_count - wan_count;
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            inHTML += "<div class=\"row-2\"></div>";
+            $(".interface-mode-small").addClass("eight");
+            $(".interface-mode-small").html(inHTML);
+            for(var i = 1; i <= wan_count; i++){
+                if(wan_id == i){
+                    wanHTML  =    "<div class=\"interface-box-small wan\">";
+                }else{
+                    wanHTML  =    "<div class=\"interface-box-small disabled wan\">";
+                }      
+                wanHTML +=    "<div class=\"icon\"></div>";
+                wanHTML +=    "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+                
+                $(".row-1").append(wanHTML);
+                
+            } 
+
+            for(var i = 1; i <= lan_count; i++){
+                lanHTML  =    "<div class=\"interface-box-small lan disabled\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                $(".row-1").append(lanHTML);
+            }
+        }
+
+        function refresh_all_line_9(wan_id, wan_count, interface_count){
+            var lan_count = interface_count - wan_count;
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            inHTML += "<div class=\"row-2\"></div>";
+            $(".interface-mode-small").addClass("line-nine");
+            $(".interface-mode-small").html(inHTML);
+            for(var i = 1; i <= wan_count; i++){
+                if(wan_id == i){
+                    wanHTML  =    "<div class=\"interface-box-small wan\">";
+                }else{
+                    wanHTML  =    "<div class=\"interface-box-small disabled wan\">";
+                }      
+                wanHTML +=    "<div class=\"icon\"></div>";
+                wanHTML +=    "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+                
+                $(".row-1").append(wanHTML);
+                
+            } 
+
+            for(var i = 1; i <= lan_count; i++){
+                lanHTML  =    "<div class=\"interface-box-small lan disabled\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                $(".row-1").append(lanHTML);
+            }
+        }
+
+        function refresh_all_inverted_line_9(wan_id, wan_count, interface_count){
+            var lan_count = interface_count - wan_count;
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            inHTML += "<div class=\"row-2\"></div>";
+            $(".interface-mode-small").addClass("line-nine");
+            $(".interface-mode-small").html(inHTML);
+            
+
+            for(var i = lan_count; i >= 1; i--){
+                lanHTML  =    "<div class=\"interface-box-small lan disabled\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+
+                $(".row-1").append(lanHTML);
+            }
+
+            for(var i = wan_count; i >= 1; i--){
+                if(wan_id == i){
+                    wanHTML  =    "<div class=\"interface-box-small wan\">";
+                }else{
+                    wanHTML  =    "<div class=\"interface-box-small disabled wan\">";
+                }      
+                wanHTML +=    "<div class=\"icon\"></div>";
+                wanHTML +=    "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+                
+                $(".row-1").append(wanHTML);
+                
+            } 
+        }
+
+
+        function refresh_all_9_2(wan_id, wan_count, interface_count){
+            var lan_count = interface_count - wan_count;
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            inHTML += "<div class=\"row-2\"></div>";
+            $(".interface-mode-small").addClass("nine");
+            $(".interface-mode-small").html(inHTML);
+
+
+            /* insert an enpty div for 1208 interface model */
+            var empty ="";
+            empty =    "<div class=\"interface-box-small lan\" style=\"visibility:hidden\">";
+            empty +=          "<div class=\"icon\"></div>";
+            empty +=          "<h2>LAN</h2>";
+            empty +=    "</div>";
+            $(".row-1").append(empty);
+
+            for(var i = 1; i <= wan_count; i++){
+                if(wan_id == i){
+                    wanHTML  =    "<div class=\"interface-box-small wan\">";
+                }else{
+                    wanHTML  =    "<div class=\"interface-box-small disabled wan\">";
+                }      
+                wanHTML +=    "<div class=\"icon\"></div>";
+                wanHTML +=    "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+
+                if(i % 2 == 0 || i == 1){
+                    $(".row-2").append(wanHTML);
+                }else{
+                    $(".row-1").append(wanHTML);
+                }
+            }
+
+            for(var i = lan_count; i >= 1; i--){
+                lanHTML  =    "<div class=\"interface-box-small lan disabled\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+                if(i % 2 == 1){
+                    $(".row-1").append(lanHTML);
+                }else{
+                    $(".row-2").append(lanHTML);
+                }  
+            }
+
+        }
+
+        function refresh_all_9(wan_id, wan_count, interface_count){
+            var lan_count = interface_count - wan_count;
+            var wanHTML = "";
+            var lanHTML = "";
+            var inHTML = "<div class=\"row-1\"></div>";
+            inHTML += "<div class=\"row-2\"></div>";
+            $(".interface-mode-small").addClass("nine");
+            $(".interface-mode-small").html(inHTML);
+            for(var i = 1; i <= lan_count; i++){
+                lanHTML  =    "<div class=\"interface-box-small lan disabled\">";
+                lanHTML +=          "<div class=\"icon\"></div>";
+                lanHTML +=          "<h2>LAN</h2>";
+                lanHTML +=    "</div>";
+                if(i % 2 == 1){
+                    $(".row-1").append(lanHTML);
+                }else{
+                    $(".row-2").append(lanHTML);
+                }  
+            }
+             
+
+            for(var i = wan_count; i >= 1; i--){
+                if(wan_id == i){
+                    wanHTML  =    "<div class=\"interface-box-small wan\">";
+                }else{
+                    wanHTML  =    "<div class=\"interface-box-small disabled wan\">";
+                }      
+                wanHTML +=    "<div class=\"icon\"></div>";
+                wanHTML +=    "<h2>WAN" + i + "</h2>";
+                wanHTML +=    "</div>";
+
+                if(i % 2 == 0 || i == 1){
+                    $(".row-2").append(wanHTML);
+                }else{
+                    $(".row-1").append(wanHTML);
+                }
+            }
+        }
+
+        function refresh_all(wan_id, wan_count, interface_count){
+            if(typeof wan_id == "undefined" || !wan_id){
+                var wan_id = 1;
+            }
+            if(typeof wan_count == "undefined" || !wan_count){
+                var wan_count = 1;
+            }
+            if(typeof interface_count == "undefined" || !interface_count){
+                var interface_count = 5;
+            }
+            
+            /*reset box*/
+            $(".interface-mode-small").html("");
+            /*set box*/
+            
+            if(-1 != $.su.interfaceModel){
+                switch($.su.interfaceModel){
+                    case 1:
+                        refresh_all_9(wan_id, wan_count, interface_count); 
+                        break;
+                    case 2:
+                        refresh_all_8(wan_id, wan_count, interface_count);
+                        break;
+                    case 3:
+                        refresh_all_line_9(wan_id, wan_count, interface_count);
+                        break;
+                    case 4:
+                        refresh_all_inverted_line_9(wan_id, wan_count, interface_count);
+                        break;
+                    case 11:
+                        refresh_all_9_2(wan_id, wan_count, interface_count);
+                        break;
+                    default:
+                        refresh_all_normal(wan_id, wan_count, interface_count);
+                        break;
+                }
+            }else{
+                switch($.su.interfaceCount){
+                    case 8:
+                        refresh_all_8(wan_id, wan_count, interface_count);
+                        break;
+                    case 9:
+                        refresh_all_9(wan_id, wan_count, interface_count); 
+                        break;
+                    default:
+                        refresh_all_normal(wan_id, wan_count, interface_count);
+                        break;
+                }
+            }       
+        }
+
+        interface_mode();
+
+
+        var actHeight = parseInt(document.documentElement.clientHeight);
+        var marginTop = actHeight * 0.382 - 540 / 2 - 70;
+        marginTop = marginTop < 0 ? 0 : marginTop;
+        $(".login-box").css("marginTop", marginTop);
+    }
+
+
+    /*ååå²çªæ£æµ*/  //by Chen Yiqun 16May2017
+    function router_select(){
+        var loginHTML = "";
+        loginHTML += "<div class=\"login-box\">";
+        loginHTML += "<h1></h1>";
+        loginHTML += "<div id=\"router_select_grid\">"
+        loginHTML += "</div>";
+        loginHTML += "</div>";
+        $("body.login-body").append(loginHTML);   
+
+        $(".login-box h1").text($.su.CHAR.LOGIN.CHOICE_DEVICE);
+        
+        //var URL_ROUTER_SELECT = "./data/storage_share.json";
+        var URL_ROUTER_SELECT = $.su.url("/login?form=router_select");
+        var routerSelectProxy = new $.su.Proxy({
+            url: URL_ROUTER_SELECT
+        });
+     
+        var ruleGrid = $("#router_select_grid").grid({
+            store:{
+                proxy: routerSelectProxy,
+                fields: [
+                    {name: "dev_name"},
+                    {name: "ip"},
+                    {name: "mac"}
+                ],
+                autoLoad: true
+            },
+            columns: [
+                {
+                    text: $.su.CHAR.LOGIN.STATIC_DEV_NAME,
+                    dataIndex: "dev_name"
+                },
+                {
+                    text: $.su.CHAR.LOGIN.STATIC_IP,
+                    dataIndex: "ip",
+                    renderer: function (data) {
+                        return '<a href="">'+data+"</a>";
+                    }
+                },
+                {
+                    text: $.su.CHAR.LOGIN.STATIC_MAC,
+                    dataIndex: "mac",
+                },
+            ],
+
+        }).on("ev_load", function(data){
+            $(".login-box div.panel-content-container").css({
+                "overflow": "auto",
+                "height" : "280px"
+            }).find('a').click(function() {
+                window.location.href = "http://"+$(this).html();
+            })
+        });
+        
+        /*è°æ´ç»éæ¡é«åº¦*/
+        var actHeight = parseInt(document.documentElement.clientHeight);
+        var marginTop = actHeight * 0.382 - 480 / 2 - 70;
+        marginTop = marginTop < 0 ? 0 : marginTop;
+        $(".login-box").css("marginTop", marginTop);
+    }
+    
+
+    /*æ­£å¸¸ç»å½*/
+    function normal_login(){
+        var loginHTML = "";
+        loginHTML += "<div class=\"login-box\">";
+        loginHTML += "<h1></h1>";
+        loginHTML += "<h2></h2>";
+        loginHTML += "<form class=\"login-form\">";
+        loginHTML += "<input id=\"username\" name=\"username\"/>"
+        loginHTML += "<input id=\"password\" name=\"password\"/>";
+        loginHTML += "<h3></h3>";
+        loginHTML += "<div id=\"login-btn\" class=\"login-btn\"></div>";
+        loginHTML += "</form>";
+        loginHTML += "</div>";
+
+        $("body.login-body").append(loginHTML);
+        $(".login-box h1").text($.su.CHAR.LOGIN.LOGIN);
+        $(".login-box h2").text($.su.CHAR.LOGIN.PLZ_LOGIN);
+        $(".login-box h3").text("");
+
+        var usernameBox = $("#username").textbox({
+            cls: "login",
+            labelCls: "username",
+            inputCls: "login",
+            maxLength: 15,
+            allowBlank: false,
+            vtype: "ascii_visible",
+            showError: false,
+            tabindex: 0,
+            hint: $.su.CHAR.LOGIN.USERNAME
+        }).on("ev_change", function(e, newValue){
+
+        });
+
+        var passwordBox = $("#password").password({
+            cls: "login",
+            labelCls: "password",
+            inputCls: "login",
+            vtype: "ascii_visible",
+            allowVisible: true,
+            maxLength: 15,
+            allowBlank: false,
+            showError: false,
+            showLevel: false,
+            hint:$.su.CHAR.LOGIN.PASSWORD
+        }).on("ev_change", function(e, value, key, keyCode){
+            if (key == "Enter" || keyCode == 13){
+                passwordBox.password("doEncrypt");
+                $("input.password-text").blur();
+                doLogin();
+            }
+        });
+
+        var login_btn = $("#login-btn").button({
+            text: $.su.CHAR.LOGIN.LOGIN,
+            handler:function(){               
+                doLogin();
+            }
+        });
+
+
+        var loginForm = $("form.login-form").form({
+            proxy: loginProxy,
+            showPrompt: false,
+            fields: [
+                {name: "username"},
+                {name: "password"}
+            ]
+        });
+
+        /*è°æ´ç»éæ¡é«åº¦*/
+        var actHeight = parseInt(document.documentElement.clientHeight);
+        var marginTop = actHeight * 0.382 - 480 / 2 - 70;
+        marginTop = marginTop < 0 ? 0 : marginTop;
+        $(".login-box").css("marginTop", marginTop);
+
+        /*è¾å¥æ¡ç¦ç¹*/
+        $("#username").focus();
+
+        function doLogin(){
+            if (!checkCookie() || $("#login-btn").hasClass("disabled")){
+                return false;
+            }
+
+            var acc_value = usernameBox.textbox("getValue");
+            var pwd_value = passwordBox.password("getValue");
+            if(acc_value.length > 15){
+                usernameBox.textbox("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_USER_LENGTH);
+                return false;
+            }
+            if(!usernameBox.textbox("validate")){
+                usernameBox.textbox("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_USER_FORMAT);
+                return false;
+            }
+
+
+            if(pwd_value.length < 6 || pwd_value.length > 15){
+                passwordBox.password("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_PASS_LENGTH);
+                return false;
+            }
+
+            if(!passwordBox.password("validate")){
+                passwordBox.password("setError");
+                $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_PASS_FORMAT);
+                return false;
+            }
+
+            $("#login-btn").button("disable");
+            $("#login-btn").addClass("disabled");
+            
+            loginForm.form("submit", {
+                "method": "login"
+            }, function(data, status, xhr){
+                var token = data.stok || (function(){
+                    var stok = "12345",
+                        href = top.location.href;
+                    var stokPos = href.indexOf("stok=");
+                    if (stokPos >= 0){
+                        stok = href.substring(stokPos+5);
+                    };
+                    return stok;
+                })();
+
+                if (localStorage){
+                    localStorage.setItem("token", token);
+                    location.href = "./index.html";
+                };
+                
+            }, function(errorcode, others, data){
+                $("#login-btn").button("enable");
+                $("#login-btn").removeClass("disabled");
+                switch (errorcode){
+                    case "700":
+                        $(".login-box h3").text($.su.CHAR.LOGIN.WRONG_PASS);                                           
+                        break;           
+                    default:
+                        $(".login-box h3").text($.su.CHAR.LOGIN.LOGIN_FAILED); 
+                };
+            });
+        };
+    }
+
+    $("span#no-cookie-text").html($.su.CHAR.LOGIN.NO_COOKIE);
+    var noCookieMsg = $("div#no-cookie-msg-container").msg({
+        type: "alert",
+        cls: "m",
+        closeBtn: false,
+        okHandler: function(){
+            $("button#login-btn").button("enable");
+        }
+    });
+    
+    function get_ssid_encode(value) {
+        if (/.*[\u4e00-\u9fa5]+.*$/.test(value)) {
+            return "1";
+        }
+        else {
+            return  "0";
+        }
+    }
+
+
+    /*æ¬é¡µæ¹æ³*/
+    var checkCookie = function(){
+        try{
+            localStorage.setItem("private", 100);
+            if (!navigator.cookieEnabled){
+                noCookieMsg.msg("show");
+                return false;
+            };
+        }catch(e){
+            noCookieMsg.msg("show");
+            return false;
+        };
+        noCookieMsg.msg("close");
+        return true;
+
+    };
+
+
+    
+
+    
+
+});
+//]]>
+</script>
+</body>
+</html>

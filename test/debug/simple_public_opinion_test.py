@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+"""
+Simple test script to verify public opinion selector can load strategies properly
+"""
+
+import sys
+import os
+import logging
+
+# Add the project root to the Python path to resolve imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+
+from agents.public_opinion_selector import PublicOpinionStockSelector
+from data.mongodb_manager import MongoDBManager
+from utils.akshare_client import AkshareClient
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
+logger = logging.getLogger(__name__)
+
+
+def main():
+    """Main function to test public opinion selector strategy loading"""
+    try:
+        # Initialize components
+        logger.info("Initializing components...")
+        db_manager = MongoDBManager()
+        data_fetcher = AkshareClient()
+
+        # Initialize selector
+        logger.info("Initializing public opinion stock selector...")
+        selector = PublicOpinionStockSelector(db_manager, data_fetcher)
+
+        # Check what strategies were loaded
+        logger.info(f"Loaded strategies: {len(selector.strategy_names)}")
+        for i, name in enumerate(selector.strategy_names):
+            logger.info(f"  Strategy {i}: {name}")
+            logger.info(f"    File: {selector.strategy_files[i] if i < len(selector.strategy_files) else 'N/A'}")
+            logger.info(f"    Class: {selector.strategy_class_names[i] if i < len(selector.strategy_class_names) else 'N/A'}")
+            logger.info(f"    Params: {selector.strategy_params_list[i] if i < len(selector.strategy_params_list) else 'N/A'}")
+
+        # Check strategy instances
+        logger.info(f"Strategy instances: {len(selector.strategy_instances)}")
+        for i, instance in enumerate(selector.strategy_instances):
+            logger.info(f"  Instance {i}: {type(instance).__name__}")
+            # Check if the instance has the required methods
+            if hasattr(instance, 'execute'):
+                logger.info(f"    Has execute method: Yes")
+            else:
+                logger.info(f"    Has execute method: No")
+
+        logger.info("Strategy loading test completed successfully!")
+
+        # Close database connection
+        db_manager.close_connection()
+
+    except Exception as e:
+        logger.error(f"Error testing public opinion stock selector: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
+

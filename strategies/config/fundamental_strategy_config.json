@@ -1,0 +1,19 @@
+{
+    "name": "基本面分析策略",
+    "type": "fundamental",
+    "description": "基于财务报表和财务比率的传统基本面分析策略",
+    "file": "fundamental_strategy",
+    "class_name": "FundamentalStrategy",
+    "parameters": {
+        "min_roe": 0.1,
+        "max_pe": 20,
+        "min_current_ratio": 1.5,
+        "max_debt_equity": 0.5,
+        "min_revenue_growth": 0.1
+    },
+    "program": {
+        "file": "fundamental_strategy",
+        "class": "FundamentalStrategy"
+    }
+}
+

@@ -47,31 +47,31 @@
                                     <ul class="list-group">
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             初始资金
-                                            <span class="badge bg-secondary rounded-pill fs-6" id="initialCapital">¥0.00</span>
+                                            <span class="badge bg-secondary rounded-pill fs-6" id="initialCapital">0.00</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             持仓市值
-                                            <span class="badge bg-info rounded-pill fs-6" id="portfolioValue">¥0.00</span>
+                                            <span class="badge bg-info rounded-pill fs-6" id="portfolioValue">0.00</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             现金
-                                            <span class="badge bg-success rounded-pill fs-6" id="cashValue">¥0.00</span>
+                                            <span class="badge bg-success rounded-pill fs-6" id="cashValue">0.00</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             账户净值
-                                            <span class="badge bg-primary rounded-pill fs-6" id="accountNetValue">¥0.00</span>
+                                            <span class="badge bg-primary rounded-pill fs-6" id="accountNetValue">0.00</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             账户盈亏
-                                                                                    <span class="badge bg-secondary rounded-pill fs-6" id="accountProfit">¥0.00</span>
+                                            <span class="badge bg-secondary rounded-pill fs-6" id="accountProfit">0.00</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             收益率
                                             <span class="badge bg-success rounded-pill fs-6" id="cumulativeReturn">0.00%</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
-                                            最大回撤
-                                            <span class="badge bg-warning rounded-pill fs-6" id="maxDrawdown">¥0.00</span>
+                                            最大回撤（1年）
+                                            <span class="badge bg-warning rounded-pill fs-6" id="maxDrawdown">0.00%</span>
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             夏普比率
@@ -91,7 +91,7 @@
                                         </li>
                                         <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
                                             VaR
-                                            <span class="badge bg-danger rounded-pill fs-6" id="varValue">¥0.00</span>
+                                            <span class="badge bg-danger rounded-pill fs-6" id="varValue">0.00</span>
                                         </li>
                                     </ul>
                                 </div>
@@ -405,6 +405,78 @@
             });
     }
 
+    // Update account overview with asset data for max drawdown calculation
+    function updateAccountOverviewWithAssetData(initialCash, accountId, assetData) {
+        // Get the current account data to update the overview with asset data
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const cash = account.cash || 0;
+                    const stocks = account.stocks || [];
+
+                    // Calculate total stock value using latest prices from akshare
+                    let totalStockValue = 0;
+                    let processedStocks = 0;
+                    let stockCount = stocks.length;
+
+                    if (stockCount === 0) {
+                        // No stocks, update UI immediately
+                        updateAccountOverviewUI(initialCash, cash, 0, cash, assetData);
+                        return;
+                    }
+
+                    // For each stock, fetch latest price from akshare
+                    stocks.forEach(function(stock) {
+                        const code = stock.code || '';
+                        if (!code) {
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCash, cash, totalStockValue, totalStockValue + cash, assetData);
+                            }
+                            return;
+                        }
+
+                        // Fetch latest price data using akshare
+                        $.ajax({
+                            url: '/api/akshare/stock-data',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                symbol: code,
+                                start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
+                                end_date: new Date().toISOString().split('T')[0]
+                            })
+                        }).done(function(response) {
+                            const priceData = response.data || [];
+                            if (priceData.length > 0) {
+                                // Use the latest closing price
+                                const latestPrice = priceData[priceData.length - 1].close || 0;
+                                const quantity = stock.quantity || 0;
+                                totalStockValue += latestPrice * quantity;
+                            }
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCash, cash, totalStockValue, totalStockValue + cash, assetData);
+                            }
+                        }).fail(function() {
+                            // If failed to get price, use cost price as fallback
+                            const costPrice = stock.cost || 0;
+                            const quantity = stock.quantity || 0;
+                            totalStockValue += costPrice * quantity;
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCash, cash, totalStockValue, totalStockValue + cash, assetData);
+                            }
+                        });
+                    });
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load account overview with asset data:', error);
+            });
+    }
+
     // Calculate historical asset data from orders
     async function calculateHistoricalAssetData(orders, initialCash, accountId) {
         try {
@@ -430,6 +502,9 @@
 
             // Calculate daily asset values
             const assetData = calculateDailyAssetValues(sortedOrders, initialCash, stockPriceData, firstBuyDate);
+
+            // Update account overview with asset data for max drawdown calculation
+            updateAccountOverviewWithAssetData(initialCash, accountId, assetData);
 
             // Create ECharts chart with dual y-axes
             createDualAxisChart(assetData, benchmarkData);
@@ -914,75 +989,9 @@
 
     // Load account overview data
     function loadAccountOverview(accountId) {
-        $.get(`/api/accounts`)
-            .done(function(accounts) {
-                const account = accounts.find(acc => acc._id === accountId);
-                if (account) {
-                    // Calculate account metrics
-                    const initialCapital = account.initial_capital || 0;
-                    const cash = account.cash || 0;
-                    const stocks = account.stocks || [];
-
-                    // Calculate total stock value using latest prices from akshare
-                    let totalStockValue = 0;
-                    let processedStocks = 0;
-                    let stockCount = stocks.length;
-
-                    if (stockCount === 0) {
-                        // No stocks, update UI immediately
-                        updateAccountOverviewUI(initialCapital, cash, 0, cash);
-                        return;
-                    }
-
-                    // For each stock, fetch latest price from akshare
-                    stocks.forEach(function(stock) {
-                        const code = stock.code || '';
-                        if (!code) {
-                            processedStocks++;
-                            if (processedStocks === stockCount) {
-                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalStockValue + cash);
-                            }
-                            return;
-                        }
-
-                        // Fetch latest price data using akshare
-                        $.ajax({
-                            url: '/api/akshare/stock-data',
-                            method: 'POST',
-                            contentType: 'application/json',
-                            data: JSON.stringify({
-                                symbol: code,
-                                start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
-                                end_date: new Date().toISOString().split('T')[0]
-                            })
-                        }).done(function(response) {
-                            const priceData = response.data || [];
-                            if (priceData.length > 0) {
-                                // Use the latest closing price
-                                const latestPrice = priceData[priceData.length - 1].close || 0;
-                                const quantity = stock.quantity || 0;
-                                totalStockValue += latestPrice * quantity;
-                            }
-                            processedStocks++;
-                            if (processedStocks === stockCount) {
-                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalStockValue + cash);
-                            }
-                        }).fail(function() {
-                            // If failed to get price, use cost price as fallback
-                            const costPrice = stock.cost || 0;
-                            const quantity = stock.quantity || 0;
-                            totalStockValue += costPrice * quantity;
-                            processedStocks++;
-                            if (processedStocks === stockCount) {
-                                updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalStockValue + cash);
-                            }
-                        });
-                    });
-                }
-            })
-            .fail(function(xhr, status, error) {
-                console.error('Failed to load account overview:', error);
-            });
+        // This function is now handled by updateAccountOverviewWithAssetData
+        // which is called when portfolio performance data is loaded
+        console.log('Account overview will be updated with asset data');
     }
 
     // Load positions data
@@ -1198,8 +1207,48 @@
             });
     }
 
+    // Helper function to calculate 1-year maximum drawdown
+    function calculateMaxDrawdown(assetData) {
+        if (!assetData || assetData.length === 0) {
+            return 0;
+        }
+
+        // Get the date one year ago from today
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+        // Filter asset data to only include data from the last year
+        const filteredData = assetData.filter(item => new Date(item.date) >= oneYearAgo);
+
+        if (filteredData.length === 0) {
+            return 0;
+        }
+
+        let peak = filteredData[0].totalAssets;
+        let maxDrawdown = 0;
+
+        for (let i = 1; i < filteredData.length; i++) {
+            const currentValue = filteredData[i].totalAssets;
+
+            // Update peak if current value is higher
+            if (currentValue > peak) {
+                peak = currentValue;
+            }
+
+            // Calculate drawdown
+            const drawdown = (peak - currentValue) / peak * 100;
+
+            // Update maximum drawdown
+            if (drawdown > maxDrawdown) {
+                maxDrawdown = drawdown;
+            }
+        }
+
+        return maxDrawdown;
+    }
+
     // Helper function to update account overview UI
-    function updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalValue) {
+    function updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalValue, assetData) {
         // 1. 账户净值 = 持仓市值 + 现金
         const accountNetValue = totalStockValue + cash;
 
@@ -1208,6 +1257,9 @@
 
         // 3. 收益率 = (账户盈亏 / 初始资金) * 100%
         const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
+
+        // Calculate 1-year maximum drawdown
+        const maxDrawdown = calculateMaxDrawdown(assetData);
 
         // Update UI
         $('#initialCapital').text(initialCapital.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
@@ -1222,7 +1274,7 @@
         $('#cumulativeReturn').text(`${profitRatio.toFixed(2)}%`)
             .removeClass('bg-success bg-danger')
             .addClass(profitRatio >= 0 ? 'bg-success' : 'bg-danger');
-        $('#maxDrawdown').text('0.00');
+        $('#maxDrawdown').text(`${maxDrawdown.toFixed(2)}%`);
         $('#sharpeRatio').text('0.00');
         $('#winRate').text('0.00%');
         $('#profitLossRatio').text('0.00');

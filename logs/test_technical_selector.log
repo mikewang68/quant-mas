@@ -1,0 +1,818 @@
+2025-08-29 09:02:18,454 - __main__ - INFO - Starting TechnicalStockSelector multi-strategy test
+2025-08-29 09:02:18,462 - data.mongodb_manager - INFO - Successfully connected to MongoDB
+2025-08-29 09:02:18,462 - utils.akshare_client - INFO - AkshareClient initialized
+2025-08-29 09:02:18,464 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 09:02:18,464 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 动量策略
+2025-08-29 09:02:18,465 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 09:02:18,465 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 加速上涨策略
+2025-08-29 09:02:18,468 - strategies.base_strategy.动量策略 - INFO - Initialized 动量策略 strategy with params: period=13, threshold=0.5, lookback_period=20
+2025-08-29 09:02:18,468 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 动量策略
+2025-08-29 09:02:18,468 - strategies.base_strategy.加速上涨策略 - INFO - Initialized 加速上涨策略 strategy with params: angle_threshold=30, lookback_period=20, volume_ratio_threshold=1.2
+2025-08-29 09:02:18,468 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 加速上涨策略
+2025-08-29 09:02:18,468 - __main__ - INFO - Loaded 2 strategies:
+2025-08-29 09:02:18,468 - __main__ - INFO -   1. 动量策略
+2025-08-29 09:02:18,468 - __main__ - INFO -      File: momentum_strategy
+2025-08-29 09:02:18,468 - __main__ - INFO -      Class: MomentumStrategy
+2025-08-29 09:02:18,468 - __main__ - INFO -      Params: {'lookback_period': 20, 'period': 13, 'threshold': 0.5}
+2025-08-29 09:02:18,468 - __main__ - INFO -   2. 加速上涨策略
+2025-08-29 09:02:18,468 - __main__ - INFO -      File: accelerating_uptrend_strategy.py
+2025-08-29 09:02:18,468 - __main__ - INFO -      Class: AcceleratingUptrendStrategy
+2025-08-29 09:02:18,468 - __main__ - INFO -      Params: {'angle_threshold': 30, 'lookback_period': 20, 'volume_ratio_threshold': 1.2, 'acceleration_window': 2}
+2025-08-29 09:02:18,468 - __main__ - INFO - Created 2 strategy instances
+2025-08-29 09:02:18,468 - __main__ - INFO - Running technical analysis with all strategies...
+2025-08-29 09:02:18,468 - agents.technical_selector - INFO - [TestTechnicalSelector] Updating pool with technical analysis using dynamic strategy loading
+2025-08-29 09:02:18,470 - agents.technical_selector - INFO - [TestTechnicalSelector] Analyzing 251 stocks from latest pool record
+2025-08-29 09:02:18,470 - agents.technical_selector - INFO - [TestTechnicalSelector] Getting standard data for 251 stocks
+2025-08-29 09:02:19,471 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:20,726 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000021
+2025-08-29 09:02:20,726 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000021
+2025-08-29 09:02:20,763 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000021
+2025-08-29 09:02:21,764 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:22,911 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000062
+2025-08-29 09:02:22,911 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000062
+2025-08-29 09:02:22,957 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000062
+2025-08-29 09:02:23,958 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:25,091 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000063
+2025-08-29 09:02:25,091 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000063
+2025-08-29 09:02:25,108 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000063
+2025-08-29 09:02:26,109 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:27,251 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000068
+2025-08-29 09:02:27,251 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000068
+2025-08-29 09:02:27,267 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000068
+2025-08-29 09:02:28,268 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:29,413 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000536
+2025-08-29 09:02:29,413 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000536
+2025-08-29 09:02:29,429 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000536
+2025-08-29 09:02:30,430 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:31,564 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000541
+2025-08-29 09:02:31,564 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000541
+2025-08-29 09:02:31,583 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000541
+2025-08-29 09:02:32,584 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:33,724 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000592
+2025-08-29 09:02:33,724 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000592
+2025-08-29 09:02:33,742 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000592
+2025-08-29 09:02:34,742 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:35,888 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000610
+2025-08-29 09:02:35,888 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000610
+2025-08-29 09:02:35,906 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000610
+2025-08-29 09:02:36,907 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:38,058 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000650
+2025-08-29 09:02:38,058 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000650
+2025-08-29 09:02:38,072 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000650
+2025-08-29 09:02:39,072 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:40,211 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000676
+2025-08-29 09:02:40,211 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000676
+2025-08-29 09:02:40,230 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000676
+2025-08-29 09:02:41,231 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:42,382 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000721
+2025-08-29 09:02:42,382 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000721
+2025-08-29 09:02:42,397 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000721
+2025-08-29 09:02:43,398 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:44,545 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000782
+2025-08-29 09:02:44,545 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000782
+2025-08-29 09:02:44,574 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000782
+2025-08-29 09:02:45,575 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:46,714 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000799
+2025-08-29 09:02:46,714 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000799
+2025-08-29 09:02:46,745 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000799
+2025-08-29 09:02:47,747 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:48,892 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000800
+2025-08-29 09:02:48,892 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000800
+2025-08-29 09:02:48,912 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000800
+2025-08-29 09:02:49,913 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:51,064 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000938
+2025-08-29 09:02:51,064 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000938
+2025-08-29 09:02:51,090 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000938
+2025-08-29 09:02:52,091 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:53,239 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 000977
+2025-08-29 09:02:53,239 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 000977
+2025-08-29 09:02:53,258 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 000977
+2025-08-29 09:02:54,260 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:55,398 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 001202
+2025-08-29 09:02:55,398 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 001202
+2025-08-29 09:02:55,430 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 001202
+2025-08-29 09:02:56,432 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:57,576 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 001308
+2025-08-29 09:02:57,576 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 001308
+2025-08-29 09:02:57,607 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 001308
+2025-08-29 09:02:58,609 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:02:59,751 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002004
+2025-08-29 09:02:59,751 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002004
+2025-08-29 09:02:59,780 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002004
+2025-08-29 09:03:00,782 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:01,927 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002011
+2025-08-29 09:03:01,927 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002011
+2025-08-29 09:03:01,944 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002011
+2025-08-29 09:03:02,945 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:04,089 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002023
+2025-08-29 09:03:04,089 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002023
+2025-08-29 09:03:04,125 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002023
+2025-08-29 09:03:05,127 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:06,264 - utils.akshare_client - INFO - Retrieved 62 daily K-data records for 002052
+2025-08-29 09:03:06,264 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 62 records to buf_data for 002052
+2025-08-29 09:03:06,294 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 62 new records to buf_data for 002052
+2025-08-29 09:03:07,295 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:08,433 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002053
+2025-08-29 09:03:08,433 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002053
+2025-08-29 09:03:08,449 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002053
+2025-08-29 09:03:09,450 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:10,680 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002066
+2025-08-29 09:03:10,680 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002066
+2025-08-29 09:03:10,694 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002066
+2025-08-29 09:03:11,695 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:12,923 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002106
+2025-08-29 09:03:12,923 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002106
+2025-08-29 09:03:12,938 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002106
+2025-08-29 09:03:13,939 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:15,154 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002112
+2025-08-29 09:03:15,154 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002112
+2025-08-29 09:03:15,174 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002112
+2025-08-29 09:03:16,175 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:17,391 - utils.akshare_client - INFO - Retrieved 62 daily K-data records for 002141
+2025-08-29 09:03:17,391 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 62 records to buf_data for 002141
+2025-08-29 09:03:17,406 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 62 new records to buf_data for 002141
+2025-08-29 09:03:18,408 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:19,621 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002145
+2025-08-29 09:03:19,621 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002145
+2025-08-29 09:03:19,636 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002145
+2025-08-29 09:03:20,637 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:21,856 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002152
+2025-08-29 09:03:21,857 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002152
+2025-08-29 09:03:21,873 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002152
+2025-08-29 09:03:22,874 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:24,081 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002158
+2025-08-29 09:03:24,081 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002158
+2025-08-29 09:03:24,100 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002158
+2025-08-29 09:03:25,101 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:26,310 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002177
+2025-08-29 09:03:26,310 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002177
+2025-08-29 09:03:26,351 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002177
+2025-08-29 09:03:27,355 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:28,564 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002182
+2025-08-29 09:03:28,564 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002182
+2025-08-29 09:03:28,593 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002182
+2025-08-29 09:03:29,596 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:30,832 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002186
+2025-08-29 09:03:30,832 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002186
+2025-08-29 09:03:30,855 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002186
+2025-08-29 09:03:31,856 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:33,088 - utils.akshare_client - INFO - Retrieved 62 daily K-data records for 002217
+2025-08-29 09:03:33,088 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 62 records to buf_data for 002217
+2025-08-29 09:03:33,127 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 62 new records to buf_data for 002217
+2025-08-29 09:03:34,128 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:35,331 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002236
+2025-08-29 09:03:35,331 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002236
+2025-08-29 09:03:35,351 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002236
+2025-08-29 09:03:36,353 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:37,577 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002259
+2025-08-29 09:03:37,577 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002259
+2025-08-29 09:03:37,597 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002259
+2025-08-29 09:03:38,599 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:39,838 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002267
+2025-08-29 09:03:39,838 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002267
+2025-08-29 09:03:39,852 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002267
+2025-08-29 09:03:40,853 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:42,084 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002283
+2025-08-29 09:03:42,084 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002283
+2025-08-29 09:03:42,111 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002283
+2025-08-29 09:03:43,113 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:44,349 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002323
+2025-08-29 09:03:44,349 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002323
+2025-08-29 09:03:44,386 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002323
+2025-08-29 09:03:45,388 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:46,603 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002334
+2025-08-29 09:03:46,603 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002334
+2025-08-29 09:03:46,640 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002334
+2025-08-29 09:03:47,641 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:48,885 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002369
+2025-08-29 09:03:48,885 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002369
+2025-08-29 09:03:48,930 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002369
+2025-08-29 09:03:49,934 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:51,167 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002376
+2025-08-29 09:03:51,167 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002376
+2025-08-29 09:03:51,182 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002376
+2025-08-29 09:03:52,184 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:53,423 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002382
+2025-08-29 09:03:53,423 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002382
+2025-08-29 09:03:53,441 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002382
+2025-08-29 09:03:54,443 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:55,664 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002397
+2025-08-29 09:03:55,664 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002397
+2025-08-29 09:03:55,678 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002397
+2025-08-29 09:03:56,680 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:03:57,911 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002421
+2025-08-29 09:03:57,911 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002421
+2025-08-29 09:03:57,933 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002421
+2025-08-29 09:03:58,935 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:00,148 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002423
+2025-08-29 09:04:00,148 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002423
+2025-08-29 09:04:00,166 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002423
+2025-08-29 09:04:01,168 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:02,382 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002429
+2025-08-29 09:04:02,382 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002429
+2025-08-29 09:04:02,407 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002429
+2025-08-29 09:04:03,409 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:04,638 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002445
+2025-08-29 09:04:04,638 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002445
+2025-08-29 09:04:04,669 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002445
+2025-08-29 09:04:05,671 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:06,879 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002449
+2025-08-29 09:04:06,879 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002449
+2025-08-29 09:04:06,916 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002449
+2025-08-29 09:04:07,921 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:09,137 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002476
+2025-08-29 09:04:09,137 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002476
+2025-08-29 09:04:09,177 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002476
+2025-08-29 09:04:10,183 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:11,410 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002510
+2025-08-29 09:04:11,411 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002510
+2025-08-29 09:04:11,428 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002510
+2025-08-29 09:04:12,430 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:13,631 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002518
+2025-08-29 09:04:13,631 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002518
+2025-08-29 09:04:13,647 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002518
+2025-08-29 09:04:14,649 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:15,781 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002540
+2025-08-29 09:04:15,781 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002540
+2025-08-29 09:04:15,796 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002540
+2025-08-29 09:04:16,797 - utils.akshare_client - INFO - Access limit reached (1), sleeping for 1 seconds...
+2025-08-29 09:04:17,933 - utils.akshare_client - INFO - Retrieved 63 daily K-data records for 002575
+2025-08-29 09:04:17,933 - agents.technical_selector - INFO - [TestTechnicalSelector] Saving 63 records to buf_data for 002575
+2025-08-29 09:04:17,950 - agents.technical_selector - INFO - [TestTechnicalSelector] Inserted 63 new records to buf_data for 002575
+2025-08-29 09:39:51,488 - __main__ - INFO - Starting TechnicalStockSelector multi-strategy test
+2025-08-29 09:39:51,493 - data.mongodb_manager - INFO - Successfully connected to MongoDB
+2025-08-29 09:39:51,493 - utils.akshare_client - INFO - AkshareClient initialized
+2025-08-29 09:39:51,494 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 09:39:51,494 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 动量策略
+2025-08-29 09:39:51,494 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 09:39:51,494 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 加速上涨策略
+2025-08-29 09:39:51,497 - strategies.base_strategy.动量策略 - INFO - Initialized 动量策略 strategy with params: period=13, threshold=0.5, lookback_period=20
+2025-08-29 09:39:51,497 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 动量策略
+2025-08-29 09:39:51,497 - strategies.base_strategy.加速上涨策略 - INFO - Initialized 加速上涨策略 strategy with params: angle_threshold=30, lookback_period=20, volume_ratio_threshold=1.2
+2025-08-29 09:39:51,497 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 加速上涨策略
+2025-08-29 09:39:51,497 - __main__ - INFO - Loaded 2 strategies:
+2025-08-29 09:39:51,497 - __main__ - INFO -   1. 动量策略
+2025-08-29 09:39:51,497 - __main__ - INFO -      File: momentum_strategy
+2025-08-29 09:39:51,497 - __main__ - INFO -      Class: MomentumStrategy
+2025-08-29 09:39:51,498 - __main__ - INFO -      Params: {'lookback_period': 20, 'period': 13, 'threshold': 0.5}
+2025-08-29 09:39:51,498 - __main__ - INFO -   2. 加速上涨策略
+2025-08-29 09:39:51,498 - __main__ - INFO -      File: accelerating_uptrend_strategy.py
+2025-08-29 09:39:51,498 - __main__ - INFO -      Class: AcceleratingUptrendStrategy
+2025-08-29 09:39:51,498 - __main__ - INFO -      Params: {'angle_threshold': 30, 'lookback_period': 20, 'volume_ratio_threshold': 1.2, 'acceleration_window': 2}
+2025-08-29 09:39:51,498 - __main__ - INFO - Created 2 strategy instances
+2025-08-29 09:39:51,498 - __main__ - INFO - Running technical analysis with all strategies...
+2025-08-29 09:39:51,498 - agents.technical_selector - INFO - [TestTechnicalSelector] Updating pool with technical analysis using dynamic strategy loading
+2025-08-29 09:39:51,499 - agents.technical_selector - INFO - [TestTechnicalSelector] Analyzing 251 stocks from latest pool record
+2025-08-29 09:39:51,499 - agents.technical_selector - INFO - [TestTechnicalSelector] Getting standard data for 251 stocks
+2025-08-29 09:39:51,499 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000021: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,500 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000062: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,500 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000063: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,500 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000068: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,501 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000536: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,501 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000541: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,502 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000592: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,502 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000610: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,503 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000650: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,503 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000676: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,504 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000721: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,504 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000782: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,505 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000799: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,505 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000800: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,506 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000938: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,506 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 000977: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,507 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 001202: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,507 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 001308: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,508 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002004: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,508 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002011: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,509 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002023: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,510 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002052: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,510 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002053: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,511 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002066: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,512 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002106: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,513 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002112: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,513 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002141: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,514 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002145: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,515 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002152: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,516 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002158: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,517 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002177: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,518 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002182: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,518 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002186: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,519 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002217: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,520 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002236: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,522 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002259: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,523 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002267: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,523 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002283: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,524 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002323: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,525 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002334: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,526 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002369: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,527 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002376: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,528 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002382: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,529 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002397: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,530 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002421: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,531 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002423: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,533 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002429: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,534 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002445: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,535 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002449: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,536 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002476: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,537 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002510: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,538 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002518: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,539 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002540: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,541 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002575: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,542 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002582: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,544 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002598: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,545 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002600: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,546 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002632: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,547 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002660: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,549 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002708: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,550 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002725: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,551 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002798: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,553 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002807: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,554 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002815: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,556 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002819: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,557 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002823: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,558 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002871: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,560 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002879: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,561 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002888: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,563 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002897: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,564 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002909: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,566 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002911: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,568 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002918: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,569 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002939: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,571 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002953: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,572 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 002993: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,574 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 003009: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,576 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 003019: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,577 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 003022: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,579 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300004: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,581 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300029: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,582 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300037: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,584 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300049: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,586 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300054: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,588 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300057: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,590 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300088: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,592 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300098: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,594 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300133: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,596 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300147: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,598 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300174: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,600 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300184: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,602 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300232: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,604 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300278: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,606 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300287: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,608 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300300: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,610 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300323: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,612 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300328: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,614 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300338: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,616 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300339: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,618 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300345: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,620 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300352: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,622 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300375: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,625 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300415: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,627 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300426: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,629 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300465: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,631 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300542: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,633 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300559: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,636 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300598: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,638 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300686: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,640 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300701: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,642 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300708: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,645 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300730: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,647 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300891: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,649 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300892: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,652 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300893: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,654 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300908: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,656 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300927: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,659 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300931: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,661 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300948: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,663 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300951: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,666 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 300997: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,668 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301002: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,670 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301008: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,673 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301011: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,675 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301041: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,678 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301093: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,680 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301133: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,683 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301189: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,686 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301255: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,688 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301259: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,691 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301305: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,694 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301321: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,696 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301363: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,699 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301525: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,702 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301588: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,704 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 301617: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,707 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600050: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,710 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600076: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,713 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600208: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,715 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600218: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,718 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600226: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,721 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600229: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,724 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600361: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,727 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600400: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,730 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600421: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,732 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600458: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,735 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600503: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,738 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600535: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,741 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600536: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,744 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600563: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,747 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600584: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,750 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600658: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,753 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600660: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,756 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600703: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,759 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600717: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,762 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600722: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,765 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600737: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,768 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600756: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,771 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600805: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,774 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600839: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,777 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600889: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,781 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 600979: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,784 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 601579: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,787 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 601609: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,790 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 601798: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,793 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 601921: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,797 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603008: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,800 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603019: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,803 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603025: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,807 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603038: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,810 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603041: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,813 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603053: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,817 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603088: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,820 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603098: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,823 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603101: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,827 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603118: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,830 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603158: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,834 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603187: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,837 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603215: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,841 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603219: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,845 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603221: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,848 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603222: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,852 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603332: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,856 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603339: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,859 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603365: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,863 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603366: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,867 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603381: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,871 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603586: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,874 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603601: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,878 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603608: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,882 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603626: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,886 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603688: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,890 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603696: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,893 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603757: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,897 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603909: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,901 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603919: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,905 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603928: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,908 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603986: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,912 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 603998: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,916 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 605028: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,920 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 605100: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,924 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 605155: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,928 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 605179: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,932 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 605218: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,936 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 605303: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,941 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 605337: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,946 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688007: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,951 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688035: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,956 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688126: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,960 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688372: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,965 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688381: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,969 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688519: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,973 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688521: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,978 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688582: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,982 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688584: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,986 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688598: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,990 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688657: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,995 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688692: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:51,999 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688709: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,003 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688720: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,008 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688798: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,012 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 688981: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,017 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 430476: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,021 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 830839: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,026 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 831195: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,030 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 831526: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,035 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 831641: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,039 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 831726: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,044 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 831855: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,048 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 832110: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,053 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 832149: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,058 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 832491: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,062 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 832978: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,067 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 833429: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,072 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 833509: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,077 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 834415: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,081 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 836077: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,086 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 836504: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,090 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 836699: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,095 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 838837: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,100 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 839273: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,104 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 839729: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,109 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 871478: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,114 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 871981: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,119 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 872808: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,123 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 872953: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,128 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 873001: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,133 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 873223: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,138 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 873679: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,143 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 920799: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,148 - agents.technical_selector - ERROR - [TestTechnicalSelector] Error processing data for 920819: cannot access local variable 'pd' where it is not associated with a value
+2025-08-29 09:39:52,148 - agents.technical_selector - INFO - [TestTechnicalSelector] Prepared standard data for 0 stocks
+2025-08-29 09:39:52,148 - agents.technical_selector - ERROR - [TestTechnicalSelector] No stock data available for analysis
+2025-08-29 09:39:52,148 - __main__ - ERROR - Technical analysis failed
+2025-08-29 09:39:52,148 - data.mongodb_manager - INFO - MongoDB connection closed
+2025-08-29 09:40:22,410 - __main__ - INFO - Starting TechnicalStockSelector multi-strategy test
+2025-08-29 09:40:22,415 - data.mongodb_manager - INFO - Successfully connected to MongoDB
+2025-08-29 09:40:22,415 - utils.akshare_client - INFO - AkshareClient initialized
+2025-08-29 09:40:22,416 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 09:40:22,416 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 动量策略
+2025-08-29 09:40:22,416 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 09:40:22,416 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 加速上涨策略
+2025-08-29 09:40:22,419 - strategies.base_strategy.动量策略 - INFO - Initialized 动量策略 strategy with params: period=13, threshold=0.5, lookback_period=20
+2025-08-29 09:40:22,419 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 动量策略
+2025-08-29 09:40:22,420 - strategies.base_strategy.加速上涨策略 - INFO - Initialized 加速上涨策略 strategy with params: angle_threshold=30, lookback_period=20, volume_ratio_threshold=1.2
+2025-08-29 09:40:22,420 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 加速上涨策略
+2025-08-29 09:40:22,420 - __main__ - INFO - Loaded 2 strategies:
+2025-08-29 09:40:22,420 - __main__ - INFO -   1. 动量策略
+2025-08-29 09:40:22,420 - __main__ - INFO -      File: momentum_strategy
+2025-08-29 09:40:22,420 - __main__ - INFO -      Class: MomentumStrategy
+2025-08-29 09:40:22,420 - __main__ - INFO -      Params: {'lookback_period': 20, 'period': 13, 'threshold': 0.5}
+2025-08-29 09:40:22,420 - __main__ - INFO -   2. 加速上涨策略
+2025-08-29 09:40:22,420 - __main__ - INFO -      File: accelerating_uptrend_strategy.py
+2025-08-29 09:40:22,420 - __main__ - INFO -      Class: AcceleratingUptrendStrategy
+2025-08-29 09:40:22,420 - __main__ - INFO -      Params: {'angle_threshold': 30, 'lookback_period': 20, 'volume_ratio_threshold': 1.2, 'acceleration_window': 2}
+2025-08-29 09:40:22,420 - __main__ - INFO - Created 2 strategy instances
+2025-08-29 09:40:22,420 - __main__ - INFO - Running technical analysis with all strategies...
+2025-08-29 09:40:22,420 - agents.technical_selector - INFO - [TestTechnicalSelector] Updating pool with technical analysis using dynamic strategy loading
+2025-08-29 09:40:22,421 - agents.technical_selector - INFO - [TestTechnicalSelector] Analyzing 251 stocks from latest pool record
+2025-08-29 09:40:22,422 - agents.technical_selector - INFO - [TestTechnicalSelector] Getting standard data for 251 stocks
+2025-08-29 09:40:22,429 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000021 from buf_data
+2025-08-29 09:40:22,436 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000062 from buf_data
+2025-08-29 09:40:22,442 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000063 from buf_data
+2025-08-29 09:40:22,449 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000068 from buf_data
+2025-08-29 09:40:22,455 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000536 from buf_data
+2025-08-29 09:40:22,461 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000541 from buf_data
+2025-08-29 09:40:22,468 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000592 from buf_data
+2025-08-29 09:40:22,474 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000610 from buf_data
+2025-08-29 09:40:22,480 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000650 from buf_data
+2025-08-29 09:40:22,487 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000676 from buf_data
+2025-08-29 09:40:22,493 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000721 from buf_data
+2025-08-29 09:40:22,499 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000782 from buf_data
+2025-08-29 09:40:22,506 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000799 from buf_data
+2025-08-29 09:40:22,512 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000800 from buf_data
+2025-08-29 09:40:22,519 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000938 from buf_data
+2025-08-29 09:40:22,528 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 000977 from buf_data
+2025-08-29 09:40:22,535 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 001202 from buf_data
+2025-08-29 09:40:22,544 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 001308 from buf_data
+2025-08-29 09:40:22,551 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002004 from buf_data
+2025-08-29 09:40:22,558 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002011 from buf_data
+2025-08-29 09:40:22,565 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002023 from buf_data
+2025-08-29 09:40:22,572 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002052 from buf_data
+2025-08-29 09:40:22,579 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002053 from buf_data
+2025-08-29 09:40:22,585 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002066 from buf_data
+2025-08-29 09:40:22,592 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002106 from buf_data
+2025-08-29 09:40:22,598 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002112 from buf_data
+2025-08-29 09:40:22,605 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002141 from buf_data
+2025-08-29 09:40:22,612 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002145 from buf_data
+2025-08-29 09:40:22,618 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002152 from buf_data
+2025-08-29 09:40:22,625 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002158 from buf_data
+2025-08-29 09:40:22,631 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002177 from buf_data
+2025-08-29 09:40:22,638 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002182 from buf_data
+2025-08-29 09:40:22,645 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002186 from buf_data
+2025-08-29 09:40:22,651 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002217 from buf_data
+2025-08-29 09:40:22,658 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002236 from buf_data
+2025-08-29 09:40:22,664 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002259 from buf_data
+2025-08-29 09:40:22,671 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002267 from buf_data
+2025-08-29 09:40:22,678 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002283 from buf_data
+2025-08-29 09:40:22,684 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002323 from buf_data
+2025-08-29 09:40:22,691 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002334 from buf_data
+2025-08-29 09:40:22,698 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002369 from buf_data
+2025-08-29 09:40:22,704 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002376 from buf_data
+2025-08-29 09:40:22,711 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002382 from buf_data
+2025-08-29 09:40:22,718 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002397 from buf_data
+2025-08-29 09:40:22,725 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002421 from buf_data
+2025-08-29 09:40:22,731 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002423 from buf_data
+2025-08-29 09:40:22,738 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002429 from buf_data
+2025-08-29 09:40:22,745 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002445 from buf_data
+2025-08-29 09:40:22,752 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002449 from buf_data
+2025-08-29 09:40:22,759 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002476 from buf_data
+2025-08-29 09:40:22,765 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002510 from buf_data
+2025-08-29 09:40:22,772 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002518 from buf_data
+2025-08-29 09:40:22,779 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002540 from buf_data
+2025-08-29 09:40:22,786 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002575 from buf_data
+2025-08-29 09:40:22,793 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002582 from buf_data
+2025-08-29 09:40:22,800 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002598 from buf_data
+2025-08-29 09:40:22,807 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002600 from buf_data
+2025-08-29 09:40:22,814 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002632 from buf_data
+2025-08-29 09:40:22,821 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002660 from buf_data
+2025-08-29 09:40:22,829 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002708 from buf_data
+2025-08-29 09:40:22,836 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002725 from buf_data
+2025-08-29 09:40:22,843 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002798 from buf_data
+2025-08-29 09:40:22,850 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002807 from buf_data
+2025-08-29 09:40:22,857 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002815 from buf_data
+2025-08-29 09:40:22,864 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002819 from buf_data
+2025-08-29 09:40:22,871 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002823 from buf_data
+2025-08-29 09:40:22,878 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002871 from buf_data
+2025-08-29 09:40:22,886 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002879 from buf_data
+2025-08-29 09:40:22,893 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002888 from buf_data
+2025-08-29 09:40:22,900 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002897 from buf_data
+2025-08-29 09:40:22,907 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002909 from buf_data
+2025-08-29 09:40:22,914 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002911 from buf_data
+2025-08-29 09:40:22,922 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002918 from buf_data
+2025-08-29 09:40:22,929 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002939 from buf_data
+2025-08-29 09:40:22,937 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002953 from buf_data
+2025-08-29 09:40:22,945 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 002993 from buf_data
+2025-08-29 09:40:22,953 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 003009 from buf_data
+2025-08-29 09:40:22,962 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 003019 from buf_data
+2025-08-29 09:40:22,969 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 003022 from buf_data
+2025-08-29 09:40:22,977 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300004 from buf_data
+2025-08-29 09:40:22,984 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300029 from buf_data
+2025-08-29 09:40:22,992 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300037 from buf_data
+2025-08-29 09:40:23,000 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300049 from buf_data
+2025-08-29 09:40:23,008 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300054 from buf_data
+2025-08-29 09:40:23,015 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300057 from buf_data
+2025-08-29 09:40:23,023 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300088 from buf_data
+2025-08-29 09:40:23,031 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300098 from buf_data
+2025-08-29 09:40:23,039 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300133 from buf_data
+2025-08-29 09:40:23,047 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300147 from buf_data
+2025-08-29 09:40:23,055 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300174 from buf_data
+2025-08-29 09:40:23,063 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300184 from buf_data
+2025-08-29 09:40:23,071 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300232 from buf_data
+2025-08-29 09:40:23,079 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300278 from buf_data
+2025-08-29 09:40:23,087 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300287 from buf_data
+2025-08-29 09:40:23,095 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300300 from buf_data
+2025-08-29 09:40:23,103 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300323 from buf_data
+2025-08-29 09:40:23,111 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300328 from buf_data
+2025-08-29 09:40:23,119 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300338 from buf_data
+2025-08-29 09:40:23,127 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300339 from buf_data
+2025-08-29 09:40:23,136 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300345 from buf_data
+2025-08-29 09:40:23,144 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300352 from buf_data
+2025-08-29 09:40:23,152 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300375 from buf_data
+2025-08-29 09:40:23,160 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300415 from buf_data
+2025-08-29 09:40:23,172 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300426 from buf_data
+2025-08-29 09:40:23,188 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300465 from buf_data
+2025-08-29 09:40:23,203 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300542 from buf_data
+2025-08-29 09:40:23,215 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300559 from buf_data
+2025-08-29 09:40:23,224 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300598 from buf_data
+2025-08-29 09:40:23,233 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300686 from buf_data
+2025-08-29 09:40:23,241 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300701 from buf_data
+2025-08-29 09:40:23,250 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300708 from buf_data
+2025-08-29 09:40:23,258 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300730 from buf_data
+2025-08-29 09:40:23,267 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300891 from buf_data
+2025-08-29 09:40:23,275 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300892 from buf_data
+2025-08-29 09:40:23,283 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300893 from buf_data
+2025-08-29 09:40:23,292 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300908 from buf_data
+2025-08-29 09:40:23,300 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300927 from buf_data
+2025-08-29 09:40:23,309 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300931 from buf_data
+2025-08-29 09:40:23,318 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300948 from buf_data
+2025-08-29 09:40:23,326 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300951 from buf_data
+2025-08-29 09:40:23,335 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 300997 from buf_data
+2025-08-29 09:40:23,343 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301002 from buf_data
+2025-08-29 09:40:23,351 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301008 from buf_data
+2025-08-29 09:40:23,360 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301011 from buf_data
+2025-08-29 09:40:23,368 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301041 from buf_data
+2025-08-29 09:40:23,377 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301093 from buf_data
+2025-08-29 09:40:23,385 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301133 from buf_data
+2025-08-29 09:40:23,394 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301189 from buf_data
+2025-08-29 09:40:23,402 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301255 from buf_data
+2025-08-29 09:40:23,410 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301259 from buf_data
+2025-08-29 09:40:23,419 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301305 from buf_data
+2025-08-29 09:40:23,428 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301321 from buf_data
+2025-08-29 09:40:23,437 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301363 from buf_data
+2025-08-29 09:40:23,445 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301525 from buf_data
+2025-08-29 09:40:23,454 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301588 from buf_data
+2025-08-29 09:40:23,463 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 301617 from buf_data
+2025-08-29 09:40:23,471 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600050 from buf_data
+2025-08-29 09:40:23,480 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600076 from buf_data
+2025-08-29 09:40:23,489 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600208 from buf_data
+2025-08-29 09:40:23,498 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600218 from buf_data
+2025-08-29 09:40:23,507 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600226 from buf_data
+2025-08-29 09:40:23,516 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600229 from buf_data
+2025-08-29 09:40:23,524 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600361 from buf_data
+2025-08-29 09:40:23,533 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600400 from buf_data
+2025-08-29 09:40:23,542 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600421 from buf_data
+2025-08-29 09:40:23,551 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600458 from buf_data
+2025-08-29 09:40:23,560 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600503 from buf_data
+2025-08-29 09:40:23,568 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600535 from buf_data
+2025-08-29 09:40:23,577 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600536 from buf_data
+2025-08-29 09:40:23,586 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600563 from buf_data
+2025-08-29 09:40:23,595 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600584 from buf_data
+2025-08-29 09:40:23,604 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600658 from buf_data
+2025-08-29 09:40:23,613 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600660 from buf_data
+2025-08-29 09:40:23,623 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600703 from buf_data
+2025-08-29 09:40:23,632 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600717 from buf_data
+2025-08-29 09:40:23,641 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600722 from buf_data
+2025-08-29 09:40:23,650 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600737 from buf_data
+2025-08-29 09:40:23,659 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600756 from buf_data
+2025-08-29 09:40:23,668 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600805 from buf_data
+2025-08-29 09:40:23,677 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600839 from buf_data
+2025-08-29 09:40:23,686 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600889 from buf_data
+2025-08-29 09:40:23,696 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 600979 from buf_data
+2025-08-29 09:40:23,705 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 601579 from buf_data
+2025-08-29 09:40:23,714 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 601609 from buf_data
+2025-08-29 09:40:23,723 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 601798 from buf_data
+2025-08-29 09:40:23,732 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 601921 from buf_data
+2025-08-29 09:40:23,742 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603008 from buf_data
+2025-08-29 09:40:23,751 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603019 from buf_data
+2025-08-29 09:40:23,760 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603025 from buf_data
+2025-08-29 09:40:23,769 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603038 from buf_data
+2025-08-29 09:40:23,779 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603041 from buf_data
+2025-08-29 09:40:23,788 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603053 from buf_data
+2025-08-29 09:40:23,797 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603088 from buf_data
+2025-08-29 09:40:23,807 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603098 from buf_data
+2025-08-29 09:40:23,816 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603101 from buf_data
+2025-08-29 09:40:23,825 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603118 from buf_data
+2025-08-29 09:40:23,835 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603158 from buf_data
+2025-08-29 09:40:23,844 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603187 from buf_data
+2025-08-29 09:40:23,853 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603215 from buf_data
+2025-08-29 09:40:23,863 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603219 from buf_data
+2025-08-29 09:40:23,872 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603221 from buf_data
+2025-08-29 09:40:23,882 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603222 from buf_data
+2025-08-29 09:40:23,891 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603332 from buf_data
+2025-08-29 09:40:23,901 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603339 from buf_data
+2025-08-29 09:40:23,912 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603365 from buf_data
+2025-08-29 09:40:23,922 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603366 from buf_data
+2025-08-29 09:40:23,932 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603381 from buf_data
+2025-08-29 09:40:23,943 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603586 from buf_data
+2025-08-29 09:40:23,953 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603601 from buf_data
+2025-08-29 09:40:23,964 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603608 from buf_data
+2025-08-29 09:40:23,973 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603626 from buf_data
+2025-08-29 09:40:23,984 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603688 from buf_data
+2025-08-29 09:40:23,995 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603696 from buf_data
+2025-08-29 09:40:24,007 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603757 from buf_data
+2025-08-29 09:40:24,018 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603909 from buf_data
+2025-08-29 09:40:24,031 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603919 from buf_data
+2025-08-29 09:40:24,042 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603928 from buf_data
+2025-08-29 09:40:24,053 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603986 from buf_data
+2025-08-29 09:40:24,065 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 603998 from buf_data
+2025-08-29 09:40:24,076 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 605028 from buf_data
+2025-08-29 09:40:24,087 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 605100 from buf_data
+2025-08-29 09:40:24,098 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 605155 from buf_data
+2025-08-29 09:40:24,110 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 605179 from buf_data
+2025-08-29 09:40:24,121 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 605218 from buf_data
+2025-08-29 09:40:24,133 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 605303 from buf_data
+2025-08-29 09:40:24,147 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 605337 from buf_data
+2025-08-29 09:40:24,165 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688007 from buf_data
+2025-08-29 09:40:24,178 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688035 from buf_data
+2025-08-29 09:40:24,189 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688126 from buf_data
+2025-08-29 09:40:24,199 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688372 from buf_data
+2025-08-29 09:40:24,211 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688381 from buf_data
+2025-08-29 09:40:24,223 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688519 from buf_data
+2025-08-29 09:40:24,234 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688521 from buf_data
+2025-08-29 09:40:24,247 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688582 from buf_data
+2025-08-29 09:40:24,259 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688584 from buf_data
+2025-08-29 09:40:24,276 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688598 from buf_data
+2025-08-29 09:40:24,296 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688657 from buf_data
+2025-08-29 09:40:24,308 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688692 from buf_data
+2025-08-29 09:40:24,320 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688709 from buf_data
+2025-08-29 09:40:24,331 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688720 from buf_data
+2025-08-29 09:40:24,343 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688798 from buf_data
+2025-08-29 09:40:24,355 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 688981 from buf_data
+2025-08-29 09:40:24,366 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 430476 from buf_data
+2025-08-29 09:40:24,376 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 830839 from buf_data
+2025-08-29 09:40:24,387 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 831195 from buf_data
+2025-08-29 09:40:24,397 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 831526 from buf_data
+2025-08-29 09:40:24,407 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 831641 from buf_data
+2025-08-29 09:40:24,417 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 831726 from buf_data
+2025-08-29 09:40:24,429 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 831855 from buf_data
+2025-08-29 09:40:24,440 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 832110 from buf_data
+2025-08-29 09:40:24,451 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 832149 from buf_data
+2025-08-29 09:40:24,462 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 832491 from buf_data
+2025-08-29 09:40:24,473 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 832978 from buf_data
+2025-08-29 09:40:24,485 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 833429 from buf_data
+2025-08-29 09:40:24,496 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 833509 from buf_data
+2025-08-29 09:40:24,507 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 834415 from buf_data
+2025-08-29 09:40:24,519 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 836077 from buf_data
+2025-08-29 09:40:24,530 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 836504 from buf_data
+2025-08-29 09:40:24,540 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 836699 from buf_data
+2025-08-29 09:40:24,551 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 838837 from buf_data
+2025-08-29 09:40:24,563 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 839273 from buf_data
+2025-08-29 09:40:24,576 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 839729 from buf_data
+2025-08-29 09:40:24,588 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 871478 from buf_data
+2025-08-29 09:40:24,599 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 871981 from buf_data
+2025-08-29 09:40:24,610 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 872808 from buf_data
+2025-08-29 09:40:24,621 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 872953 from buf_data
+2025-08-29 09:40:24,632 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 873001 from buf_data
+2025-08-29 09:40:24,643 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 873223 from buf_data
+2025-08-29 09:40:24,654 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 873679 from buf_data
+2025-08-29 09:40:24,665 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 920799 from buf_data
+2025-08-29 09:40:24,676 - agents.technical_selector - INFO - [TestTechnicalSelector] Using cached data for 920819 from buf_data
+2025-08-29 09:40:24,676 - agents.technical_selector - INFO - [TestTechnicalSelector] Prepared standard data for 251 stocks
+2025-08-29 09:40:24,676 - agents.technical_selector - INFO - [TestTechnicalSelector] Executing strategy: 动量策略
+2025-08-29 09:40:24,676 - strategies.base_strategy.动量策略 - INFO - [动量策略] 执行 动量策略 策略，处理 251 只股票
+2025-08-29 09:40:24,682 - strategies.base_strategy.动量策略 - INFO - [动量策略] 选中 196 只股票
+2025-08-29 09:40:24,687 - data.database_operations - INFO - Updated latest pool record with 196 stocks from 动量策略
+2025-08-29 09:40:24,687 - strategies.base_strategy.动量策略 - INFO - [动量策略] Successfully saved strategy results to pool with key: 技术分析Agent_动量策略_2025-34
+2025-08-29 09:40:24,687 - strategies.base_strategy.动量策略 - INFO - [动量策略] 策略结果已自动保存到池中
+2025-08-29 09:40:24,687 - agents.technical_selector - INFO - [TestTechnicalSelector] Strategy 动量策略 selected 196 stocks
+2025-08-29 09:40:24,687 - agents.technical_selector - INFO - [TestTechnicalSelector] Executing strategy: 加速上涨策略
+2025-08-29 09:40:24,687 - strategies.base_strategy.加速上涨策略 - INFO - [加速上涨策略] 执行 加速上涨策略 策略，处理 251 只股票
+2025-08-29 09:40:24,701 - strategies.base_strategy.加速上涨策略 - INFO - [加速上涨策略] 选中 14 只股票
+2025-08-29 09:40:24,705 - data.database_operations - INFO - Updated latest pool record with 14 stocks from 加速上涨策略
+2025-08-29 09:40:24,705 - strategies.base_strategy.加速上涨策略 - INFO - [加速上涨策略] Successfully saved strategy results to pool with key: 技术分析Agent_加速上涨策略_2025-34
+2025-08-29 09:40:24,705 - strategies.base_strategy.加速上涨策略 - INFO - [加速上涨策略] 策略结果已自动保存到池中
+2025-08-29 09:40:24,705 - agents.technical_selector - INFO - [TestTechnicalSelector] Strategy 加速上涨策略 selected 14 stocks
+2025-08-29 09:40:24,705 - agents.technical_selector - INFO - [TestTechnicalSelector] Technical analysis completed. Total selected stocks: 210
+2025-08-29 09:40:24,708 - agents.technical_selector - INFO - [TestTechnicalSelector] Updated latest pool record with 210 technical analysis stocks
+2025-08-29 09:40:24,709 - __main__ - INFO - Technical analysis completed successfully
+2025-08-29 09:40:24,709 - __main__ - INFO - Strategy names: ['动量策略', '加速上涨策略']
+2025-08-29 09:40:24,709 - __main__ - INFO - Number of strategies: 2
+2025-08-29 09:40:24,709 - data.mongodb_manager - INFO - MongoDB connection closed

@@ -320,6 +320,31 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **IMPLEMENTED**: Hidden reference series on left axis to maintain proper index scale display while keeping curves synchronized
 - **PERFECTED**: Starting point synchronization ensuring both asset and benchmark curves begin from exactly the same point on 20200922
 
+### TP-Link Router WAN2 Control Enhancement
+- **IMPLEMENTED**: Enhanced Selenium-based automation script for TP-Link router WAN2 connection control
+- **ADDED**: Flexible configuration support with both command-line arguments and JSON config files
+- **ENHANCED**: Robust element location strategies with multiple fallback methods for improved reliability
+- **IMPROVED**: Comprehensive error handling and logging for better debugging and monitoring
+- **OPTIMIZED**: Performance with reduced wait times and efficient element interaction methods
+- **ADDED**: Support for headless and non-headless modes for both automated and debugging usage
+- **CREATED**: Detailed documentation and example usage scripts for easy adoption
+- **VERIFIED**: Functionality with comprehensive test scripts ensuring proper operation
+
+### TP-Link Router Right-side WAN2 Control Fix
+- **FIXED**: Resolved issue where script was controlling left-side WAN1 instead of right-side WAN2
+- **IMPLEMENTED**: Position-based element identification to ensure right-side WAN2 control
+- **ADDED**: Enhanced button detection logic using x-coordinate positioning
+- **CREATED**: Dedicated right-side WAN2 controller script with improved accuracy
+- **VERIFIED**: Functionality to ensure proper control of right-side WAN2 interface
+
+### TP-Link Router Right-side WAN2 Restart and Recording Enhancement
+- **IMPLEMENTED**: Specialized script for restarting and recording right-side WAN2 operations
+- **ADDED**: Position-based element identification specifically for right-side WAN2 interface
+- **ENHANCED**: Improved button detection using coordinate-based positioning algorithms
+- **ADDED**: Support for operation recording and logging
+- **CREATED**: Comprehensive documentation and usage examples
+- **VERIFIED**: Functionality to ensure accurate control of right-side WAN2 interface
+
 ## Usage Patterns
 
 ### Running Agents

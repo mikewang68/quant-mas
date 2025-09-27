@@ -1,0 +1,37 @@
+{
+  "test_timestamp": "20250908_064713",
+  "test_description": "Custom FireCrawl Guba scraping test with specific requirements",
+  "firecrawl_api_url": "http://192.168.1.2:8080/v1",
+  "test_results": {
+    "https://guba.eastmoney.com/list,300339,1,f.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "requirement": "5_days"
+    },
+    "https://guba.eastmoney.com/list,300339,2,f.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "requirement": "5_items"
+    },
+    "https://guba.eastmoney.com/list,300339,3,f.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "requirement": "5_days"
+    },
+    "https://guba.eastmoney.com/list,300339,99.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "requirement": "5_days"
+    },
+    "https://guba.eastmoney.com/list,300339.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "requirement": "10_items"
+    }
+  }
+}

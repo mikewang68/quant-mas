@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Accounts Loading</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Test Accounts Loading</h1>
+    <label for="accountSelect">选择账户:</label>
+    <select id="accountSelect">
+        <option value="">加载中...</option>
+    </select>
+
+    <script>
+        // Test function to load accounts
+        function loadAccounts() {
+            // Show loading state
+            const accountSelect = $('#accountSelect');
+            accountSelect.empty();
+            accountSelect.append('<option value="">加载中...</option>');
+
+            $.get('http://localhost:5000/api/accounts')
+                .done(function(accounts) {
+                    console.log('Accounts loaded:', accounts);
+                    accountSelect.empty();
+
+                    // Add default option
+                    accountSelect.append('<option value="">请选择账户</option>');
+
+                    // Check if accounts is an array
+                    if (!Array.isArray(accounts)) {
+                        console.error('Accounts data is not an array:', accounts);
+                        accountSelect.append('<option value="">数据格式错误</option>');
+                        return;
+                    }
+
+                    // Check if accounts array is empty
+                    if (accounts.length === 0) {
+                        accountSelect.append('<option value="">暂无账户数据</option>');
+                        return;
+                    }
+
+                    // Add all accounts
+                    let validAccounts = 0;
+                    accounts.forEach(function(account) {
+                        // Ensure account has _id and is not null/undefined
+                        if (account && account._id) {
+                            const option = $('<option></option>');
+                            option.val(account._id);
+                            option.text(account.name || '未命名账户');
+                            accountSelect.append(option);
+                            validAccounts++;
+                        } else {
+                            console.warn('Skipping invalid account entry:', account);
+                        }
+                    });
+
+                    // Handle case where no valid accounts were found
+                    if (validAccounts === 0) {
+                        accountSelect.append('<option value="">无有效账户数据</option>');
+                        return;
+                    }
+
+                    console.log('Accounts loaded successfully');
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('Failed to load accounts:', error);
+                    console.error('Response status:', xhr.status);
+                    console.error('Response text:', xhr.responseText);
+                    accountSelect.empty();
+                    accountSelect.append('<option value="">加载失败</option>');
+                });
+        }
+
+        // Load accounts when page loads
+        $(document).ready(function() {
+            console.log('Document ready, loading accounts...');
+            loadAccounts();
+        });
+    </script>
+</body>
+</html>
+

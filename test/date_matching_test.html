@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Date Matching Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Date Matching Test</h1>
+    <button id="testBtn">Test Date Matching</button>
+    <div id="result"></div>
+
+    <script>
+        $('#testBtn').click(function() {
+            // Simulate portfolio dates
+            const portfolioDates = [
+                "2025-09-19",
+                "2025-09-20",
+                "2025-09-21",
+                "2025-09-22",
+                "2025-09-23"
+            ];
+
+            // Simulate benchmark data
+            const benchmarkData = [
+                {"date": "2025-09-19", "close": 4501.92},
+                {"date": "2025-09-22", "close": 4522.61},
+                {"date": "2025-09-23", "close": 4468.96}
+            ];
+
+            // Create benchmark map
+            const benchmarkMap = {};
+            benchmarkData.forEach(item => {
+                benchmarkMap[item.date] = item.close;
+            });
+
+            // Match dates
+            const matchedBenchmarkData = [];
+            const matchedBenchmarkDates = [];
+
+            portfolioDates.forEach(date => {
+                console.log("Processing date:", date);
+
+                // Try exact match first
+                if (benchmarkMap[date]) {
+                    console.log("Exact match found for", date);
+                    matchedBenchmarkData.push(benchmarkMap[date]);
+                    matchedBenchmarkDates.push(date);
+                } else {
+                    console.log("No exact match for", date, "- searching nearby dates");
+                    // Try to find closest date (in case of weekend/holiday)
+                    const portfolioDate = new Date(date);
+                    let found = false;
+
+                    // Check previous days
+                    for (let i = 1; i <= 5 && !found; i++) {
+                        const checkDate = new Date(portfolioDate);
+                        checkDate.setDate(checkDate.getDate() - i);
+                        const checkDateString = checkDate.toISOString().split('T')[0];
+                        console.log("Checking previous date:", checkDateString);
+                        if (benchmarkMap[checkDateString]) {
+                            console.log("Found previous match:", checkDateString);
+                            matchedBenchmarkData.push(benchmarkMap[checkDateString]);
+                            matchedBenchmarkDates.push(date); // Use portfolio date for alignment
+                            found = true;
+                        }
+                    }
+
+                    // Check next days
+                    for (let i = 1; i <= 5 && !found; i++) {
+                        const checkDate = new Date(portfolioDate);
+                        checkDate.setDate(checkDate.getDate() + i);
+                        const checkDateString = checkDate.toISOString().split('T')[0];
+                        console.log("Checking next date:", checkDateString);
+                        if (benchmarkMap[checkDateString]) {
+                            console.log("Found next match:", checkDateString);
+                            matchedBenchmarkData.push(benchmarkMap[checkDateString]);
+                            matchedBenchmarkDates.push(date); // Use portfolio date for alignment
+                            found = true;
+                        }
+                    }
+
+                    // If no match found, use the last available benchmark data
+                    if (!found) {
+                        console.log("No match found, using last available data");
+                        if (matchedBenchmarkData.length > 0) {
+                            // Use the last available benchmark value
+                            matchedBenchmarkData.push(matchedBenchmarkData[matchedBenchmarkData.length - 1]);
+                            matchedBenchmarkDates.push(date);
+                        } else {
+                            // If no benchmark data at all, push null
+                            matchedBenchmarkData.push(null);
+                            matchedBenchmarkDates.push(date);
+                        }
+                    }
+                }
+            });
+
+            // Display results
+            let resultHtml = "<h2>Results:</h2>";
+            resultHtml += "<h3>Portfolio Dates:</h3><ul>";
+            portfolioDates.forEach(date => {
+                resultHtml += `<li>${date}</li>`;
+            });
+            resultHtml += "</ul>";
+
+            resultHtml += "<h3>Matched Results:</h3><ul>";
+            for (let i = 0; i < matchedBenchmarkDates.length; i++) {
+                resultHtml += `<li>${matchedBenchmarkDates[i]} -> ${matchedBenchmarkData[i]}</li>`;
+            }
+            resultHtml += "</ul>";
+
+            $('#result').html(resultHtml);
+        });
+    </script>
+</body>
+</html>
+

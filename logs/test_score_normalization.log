@@ -1,0 +1,34 @@
+2025-08-29 10:03:25,114 - __main__ - INFO - Starting score normalization test
+2025-08-29 10:03:25,122 - data.mongodb_manager - INFO - Successfully connected to MongoDB
+2025-08-29 10:03:25,122 - utils.akshare_client - INFO - AkshareClient initialized
+2025-08-29 10:03:25,123 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 10:03:25,123 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 动量策略
+2025-08-29 10:03:25,123 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 10:03:25,124 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 加速上涨策略
+2025-08-29 10:03:25,127 - strategies.base_strategy.动量策略 - INFO - Initialized 动量策略 strategy with params: period=13, threshold=0.5, lookback_period=20
+2025-08-29 10:03:25,127 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 动量策略
+2025-08-29 10:03:25,127 - strategies.base_strategy.加速上涨策略 - INFO - Initialized 加速上涨策略 strategy with params: angle_threshold=30, lookback_period=20, volume_ratio_threshold=1.2
+2025-08-29 10:03:25,127 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 加速上涨策略
+2025-08-29 10:03:25,127 - __main__ - INFO - Loaded 2 strategies:
+2025-08-29 10:03:25,127 - __main__ - INFO -   1. 动量策略
+2025-08-29 10:03:25,127 - __main__ - INFO -   2. 加速上涨策略
+2025-08-29 10:03:25,127 - __main__ - INFO - Created 2 strategy instances
+2025-08-29 10:03:25,127 - __main__ - INFO - Score normalization test completed successfully
+2025-08-29 10:03:25,128 - data.mongodb_manager - INFO - MongoDB connection closed
+2025-08-29 10:05:39,868 - __main__ - INFO - Starting score normalization test
+2025-08-29 10:05:39,874 - data.mongodb_manager - INFO - Successfully connected to MongoDB
+2025-08-29 10:05:39,874 - utils.akshare_client - INFO - AkshareClient initialized
+2025-08-29 10:05:39,875 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 10:05:39,875 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 动量策略
+2025-08-29 10:05:39,875 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy file and class from program field
+2025-08-29 10:05:39,875 - agents.technical_selector - INFO - [TestTechnicalSelector] Loaded strategy from database: 加速上涨策略
+2025-08-29 10:05:39,878 - strategies.base_strategy.动量策略 - INFO - Initialized 动量策略 strategy with params: period=13, threshold=0.5, lookback_period=20
+2025-08-29 10:05:39,878 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 动量策略
+2025-08-29 10:05:39,878 - strategies.base_strategy.加速上涨策略 - INFO - Initialized 加速上涨策略 strategy with params: angle_threshold=30, lookback_period=20, volume_ratio_threshold=1.2
+2025-08-29 10:05:39,878 - agents.technical_selector - INFO - [TestTechnicalSelector] Successfully loaded dynamic strategy: 加速上涨策略
+2025-08-29 10:05:39,878 - __main__ - INFO - Loaded 2 strategies:
+2025-08-29 10:05:39,878 - __main__ - INFO -   1. 动量策略
+2025-08-29 10:05:39,878 - __main__ - INFO -   2. 加速上涨策略
+2025-08-29 10:05:39,878 - __main__ - INFO - Created 2 strategy instances
+2025-08-29 10:05:39,878 - __main__ - INFO - Score normalization test completed successfully
+2025-08-29 10:05:39,879 - data.mongodb_manager - INFO - MongoDB connection closed

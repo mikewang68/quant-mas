@@ -1,0 +1,67 @@
+{
+  "test_timestamp": "20250908_065842",
+  "firecrawl_config": {
+    "api_url": "http://192.168.1.2:8080/v1",
+    "timeout": 30,
+    "api_key_available": false
+  },
+  "scraping_results": {
+    "https://guba.eastmoney.com/list,300339,1,f.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "links_count": 0,
+      "content": ""
+    },
+    "https://guba.eastmoney.com/list,300339,2,f.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "links_count": 0,
+      "content": ""
+    },
+    "https://guba.eastmoney.com/list,300339,3,f.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "links_count": 0,
+      "content": ""
+    },
+    "https://guba.eastmoney.com/list,300339,99.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "links_count": 0,
+      "content": ""
+    },
+    "https://guba.eastmoney.com/list,300339.html": {
+      "status": "success",
+      "title": "N/A",
+      "content_length": 0,
+      "links_count": 0,
+      "content": ""
+    }
+  },
+  "search_results": {
+    "润和软件 股票分析": {
+      "status": "success",
+      "results_count": 0,
+      "results": []
+    },
+    "300339 公司新闻": {
+      "status": "success",
+      "results_count": 0,
+      "results": []
+    },
+    "润和软件 投资者关系": {
+      "status": "success",
+      "results_count": 0,
+      "results": []
+    },
+    "300339 财务数据": {
+      "status": "success",
+      "results_count": 0,
+      "results": []
+    }
+  }
+}

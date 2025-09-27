@@ -1796,6 +1796,51 @@ def register_routes(app: Flask):
     @app.route("/api/account-performance/<string:account_id>", methods=["GET"])
     def get_account_performance(account_id):
         """Get account performance data for charting (last 2 years)"""
+
+    @app.route("/api/update-market-data", methods=["POST"])
+    def update_market_data():
+        """Update market data by calling down2mongo script"""
+        try:
+            # Import and run the down2mongo script
+            import subprocess
+            import sys
+            from pathlib import Path
+
+            # Get the path to down2mongo.py
+            down2mongo_path = Path(__file__).parent.parent / "utils" / "down2mongo.py"
+
+            # Run the script as a subprocess
+            result = subprocess.run(
+                [sys.executable, str(down2mongo_path)],
+                capture_output=True,
+                text=True,
+                timeout=300  # 5 minute timeout
+            )
+
+            if result.returncode == 0:
+                return jsonify({
+                    "status": "success",
+                    "message": "Market data updated successfully",
+                    "output": result.stdout
+                })
+            else:
+                return jsonify({
+                    "status": "error",
+                    "message": "Failed to update market data",
+                    "error": result.stderr
+                }), 500
+
+        except subprocess.TimeoutExpired:
+            return jsonify({
+                "status": "error",
+                "message": "Market data update timed out"
+            }), 500
+        except Exception as e:
+            logger.error(f"Error updating market data: {e}")
+            return jsonify({
+                "status": "error",
+                "message": f"Failed to update market data: {str(e)}"
+            }), 500
         try:
             # Check if MongoDB connection is available
             if app.config["MONGO_DB"] is None:

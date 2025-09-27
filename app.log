@@ -1,0 +1,31 @@
+INFO:data.mongodb_manager:Successfully connected to MongoDB
+INFO:__main__:Successfully initialized MongoDBManager
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.1.177:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+INFO:data.mongodb_manager:Successfully connected to MongoDB
+INFO:__main__:Successfully initialized MongoDBManager
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 107-926-869
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:17] "GET /dashboard HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:17] "[36mGET /static/css/style.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:17] "[36mGET /static/js/main.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:18] "GET /api/accounts HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:18] "GET /api/accounts HTTP/1.1" 200 -
+INFO:utils.akshare_client:AkshareClient initialized
+INFO:utils.akshare_client:Access limit reached (1), sleeping for 1 seconds...
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:18] "GET /api/orders HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:18] "GET /api/accounts HTTP/1.1" 200 -
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:18] "GET /api/accounts HTTP/1.1" 200 -
+INFO:utils.akshare_client:Retrieved 484 daily K-data records for 300339
+INFO:utils.akshare_client:Access limit reached (1), sleeping for 1 seconds...
+INFO:utils.akshare_client:Retrieved 483 daily K-data records for 000692
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:21] "GET /api/account-performance/689699f3247e03cf516d5841 HTTP/1.1" 200 -
+INFO:utils.akshare_client:AkshareClient initialized
+  0%|          | 0/16 [00:00<?, ?it/s]  6%|▋         | 1/16 [00:00<00:02,  5.63it/s] 12%|█▎        | 2/16 [00:00<00:02,  5.88it/s] 19%|█▉        | 3/16 [00:00<00:02,  5.62it/s] 25%|██▌       | 4/16 [00:00<00:02,  5.71it/s] 31%|███▏      | 5/16 [00:00<00:01,  5.83it/s] 38%|███▊      | 6/16 [00:01<00:01,  5.77it/s] 44%|████▍     | 7/16 [00:01<00:01,  5.80it/s] 50%|█████     | 8/16 [00:01<00:01,  5.82it/s] 56%|█████▋    | 9/16 [00:01<00:01,  5.83it/s] 62%|██████▎   | 10/16 [00:01<00:00,  6.22it/s] 69%|██████▉   | 11/16 [00:01<00:00,  6.20it/s] 75%|███████▌  | 12/16 [00:02<00:00,  5.65it/s] 81%|████████▏ | 13/16 [00:02<00:00,  5.57it/s] 88%|████████▊ | 14/16 [00:02<00:00,  5.82it/s] 94%|█████████▍| 15/16 [00:02<00:00,  5.63it/s]100%|██████████| 16/16 [00:02<00:00,  5.53it/s]                                               INFO:utils.akshare_client:Retrieved 484 records for index 000300
+INFO:werkzeug:192.168.1.177 - - [23/Sep/2025 14:26:24] "GET /api/benchmark-data/000300 HTTP/1.1" 200 -

@@ -1072,7 +1072,33 @@
     // Handle update data button
     document.getElementById('update-data-btn').addEventListener('click', function() {
         if (confirm('确定要更新市场数据吗？这可能需要一些时间。')) {
-            alert('市场数据更新已开始。这可能需要几分钟时间。');
+            // Show loading state
+            const updateBtn = this;
+            const originalText = updateBtn.innerHTML;
+            updateBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 更新中...';
+            updateBtn.disabled = true;
+
+            // Call the API to update market data
+            fetch('/api/update-market-data', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert('市场数据更新成功！\\n\\n' + data.output);
+                } else {
+                    alert('市场数据更新失败：\\n\\n' + data.message + '\\n\\n' + (data.error || ''));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating market data:', error);
+                alert('更新市场数据时发生错误：\\n\\n' + error.message);
+            })
+            .finally(() => {
+                // Reset button state
+                updateBtn.innerHTML = originalText;
+                updateBtn.disabled = false;
+            });
         }
     });
 

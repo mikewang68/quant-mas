@@ -1,0 +1,8 @@
+{
+    "router_ip": "192.168.1.1",
+    "username": "wangdg68",
+    "password": "wap951020ZJL",
+    "headless": true,
+    "log_file": "wan2_operations.log"
+}
+

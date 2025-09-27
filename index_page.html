@@ -1,0 +1,1193 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+
+<link rel="shortcut icon" href="favicon.ico"/>
+<link type="text/css" href="css/widget.css" rel="stylesheet" />
+
+<link type="text/css" href="themes/neoteric/css/widget.css" rel="stylesheet" />
+<link type="text/css" href="themes/neoteric/css/style.css" rel="stylesheet" />
+
+<!--[if lte IE 8]>
+<meta http-equiv="X-UA-Compatible" content="IE=8" />
+<link href="themes/old/neoteric/ie.css" rel="stylesheet" type="text/css" />
+<![endif]-->
+
+<title>Opening...</title>
+</head>
+<body>
+<noscript>
+	<meta http-equiv="refresh" content="0; url=error.html"/>
+</noscript>
+
+<!--ä¸»çé¢-->
+<!--é¡¶é¨é¢è²æ¡-->
+<div class="top-banner">
+	<div class="middle-wrap">	
+		<div class="control">
+			<div class="logout">
+				<span class="icon"></span>
+				<span class="text"></span>
+			</div>
+			<div class="user">
+				<span class="icon"></span>
+				<span class="text"></span>
+			</div>
+		</div>
+		
+		<a href="http://www.tp-link.com.cn" target="_blank">
+			<div class="top-banner-logo"></div>
+		</a>
+
+		<div class="product-info">
+			<h1>|</h1>
+			<div id="product-type"></div>
+		</div>
+
+	</div>
+</div>
+
+<div class="user-info" style="display:block;">
+    <div class="middle-wrap">
+        <a class="top-control-btn" id="top-control-unknown-ap" href="javascript:void(0);" title="ç¹å»æ¥çä¸æ¯æçAPåå·åè¡¨">
+            <span id="unknown-ap" class="text"></span>
+        </a>
+    </div>
+</div>
+<div id= "top-tip" class="top-tip">
+	<a>å¼å¯äºç®¡çå,æ çº¿è®¾ç½®ãAPç®¡çãè®¤è¯è®¾ç½®å¯ä»¥å¨TP-LINKåç¨ç½ç»ä¸è¿è¡è¿ç¨éä¸­éç½®ãåç»­ç»´æ¤æ´å æ¹ä¾¿ã</a>
+	<span id="opencloud">å¼å¯äºç®¡ç</span>
+	<div class='option'>
+		<span class='nomore'>ä¸åæç¤º</span>
+		<span class='close'>å³é­</span>
+	</div>
+</div>
+<div id="link-detail-window" style="max-height:520px;overflow:auto;display:none">
+	<table id = "link-detail-model-header" class="link-detail-table detail" style='background-color:#fafafa'>
+		<tr><td class='detail-key' style='text-align:center;width:80px;border:1px solid #d9d9d9;'>åºå·</td><td class='detail-value' style='text-align:center;border:1px solid #d9d9d9;width:350px'>APåå·</td></tr>
+	</table>
+	<table id = "link-detail-model" class="link-detail-table detail">
+	</table>
+</div>
+
+<div class="middle-wrap" style="min-width:1380px">
+	<div class="main-wrap">
+		<ul id="ul-nav" style="display:none;">
+			<li>
+				<div class="nav-wrap">
+					<a class="nav" name="advanced" href="pages/frame/advanced.html"></a>
+				</div>
+			</li>
+		</ul>
+
+		<div class="tab-menu-wrapper">
+	        <div id="tab-menu" class="tab-menu">
+	        </div> 
+	    </div>	
+
+
+		<div class="top-content">
+			<div class="top-content-wrap" id="top-content"></div>
+		</div><!-- top-content -->
+		
+<!--é®è½å±-->
+<div id="mask" class="mask"></div>
+<!--loading-->
+
+
+<!-- å¨çº¿åçº§ -->
+<div id="cloud_upgrade_alert_cnt" class="hidden warning" style="width:550px">
+	<div id="cloud_confirm_cnt">
+		<h4 class="title"  style="width:486px;text-align:center;margin:15px 0px">
+	 		<span class="text" id="cloud_confirm_content" style="font-size:28px">è½¯ä»¶åçº§æç¤º</span>
+		</h4>
+    	<div style="width:486px;text-align:center">
+        	<span class="text" style="font-size:12px">åç°æ°çè½¯ä»¶çæ¬ï¼å»ºè®®ç«å³åçº§</span>
+    	</div>
+    </div>
+	<div id="upgrade_note" style="margin:16px 0px;vertical-align:middle">
+	 	<hr style="margin:15px 0px"/>
+        <div style="width:174px;margin:10px 0px">
+            <label style="font-size:13px">æ°çè½¯ä»¶æ´æ°è¯´æ:</label>
+        </div>
+        <div style="width:486px;margin:10px 0px;vertical-align:middle">
+            <span id="upgrade_text" style="font-size:12px">
+            </span>
+        </div>
+    </div>
+    <div id="upgrade_warm" style="width:486px">
+        <label style="font-size:12px">æ³¨æäºé¡¹:   è½¯ä»¶åçº§è¿ç¨ä¸­ä¸è½å³é­è·¯ç±å¨çµæºï¼å¦åå°é æè·¯ç±å¨æåï¼åçº§æåä¹åå°èªå¨éå¯ã</label>
+    </div>
+</div>
+
+<div id="cloud_upgrade_cnt" class="hidden warning">
+	 <div id="cloud_upgrade_bar_cnt" class="reboot-loading-msg hidden">
+	 	<p id="cloud_note" class="reboot-progressbar-text"></p>
+	    <input id="cloud_pro_bar" type="text"/>
+		<input id="cloud_pro_bar_reboot" type="text"/>
+	</div>
+</div> 
+
+<div id="cloud_upgrade_failed_cnt" class="hidden warning">
+	<h4 class="title" id="cloud_upgrade_failed">
+		<span class="icon" ></span>
+		<span class="text" id="cloud_error_str"></span>
+	</h4>
+</div> 
+
+
+<!-- ç»åºçç¡®è®¤ -->
+
+<div id="logout_confirm_msg" class="hidden warning">
+	<div class="reboot-confirm-qa">
+		<h4 class="title">
+			<span class="icon"></span>
+			<span class="text" id="logout_confirm_msg_text"></span>
+		</h4>
+	</div>
+</div>
+
+<!-- ç¨æ·è´¦æ·ä¿®æ¹ -->
+<div id="user-modify-msg" class="hidden warning">
+	<form id="user-modify-form">
+		<input type="text"  id="old_acc" name="old_acc" value="" />
+    	<input type="password"  id="old_pwd" name="old_pwd" value="" />
+		<input type="text"  id="new_acc" name="new_acc" value="" />
+    	<input type="password"  id="new_pwd" name="new_pwd" value="" />
+		<input type="password"  id="cfm_pwd" name="cfm_pwd" value="" />
+		<input id="pwd_status"  value="" />
+	</form>
+	<button type="button" id="user-modify-btn"></button>
+</div>
+
+<!-- å¿«ééç½®å¯¹è¯æ¡ -->
+<div id="wizard-msg">
+    <div id="wizard-form"></div>
+</div>
+
+<!--å¨å±è­¦åæç¤ºæ¡-->
+<div id="global-warning-msg" class="hidden warning">
+	<h4 class="title">
+		<span class="icon"></span>
+		<span class="text" id="global-warning-text"></span>
+	</h4>
+</div>
+</div>
+</div>
+
+
+<!--
+ä»¥ä¸æ¯jsé¨å
+-->
+
+<!--  jqueryæ¡æ¶å è½½  -->
+<script type="text/javascript" src="js/libs/jquery-su.min.js"></script>
+
+<!--  è¯­è¨é¨åå è½½  -->
+<script type="text/javascript" src="js/su/locale.js"></script>
+<script type="text/javascript">
+//<![CDATA[
+	try{
+		$.su.locale.URL_LAN_CHECK = $.su.url("/locale?form=lang");//"./data/lan.json";
+		$.su.locale.get();
+	}catch(error){
+		location.href = "./error.html";
+	};
+//]]>
+</script>
+
+<!--  å¼å¥æ¡æ¶ä»£ç ï¼ æåéè¦ç»ä¸å°ä¸ä¸ªæä»¶ä¸é¢  -->
+<script type="text/javascript" src="js/libs/encrypt.js"></script>
+<!--<script type="text/javascript" src="js/su/su.full.min.js"></script>-->
+<script type="text/javascript">
+$("head").append('<script type="text/javascript" src="js/su/su.full.min.js"><\/script>');
+</script>
+
+
+
+<!--  è¿è¡æ¶ä»£ç   -->
+<script type="text/javascript">
+//<![CDATA[
+$(document).ready(function(e){
+	/*å è½½äº§åä¿¡æ¯*/
+	var MODEL_NAME = $.su.locale.model;
+	var MODEL_DESC = MODEL_NAME.match(/[^ ]*/);
+	if(typeof MODEL_DESC != "string"){
+		MODEL_DESC = MODEL_DESC[0];
+	}
+	document.title = MODEL_DESC;
+	$("#product-type").html(MODEL_DESC);
+
+//é¡µé¢æ é¢
+$(".logout span.text").text($.su.CHAR.INDEX.LOGOUT);
+$(".user span.text").text($.su.CHAR.INDEX.USER);
+
+//è·å¾token
+try{
+	$.su.url.stok = localStorage.getItem("token") || (function(){
+		var stok = "12345",
+			href = top.location.href;
+		var stokPos = href.indexOf("stok=");
+		if (stokPos >= 0){
+			stok = href.substring(stokPos+5);
+		};
+		return stok;
+	})();
+}catch(e){
+	var h = function(){
+		location.href = "/";
+	};
+	
+	if (logoutProxy){
+		logoutProxy.write({}, h, h, h)
+	};
+};
+
+/* top tip client event */
+$("#opencloud").unbind().bind("click",function(){
+	$.su.menu.advanced.open("sys-tools");
+	$("#sys-tools").addClass("selected").closest("li.fst").addClass("selected");
+	//$("#sys-tools").closest("li.fst").find().each(function(i, obj){
+	$("a#sys-tools").closest("li").find("ul.sec li").each(function(i, obj){	
+		if ($(obj).find("a").attr("data-name") == "cloud-management"){
+			/* device-control show red point */
+			$(obj).find("a").trigger("click");
+		}
+	})
+})
+$('.top-tip .nomore').unbind().bind("click",function(){
+	/* the top tip don't need to show again */
+	var URL_CLOUD_MANAGEMENT = $.su.url("/admin/cloud_management?form=cloud_management");
+	var cloudProxy = new $.su.Proxy({
+		url: URL_CLOUD_MANAGEMENT
+	});
+	$(".top-tip").hide();
+	$("div.menu-container").css({
+		"margin-top": "0px"
+	});
+	$("div.main-wrap").css({
+		"padding": "70px 0 0"
+	});
+	cloudProxy.write({method: "set_cloud_config_for_ui",top_bar_notify_again:0}, function(){
+		    $.su.menu.top_bar_notify_again  = false;
+	},function(result){
+		$("div#global-warning-msg").msg(result.msg);
+	},function(){
+		$("div#global-warning-msg").msg("time out");
+	})
+})
+$('.top-tip .close').unbind().bind("click",function() {
+	/* the top tip close */
+	$(".top-tip").hide();
+	$("div.menu-container").css({
+		"margin-top": "0px"
+	});
+	$("div.main-wrap").css({
+		"padding": "70px 0 0"
+	});
+	$.su.menu.toptip_close = true;
+})
+
+/*initial info*/
+var INIT_URL = $.su.url("/admin/initial?form=initial");
+var INIT_PROXY = new $.su.Proxy({
+    url: INIT_URL,
+    async:false
+});
+
+INIT_PROXY.read({},function(data){
+	/*å¤æ­åºåæ è¯*/
+    if(data.config_status == "Modify"){        
+    }else{
+        location.href = "./login.html";
+    }
+    
+    /*wanå£æ°é*/
+    if(data && data.wanmode){
+        $.su.wanCount = data.wanmode;
+    }
+    /*æ¥å£æ°é*/
+    if(data && data.interfaceCount){
+    	$.su.interfaceCount = parseInt(data.interfaceCount);
+    }
+	/*radioæ°é*/
+    if(data && data.radio){
+        $.su.radioCount = parseInt(data.radio, 10);
+    }else{
+        $.su.radioCount = 0;
+    }
+
+    /*æ¥å£æ ·å¼*/
+    if(data && data.interfaceModel){
+    	$.su.interfaceModel = parseInt(data.interfaceModel, 10);
+    }else{
+    	$.su.interfaceModel = -1;
+    }
+
+    /*ç¾åå¤æ­*/
+    if(data && data.isFast){
+    	$.su.isFast = parseInt(data.isFast);
+    }else{
+    	$.su.isFast = 0;
+    }
+});
+/*ç¨æ·è´¦æ·ä¿®æ¹*/
+var ACC_PWD_URL = $.su.url("/admin/administration?form=account");
+
+var user_modify_msg = $("div#user-modify-msg").msg({
+	type: "confirm",
+	global: true,
+	closeBtn:true,
+	cls: "new-page user-modify",
+	title:"ç®¡çè´¦æ·",
+	showHead:true
+});
+
+$(".top-banner").delegate(".user", "click", function(e){
+	e.preventDefault();
+    e.stopPropagation();
+    user_modify_msg.msg("show");
+    user_modify_msg.msg("hideButtons");
+    $("#user-modify-form").form("load");
+    $("#user-modify-form").form("reset");
+    $("#pwd_status").status('setNormal');
+
+});
+
+
+
+	var old_acc = $("input#old_acc").textbox({
+		fieldLabel: $.su.CHAR.ACCOUNT.OLDUSER,
+		vtype:"ascii_visible",
+		minLength:1,
+		maxLength:15,
+		allowBlank: false
+	});
+
+	var old_pwd = $("input#old_pwd").password({
+		fieldLabel: $.su.CHAR.ACCOUNT.OLDPWD,
+		allowBlank: false,
+		vtype:"ascii_visible",
+		showLevel:false,
+		minLength:1,
+		maxLength:15
+	});
+
+	var new_acc = $("input#new_acc").textbox({
+		fieldLabel: $.su.CHAR.ACCOUNT.NEWUSER,
+		cls:"part-separate",
+		allowBlank: false,
+		vtype:"ascii_visible",
+		minLength:1,
+		maxLength:15
+	});
+
+	var passwordCheck = function(new_pwd, cfm_val){
+		
+		if(cfm_val == new_pwd){
+			$("#pwd_status").status("setSuccess");
+			return true;
+		}else{
+			$("#pwd_status").status("setFailed");
+			return false;
+		};
+	}; 
+
+	$("input#new_pwd").password({
+		fieldLabel: $.su.CHAR.ACCOUNT.NEWPWD,
+		allowBlank: false,
+		vtype:"ascii_visible",
+		minLength:6,
+		allowVisible: true,
+		maxLength:15
+	}).on("ev_change", function(item, data){
+		$("#pwd_status").status('setNormal');
+		$("input#cfm_pwd").password('setNormal');
+		
+		var new_pwd = $("input#new_pwd").password("getValue");
+		var cfm_val = $("input#cfm_pwd").password("getValue");
+		if ( cfm_val){
+			passwordCheck(new_pwd, cfm_val);
+		}
+	}).on("ev_validatechange", function(item, data){
+		var new_pwd = $("input#new_pwd").password("getValue");
+	    var cfm_val = $("input#cfm_pwd").password("getValue");
+
+		if( cfm_val=='' ){
+			$("#pwd_status").status('setNormal');
+			return true;
+		}else{
+			passwordCheck(new_pwd, cfm_val);
+		};
+	});
+	
+
+	$("input#cfm_pwd").password({
+		fieldLabel: $.su.CHAR.ACCOUNT.CONFIRM,
+		vtype:"ascii_visible",
+		minLength:6,
+		maxLength:15,
+		cls:"inline",
+		allowBlank: false,
+		allowVisible: true,
+		validator:function(val){
+			return true;
+		},
+		showLevel:false
+	}).on("ev_change ev_validatechange", function(){
+		var new_pwd = $("input#new_pwd").password("getValue");
+	    var cfm_val = $("input#cfm_pwd").password("getValue");
+		
+		if (new_pwd == ""){
+			if ( cfm_val == "" ){
+				$("#pwd_status").status("setNormal");
+			}else{
+				if (!passwordCheck(new_pwd, cfm_val)){
+					$("input#cfm_pwd").password("setError");
+				};
+			}
+		}else{
+			if (!passwordCheck(new_pwd, cfm_val)){
+				$("input#cfm_pwd").password("setError");
+			}
+		}
+	});
+
+	$("#pwd_status").status({
+		cls:"inline"
+	});
+
+	$("#user-modify-btn").button({
+		text:$.su.CHAR.OPERATION.SAVE,
+		handler:function(){
+			user_form.form("submit", {}, function(data){
+				setTimeout(function() {
+					user_modify_msg.msg("close");
+				}, 1000);		
+			}, function(error){
+
+			}, function(fail){
+
+			});
+		}
+	});
+
+
+	var pwdProxy = new $.su.Proxy({
+		url: ACC_PWD_URL
+	});
+
+	var user_form = $("#user-modify-form").form({
+		proxy: pwdProxy,
+		autoLoad:false,
+		fields: [
+			{name: "old_acc", mapping: "old_acc"},
+			{name: "old_pwd", mapping: "old_pwd"},
+			{name: "new_acc", mapping: "new_acc"},
+			{name: "new_pwd", mapping: "new_pwd"},
+			{name: "cfm_pwd", mapping: "cfm_pwd"}
+		],
+		validator:function(){
+			var  val = $("input#cfm_pwd").password("getValue");
+			var new_pwd = $("input#new_pwd").password("getValue");
+			// //console.log(new_pwd, val);
+			if(new_pwd.length < 6 || new_pwd.length > 15){
+                $("input#new_pwd").password("setError", "å¯ç é¿åº¦æå°ä¸º6ä½,æå¤ä¸º15ä½");
+                return false;
+            }
+            if(val.length < 6 || val.length > 15){
+                $("input#cfm_pwd").password("setError", "å¯ç é¿åº¦æå°ä¸º6ä½,æå¤ä¸º15ä½");
+                return false;
+            }
+			if(val == new_pwd)
+			{
+				
+				$("#pwd_status").status("setSuccess");
+				return true;
+			}
+			else
+			{
+				
+				// $("#pwd_status").status("setFailed");
+				$("input#cfm_pwd").password("setError", $.su.CHAR.ERROR["00000148"]);
+				return false;
+			}
+
+		},
+		submitBtn: "#user-modify-btn"
+	});
+
+	$("#user-modify-form").find(".form-submit.button-container.submit").css("textAlign", "center");
+
+/*å¿«ééç½®*/
+var wizard_msg = $("div#wizard-msg").msg({
+		type: "confirm",
+		global: true,
+		closeBtn:false,
+		cls: "wizard",
+		title:$.su.CHAR.WIZARD.WIZARD,
+		showHead:false
+	});
+
+$.su.wizard = $.su.wizard || {
+	"msg": wizard_msg,
+	"show": function(){
+		var me = this;
+		var wizardForm = $('#wizard-form');
+    	var url = './pages/userrpm/wizard.html';
+    	wizardForm.load(url, {}, function(){
+            me.msg.msg("show");
+        });
+		
+	},
+	"hide": function(){
+		this.msg.msg("hide");
+	}
+};
+
+$.su.wizard.msg.msg("hideButtons");
+
+
+
+
+
+/*ç¨æ·ç»åº*/
+var URL_LOGOUT = $.su.url("/admin/system?form=logout"); //"./data/login.json"
+
+var logoutProxy = new $.su.Proxy({
+	url: URL_LOGOUT,
+	autoLoad: false
+});
+
+/**********STR*ç¨æ·ç»åºæç¤ºä¿¡æ¯*STR**********/
+
+var logoutConfirmMsg = $("div#logout_confirm_msg").msg({
+	type: "confirm",
+	global: true,
+	closeBtn: false,
+	cls: "reboot-confirm-size",
+	okHandler: function(e){
+		var h = function(){
+			if (localStorage){
+				localStorage.setItem("token", "");
+			};
+			location.href = "/";
+		};
+		//localStorage.getItem("token")
+		logoutProxy.write({}, h, h);
+	}
+});
+
+
+$(".top-banner").delegate(".logout", "click", function(e){
+	e.preventDefault();
+    e.stopPropagation();
+    $("div#logout_confirm_msg").msg("show");
+});
+
+$('span#logout_confirm_msg_text').html($.su.CHAR.INDEX.CONFIRM_LOGOUT);
+
+var URL_APMNGR_NOTIFICATION = $.su.url("/apmngr_status?form=status"); //apmngr's notification
+var apNoteProxy = new $.su.Proxy({
+	url: URL_APMNGR_NOTIFICATION,
+	autoLoad: false,
+	timeout: 5000
+});
+var apUnknownProxy = new $.su.Proxy({
+	url: URL_APMNGR_NOTIFICATION,
+	autoLoad: false,
+	timeout: 5000,
+	async: false
+});
+var $linkDetail = $("#link-detail-window").msg({
+	closeBtn: true,
+	cls:"l",
+	title: "ä¸æ¯æçAPæºååè¡¨",
+	type: "window",
+	global: true,
+    showHead: true
+});
+function showDetail(){
+	apUnknownProxy.write({"method":"getUnknownAp"}, function(data){
+		var html = "";
+		var index = 0;
+		var unknown_list = data.unknown_list;
+		var unrecognize = data.unrecognize_ap;
+		if(unknown_list != undefined && unknown_list.length > 0)
+		{
+			index = unknown_list.length;
+			for(var i = 0;i < unknown_list.length; i = i + 1)
+			{
+				html += "<tr><td class='detail-key' style='text-align:center;width:80px;border:1px solid #d9d9d9;'>" + (i+1) + "</td><td class='detail-value' style='text-align:center;border:1px solid #d9d9d9;width:350px'>"+unknown_list[i].ap_name+" "+unknown_list[i].hwver+"</td></tr>";
+			}
+		}
+		if(unrecognize == 1)
+		{
+			html += "<tr><td class='detail-key' style='text-align:center;width:80px;border:1px solid #d9d9d9;'>" + (index+1) + "</td><td class='detail-value' style='text-align:center;border:1px solid #d9d9d9;width:350px'>æªç¥åå·</td></tr>";
+		}
+		$("#link-detail-model").html(html);
+		$linkDetail.msg('show');
+	});
+}
+function refreshConfigStatus(){
+	apNoteProxy.write({"method":"get"}, function(data){
+		if(data.ap_unknown != undefined && data.ap_unknown == 1){
+			text = $.su.CHAR.APMNGR.UNKOWN_DEV_NOTE;
+		}else{
+			text = "";
+		}
+		$('span#unknown-ap').text(text);
+	});
+}
+
+refreshConfigStatus();
+window.indexPageConfTimeout = window.indexPageConfTimeout || setInterval(refreshConfigStatus, 10000);
+
+$("a#top-control-unknown-ap").click(function(e){
+	showDetail();
+});
+
+/**********END*ç¨æ·ç»åºæç¤ºä¿¡æ¯*END**********/
+
+/**********SRT*è­¦åä¿¡æ¯*SRT**********/
+var warningMsg = $("div#global-warning-msg").msg({
+	type: "alert",
+	global: true,
+	cls: "m",
+	closeBtn: false
+});
+
+/**********END*è­¦åä¿¡æ¯*END**********/
+
+
+
+/**********SRT*å¨çº¿åçº§æç¤ºä¿¡æ¯*SRT**********/
+var query_interval = false;
+var showUpgradeMsg = "1";	/* 1:show the msgbox next time 0:don't show next time*/
+var CLOUD_FIRMWARE_URL = $.su.url("/admin/cloud_upgrade?form=firmware"); 
+var downloadTimeout = 0;
+var cloudFirmwareProxy = new $.su.Proxy({
+        url: CLOUD_FIRMWARE_URL
+});  
+var upgradeNote = " ";
+var updateFlag = false;
+var DOWNLOADTIMEOUT = 300;	/* the timeout of download (second) */
+
+var cloud_upgrade_alert_cnt = $("div#cloud_upgrade_alert_cnt").msg({
+	type: "upgrade",
+	global: true,
+	closeBtn: false,
+	cls: "warning reboot-confirm-size",
+	okHandler:function(){
+			$("#cloud_upgrade_alert_cnt").msg('hide');
+			$("#cloud_note").html("æ­£å¨ä¸è½½...");	
+			$("#cloud_upgrade_cnt").msg("show");	
+			$("#cloud_upgrade_cnt").msg('hideButtons');
+			$("#cloud_upgrade_bar_cnt").show();	
+			handle_ignore_box();
+			cloudFirmwareProxy.write({method: 'download',params:{global_flag:showUpgradeMsg}}, function(data){  
+				/* tell the luci begin to download */
+			},function(errcode){
+        		hide_cloud_upgrade_promsg();
+        		$("#cloud_error_str").html("ä¸è½½å¤±è´¥"); 
+				showOnlineAlertMag();
+			},function(){
+				hide_cloud_upgrade_promsg();
+				$("#cloud_error_str").html("ä¸è½½å¤±è´¥"); 
+				showOnlineAlertMag();
+			});
+
+			downloadTimeout = setTimeout(function() {
+				hide_cloud_upgrade_promsg();   
+				$("#cloud_error_str").html("ä¸è½½è¶æ¶"); 
+				showOnlineAlertMag();
+			}, DOWNLOADTIMEOUT*1000);
+
+			if(!query_interval)
+			{
+				query_interval = setInterval(download_firmware,2000);
+			}
+			return false;
+		},
+		// cls: "m warning",
+		noHandler:function(){
+			handle_ignore_box();
+			cloudFirmwareProxy.write({method: 'global_set',params:{global_flag:showUpgradeMsg}}, function(data){
+			});
+			return true;
+		}
+});
+
+
+
+
+$("#upgrade_text").html(" ");
+
+$("#ignore_box").checkbox({
+    /*fieldLabel: $.su.CHAR.IMB.TITLE,*/
+    items: [
+        {boxlabel: "ä¸æ¬¡ä¸åæç¤º", inputValue: "on", uncheckedValue: "off", itemCls: "spec_chk", checked:false}
+    ]
+})
+
+ 
+$("#cloud_upgrade_failed_cnt").msg({
+	type: "alert",
+	global: true,
+	cls: "m",
+	closeBtn: false	
+});
+
+$("#cloud_upgrade_cnt").msg({
+	type: "confirm",
+	global: true,
+	closeBtn: false,
+	cls: "reboot-confirm-size"
+});
+
+function handle_ignore_box()
+{
+	var ignore_flag = $("#ignore_box").checkbox("getValue1");
+	if (ignore_flag[0] == "on")
+	{
+		showUpgradeMsg = "0";
+		/* the checkbox is checked, means don't show the msg box */
+	}
+	else
+	{
+		showUpgradeMsg = "1";
+		/* the checkbox is not checked, means need show the msg box */
+	}
+
+}
+
+function check_version()
+{	
+	cloudFirmwareProxy.write({method: 'global_get'}, function(data){
+
+    		/* data.flag        1: there is newer firmware 0: there is no newer firmware*/
+    		/* data.global_flag 1: need to alert to user this time   0: the user don't need the upgrade notify to show again*/
+    		/* data.not_show    1: don't need to push the upgrade notify 0: need to push the upgrade notify*/
+
+        	if (data.flag == "1" && data.global_flag == "1" && data.not_show == "0")
+        	{
+        		upgradeNote = data.upgrade_note;
+        		if (upgradeNote != null && upgradeNote.length != 0)
+        		{
+        			upgradeNote = upgradeNote.replace(/\\n/g, "<br/>");
+
+					$("#upgrade_text").html(upgradeNote);
+					$("div#upgrade_note").msg("show");       			
+        		}
+        		else
+        		{
+        			$("div#upgrade_note").msg("hide");
+        		}
+        		$("div#cloud_upgrade_alert_cnt").msg("show");
+
+        	}
+        	if (data.flag == "1")
+        	{
+        		/* show the red point to remind the user to upgrade */
+        		setTimeout(show_red_point, 2000);
+        		//show_red_point();
+        	}
+	});
+}
+
+function show_red_point()
+{
+	var fst_menu_point = "<span style=\"color:red;font-size:28px;font-weight:bold;position:relative;bottom:13px;left:-86px\">.</span>",
+	advanced_menu_point = "<span style=\"color:red;font-size:28px;font-weight:bold;position:relative;bottom:12px;left:5px\">.</span>",
+	tab_point = "<span style=\"color:red;font-size:28px;font-weight:bold;position:relative;bottom:13px;left:5px\">.</span>";
+
+	var fst_menu = $("a#sys-tools");
+	if (fst_menu)
+	{
+		/* system-tools show red point */
+		fst_menu.append(fst_menu_point);
+	}
+
+	$("a#sys-tools").closest("li").find("ul.sec li").each(function(i, obj){
+		if ($(obj).find("a").attr("data-name") == "firmware"){
+			/* device-control show red point */
+			$(obj).find("a").append(advanced_menu_point);
+		}
+	})
+
+	$("ul.tab-menu-ul li a").each(function(i, obj){
+		if ($(obj).attr("data-name") == "upgrade"){
+			/* firmware upgrade show red point */
+			$(obj).append(tab_point);
+		}
+	})
+}
+
+function hide_cloud_upgrade_promsg()
+{
+	clearInterval(query_interval);
+	query_interval = false;
+	clearTimeout(downloadTimeout);
+	cloud_pro_bar.progressbar("stop");
+	cloud_pro_bar.progressbar("reset");
+	cloud_pro_bar_reboot.waitingbar("stop");
+	cloud_pro_bar_reboot.waitingbar("reset");
+	percentOnline = 0;
+
+	$("#cloud_upgrade_alert_cnt").hide();
+	$("#cloud_upgrade_alert_cnt").msg("close",function(){
+		$("#cloud_upgrade_alert_cnt").msg('showButtons');
+		$('#cloud_confirm_cnt').show();
+	});
+	$("#cloud_upgrade_cnt").msg("close",function(){
+		$("#cloud_upgrade_bar_cnt").hide();	
+	});
+}
+
+function showOnlineAlertMag(){
+	$("div#cloud_upgrade_failed_cnt").msg("show");
+};
+
+var downloadDone = 0;
+function download_firmware()
+{
+	if (downloadDone == 0)
+	{
+		cloudFirmwareProxy.write({method: 'download_status'}, function(data){
+
+	    var status = data.status;
+	    var progress = 0;
+	    if (downloadDone == 0)
+	    {
+	    	if (status == "2")	/* the download is done */
+	    	{
+	    		clearTimeout(downloadTimeout);
+	    		clearInterval(query_interval);	/* the firmware is download over, so clean the interval*/
+	    		query_interval = false;
+	    		updateFlag = false;
+	    		cloud_pro_bar.progressbar("setValue", 1.00);	/* set the progressbar to 100% */
+
+	    		if(!query_interval)	/* the download is finished, begin to upgrade*/
+				{
+					query_interval = setInterval(cloud_upgrade,1000);
+					downloadDone =1;
+				}
+	    			
+	    	}
+	    	else if (status != "0")	/* the download is doing */
+	    	{
+	    		progress = parseFloat(data.progress);
+	    		progress = progress / 100;
+	    		if ( progress > 0 && progress <= 1.0)
+	    		{
+	    			cloud_pro_bar.progressbar("setValue", progress.toFixed(2));
+	    		}	
+	    		if( progress == 1)
+	    		{
+	    			$("#cloud_note").html("ä¸è½½å®æ¯ï¼å¼å§æ ¡éªå¹¶åå¤åçº§...");	
+	    		}
+	    	}
+	    	else	/* the download is failed */
+	    	{
+	    		hide_cloud_upgrade_promsg();
+	    		$("#cloud_error_str").html("ä¸è½½å¤±è´¥"); 
+				showOnlineAlertMag();
+	    	}
+	    }
+	    },function(errcode){
+				hide_cloud_upgrade_promsg();
+		},function(){
+				/*hide_cloud_upgrade_promsg();*/
+		});
+	}
+
+}
+
+var timeoutOnline = 0;
+var rebootIntervalOnline = 0;
+var isRebootFinishOnline = false;
+var percentOnline = 0;
+var totolTimeOnline = 130;	/* total time of upgrade */
+var rebootTimeOnline = 150*1000;	/* total time of reboot */
+var percentPersecondOnline = 1 / totolTimeOnline;
+
+function cloud_upgrade()	/* cloud upgrade and reboot */
+{
+
+		if (updateFlag == false)
+		{
+			$("#cloud_note").html("æ­£å¨åçº§ï¼å¨æ­¤æé´è¯·ä¸è¦è¿è¡å¶å®æä½");
+			updateFlag = true;
+		}
+
+		percentOnline = percentOnline + percentPersecondOnline;
+		cloud_pro_bar.progressbar("setValue", percentOnline.toFixed(2));
+		if(percentOnline >= 1.0)
+		{
+			clearInterval(query_interval);
+			cloud_pro_bar.progressbar("reset");
+			cloud_pro_bar.progressbar("hide");
+			percentOnline = 0;
+			$("#cloud_note").hide();
+
+			cloud_pro_bar_reboot.waitingbar("show");
+			cloud_pro_bar_reboot.waitingbar("run");
+			timeoutOnline = setTimeout(function() {
+				rebootIntervalOnline = setInterval(function(){
+					$.ajax({
+						url: "./login.html",
+						async: true,
+						dataType: "html",
+
+						success: function(data){
+							isRebootFinishOnline = true;
+						},
+						error: function(){
+						    isRebootFinishOnline = false;
+						}
+						});
+				        		    
+					    if(isRebootFinishOnline){
+					    	clearInterval(rebootIntervalOnline);
+					    	location.href= "./login.html";
+					    }
+					}, 1000);
+				}, rebootTimeOnline);	
+		}
+}
+
+
+
+var cloud_pro_bar = $('input#cloud_pro_bar').progressbar({
+	fieldLabel: null,
+	width: 326,
+	   height: 6,
+	value: 0,
+	expression: "percentage*100", 
+	cls: 'reboot-loading-probar'
+});
+
+var cloud_pro_bar_reboot  = $('input#cloud_pro_bar_reboot').waitingbar({
+	fieldLabel: $.su.CHAR.FIMWARE.REBOOT
+});
+
+cloud_pro_bar_reboot.waitingbar("hide");
+/**********END*å¨çº¿åçº§æç¤ºä¿¡æ¯*END**********/
+
+/**********STR*appå®ä¹*STR*********/
+$.su.app = {
+	/*runningModule: $({
+		name: ""
+	}),
+	init: function(){
+		$.su.app.runningModule.on("ev_unload", function(e, name){
+			$.su.app.runningModule[0]["name"] = name;
+			//console.log("ev_unload");
+			$.su.app.runningModule.off("ev_beforeunload");
+		});
+	},*/
+	runningModule: {
+		name: "",
+		addUnloadHandler: function(fn){
+			if ($.isFunction(fn)){
+				this.unloadHandlers.push(fn);
+			}
+		},
+		clearUnloadHandler: function(){
+			this.unloadHandlers = [];
+		},
+		unload: function(oldN, newN){
+			this.name = newN;
+			var handlers = this.unloadHandlers;
+			for (var index in handlers){
+				var fn = handlers[index];
+				if ($.isFunction(fn)){
+					fn();
+				}
+			};
+			this.clearUnloadHandler();
+		},
+		unloadHandlers: []
+	},
+	errorOperation: {
+		denied: function(error_code){
+			var msg = $("div#global-warning-msg");
+			$("span#global-warning-text").html($.su.CHAR.ERROR_CODE[error_code]);
+			if (msg.is(":hidden")){
+				msg.msg("show");
+			}
+			if(error_code == 704){
+				setTimeout(function() {
+					location.href = "./login.html";
+				}, 2000);	
+				msg.msg("hideButtons");
+			}
+		},
+		userConflict: function(){
+			//æä½ä¸­ç¨æ·å²çªçåè°
+		}
+	},
+	navGoTo: function(name, url){
+		var contentContainer = $("div#top-content");
+		//æ§æ¨¡åå¸è½½
+		$.su.Manager.removeLocal();
+		$.su.loading.show();
+
+		/*if (name != "quick_setup"){
+			//équicksetup
+			
+			
+			contentContainer.load(url, {}, function(response,status,xhr){
+				$.su.layout.doLayout();
+				$.su.loading.hide();
+			});
+		}else{*/
+			//$.su.app.runningModule.trigger("ev_beforeunload", [$.su.app.runningModule[0].name, name]);
+		var runningModule = $.su.app.runningModule;
+			runningModule.unload(runningModule.name, name);
+
+		contentContainer.load(url, {}, function(response,status,xhr){
+			//$.su.app.runningModule.trigger("ev_unload", [name]);
+			$.su.layout.doLayout();
+			//$.su.loading.hide();
+		});
+
+		//}
+	},
+	menuGoTo: function(name, url, isAdvanced){
+		var contentContainer = isAdvanced ? $("div#func-advanced") : $("div#func-basic");
+		//æ§æ¨¡åå¸è½½
+		$.su.Manager.removeLocal();
+		//var runningModule = $.su.app.runningModule;
+		//$.su.app.runningModule.trigger("ev_beforeunload", [$.su.app.runningModule[0].name, name]);
+		//console.log("menuGoTo", runningModule)
+		var runningModule = $.su.app.runningModule;
+			runningModule.unload(runningModule.name, name);
+
+		$.su.loading.show();
+		contentContainer.load(url, {}, function(response,status,xhr){
+			//$.su.app.runningModule.trigger("ev_unload", [name]);
+			
+			$.su.layout.doLayout();
+			/*$("div.top-main").scrollTo({
+				top: 0,
+				left: 0
+			}, 100);*/
+			$("div.top-main").scrollTo(0);
+			$.su.loading.hide();
+		});
+	}   
+};
+//$.su.app.init();
+/**********END*appå®ä¹*END*********/
+
+
+
+/**********STR*èåé¨åææ*STR**********/
+$.su.nav = (function(){
+	var nav = {};
+	//å­ç¬¦ä¸²åå§å
+	var navItems = $("ul#ul-nav li a");
+	navItems.each(function(index, element){
+		var me = $(element),
+			name = me.attr("name");
+		me.html("<span>"+$.su.CHAR.NAV[name.toUpperCase()]+"</span>");
+	});
+	
+	navItems.on("click", function(e){
+		e.preventDefault();
+		var me = $(this),
+			name = me.attr("name");
+		
+		$.su.nav.goTo(name);
+
+	});
+	
+	nav.goTo = function(name){ 
+		var item = $("ul#ul-nav li a[name='"+name+"']");
+		var url = item.attr("href");
+
+		$("ul#ul-nav li").removeClass("selected");
+		item.closest("li").addClass("selected");
+		$.su.app.navGoTo(name, url);
+	};
+
+	return nav;
+})();
+
+	$.su.nav.goTo("advanced");
+
+/**********END*èåé¨åææ*END**********/
+
+/**********SRT*å¸å±è°æ´*SRT*********/
+$.su.layout.doLayout = function(){
+	//alert("layout");
+	//console.log($.su.app.runningModule.name);
+
+	var mh = $("div.menu-container").height(),
+		hh = $("div.top-header").height(),
+		fh = $("div.top-footer").height(),
+        tabh = $("div.tab-menu-wrapper").height(),
+		wh = $(window).height();
+
+	//$("div.function-container").css("height", "inherit");
+
+	$("div.top-main").css({
+		height: wh - hh -tabh
+	});
+
+	var th = $("div.top-main").height(),
+		ch = wh - hh - tabh,// - fh
+		h = Math.max(mh, ch);
+
+	$("body").css({
+		"min-height": wh - 210
+	});
+
+	var c = $("div.function-container");
+	var pT = parseInt(c.css("paddingTop"), 10);
+	var pB = parseInt(c.css("paddingBottom"), 10);
+
+	$("div.function-container").css({
+		"min-height": wh - 210
+	});
+
+	//alert(wh, hh, fh, mh, ch, h, pT, pB);
+		
+	if ($.su.app.runningModule.name === "quick_setup"){
+		var wh = $(window).height(),
+			fh = $("div.top-footer").height(),
+			hh = $("div.top-header").height();
+
+		var c = $("div#quicksetup-form").css("height", "inherit");
+
+		var ch = $("div#top-content").height(),
+			h = ch;
+
+		if (fh+hh+ch >= wh){
+			c.css("height", h);
+		}else{
+			c.css("height", wh - hh - fh);
+		};
+		
+	};
+};
+/**********END*å¸å±è°æ´*END*********/
+
+/**é¡µé¢åå§å**/
+$(window).on("resize", function(){
+	$.su.layout.doLayout();
+});
+
+$(window).on("load", function(){
+	$.su.layout.doLayout();
+	check_version();
+});
+
+});
+//]]>
+</script>
+</body>
+</html>

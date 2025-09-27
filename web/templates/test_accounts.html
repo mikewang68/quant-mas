@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Accounts</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>Test Accounts Loading</h1>
+    <select id="accountSelect">
+        <option value="">加载中...</option>
+    </select>
+
+    <script>
+        $(document).ready(function() {
+            console.log('Loading accounts...');
+            $.get('/api/accounts')
+                .done(function(accounts) {
+                    console.log('Accounts loaded:', accounts);
+                    const accountSelect = $('#accountSelect');
+                    accountSelect.empty();
+
+                    if (accounts.length === 0) {
+                        accountSelect.append('<option value="">暂无账户</option>');
+                        return;
+                    }
+
+                    // Add default option
+                    accountSelect.append('<option value="">请选择账户</option>');
+
+                    // Add all accounts
+                    accounts.forEach(function(account) {
+                        const option = $('<option></option>');
+                        option.val(account._id);
+                        option.text(account.name || '未命名账户');
+                        accountSelect.append(option);
+                    });
+
+                    console.log('Account select populated with', accountSelect.find('option').length, 'options');
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('Failed to load accounts:', error);
+                    $('#accountSelect').html('<option value="">加载失败</option>');
+                });
+        });
+    </script>
+</body>
+</html>
+
