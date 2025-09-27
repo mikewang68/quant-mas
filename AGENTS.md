@@ -409,7 +409,11 @@ python -m backtesting.backtester
    - Enhanced K-line charts to specifically fetch moving average parameters from the "三均线多头排列策略（宽松型）" strategy in the database
    - Modified K-line charts to display all data by default with synchronized zooming across main chart, indicator chart, and volume chart
    - Added indicator chart between main chart and volume chart with tab switching functionality for MACD, RSI, and KDJ indicators
+   - Enhanced dashboard recent trades section with proper profit/loss calculation for buy and sell transactions
+   - Implemented average cost basis calculation for sell transactions with commission handling
+   - Added color-coded display for profit/loss values (green for profits, red for losses)
+   - Improved formatting with thousand separators and right alignment for better readability
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-18*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-27*
 
