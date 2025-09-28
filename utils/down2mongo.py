@@ -23,6 +23,14 @@ except ImportError:
     print("Warning: Router control module not available. IP switching will be disabled.")
     ROUTER_CONTROL_AVAILABLE = False
 
+# Import the IP detection function
+try:
+    from utils.get_isp_ip import get_current_ip
+    IP_DETECTION_AVAILABLE = True
+except ImportError:
+    print("Warning: IP detection module not available.")
+    IP_DETECTION_AVAILABLE = False
+
 
 # 连接mongodb中的stock数据库
 def conn_mongo():
@@ -85,6 +93,18 @@ def write_k_daily(db):
     start_date = get_lastest_date(db)
     # start_date = ""
     end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+
+    # Initialize the used IP list
+    used_ip = []
+
+    # Get the initial IP before starting data collection
+    if IP_DETECTION_AVAILABLE:
+        initial_ip = get_current_ip()
+        if initial_ip:
+            used_ip.append(initial_ip)
+            print(f"Initial IP added to used list: {initial_ip}")
+        else:
+            print("Failed to get initial IP")
 
     # Counter for IP switching
     stock_counter = 0
@@ -164,12 +184,44 @@ def write_k_daily(db):
             stock_counter += 1
             stocks_since_last_switch += 1
 
+            # Add a 1-second delay after processing each stock
+            # time.sleep(1)
+
             # Switch IP every 100 stocks
             if ROUTER_CONTROL_AVAILABLE and stocks_since_last_switch >= 100:
                 print(f"Switching IP after processing {stock_counter} stocks...")
+
+                # Switch the IP
                 success = switch_ip(router_ip="192.168.1.1", username="wangdg68", password="wap951020ZJL")
                 if success:
                     print("IP switch successful")
+
+                    # If IP detection is available, check and manage IP addresses
+                    if IP_DETECTION_AVAILABLE:
+                        # Get the current IP
+                        current_ip = get_current_ip()
+                        if current_ip:
+                            print(f"Current IP: {current_ip}")
+
+                            # Check if this IP has been used before
+                            while current_ip in used_ip:
+                                print(f"IP {current_ip} has been used before, switching again...")
+                                # Switch IP again
+                                switch_ip(router_ip="192.168.1.1", username="wangdg68", password="wap951020ZJL")
+                                time.sleep(5)  # Wait for IP to change
+                                current_ip = get_current_ip()
+                                if current_ip:
+                                    print(f"New IP: {current_ip}")
+                                else:
+                                    print("Failed to get current IP")
+                                    break
+
+                            # Add the new IP to the used list
+                            if current_ip and current_ip not in used_ip:
+                                used_ip.append(current_ip)
+                                print(f"Added {current_ip} to used IP list")
+                        else:
+                            print("Failed to get current IP")
                 else:
                     print("IP switch failed")
                 stocks_since_last_switch = 0  # Reset the counter
