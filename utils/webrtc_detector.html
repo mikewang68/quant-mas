@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebRTC IP Detection for ident.me</title>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        #status {
+            margin: 15px 0;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .ip-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .ip-section h2 {
+            margin-top: 0;
+            color: #555;
+        }
+        #webrtc-ips {
+            min-height: 20px;
+        }
+        .ip-item {
+            display: inline-block;
+            margin: 5px;
+            padding: 8px 12px;
+            background: #007bff;
+            color: white;
+            border-radius: 20px;
+            font-family: monospace;
+        }
+        .info {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 0 5px 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📡 WebRTC IP地址检测工具</h1>
+
+        <div class="info">
+            <strong>说明：</strong>此工具使用WebRTC技术检测您的真实公网IP地址。
+            与HTTP请求不同，WebRTC可以直接发现您的真实客户端IP地址。
+        </div>
+
+        <div id="status">正在检测IP地址...</div>
+
+        <div class="ip-section">
+            <h2>🌐 WebRTC检测到的IP地址</h2>
+            <div id="webrtc-ips">
+                <p>等待检测...</p>
+            </div>
+        </div>
+
+        <div class="ip-section">
+            <h2>📋 详细日志</h2>
+            <div id="logs" style="font-family: monospace; background: #f8f9fa; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto;">
+                <p>等待检测开始...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储检测到的IP地址
+        let detectedIPs = new Set();
+
+        // 添加日志
+        function addLog(message) {
+            const logsDiv = document.getElementById('logs');
+            const time = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>[${time}]</strong> ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        // 添加IP地址到显示区域
+        function addIP(ip) {
+            // 验证IP是否已存在
+            if (detectedIPs.has(ip)) return;
+
+            // 添加到集合中
+            detectedIPs.add(ip);
+
+            // 创建IP标签
+            const ipContainer = document.getElementById('webrtc-ips');
+            const ipItem = document.createElement('div');
+            ipItem.className = 'ip-item';
+            ipItem.textContent = ip;
+
+            // 如果是默认提示文本，清空容器
+            if (ipContainer.querySelector('p')) {
+                ipContainer.innerHTML = '';
+            }
+
+            ipContainer.appendChild(ipItem);
+
+            addLog(`发现WebRTC IP: ${ip}`);
+        }
+
+        // 判断是否为私有IP
+        function isPrivateIP(ip) {
+            return ip.startsWith('192.168.') ||
+                   ip.startsWith('10.') ||
+                   (ip.startsWith('172.') &&
+                    parseInt(ip.split('.')[1]) >= 16 &&
+                    parseInt(ip.split('.')[1]) <= 31);
+        }
+
+        // 主要的IP检测函数
+        function getWebRTCIPs() {
+            return new Promise((resolve, reject) => {
+                addLog('开始初始化RTCPeerConnection...');
+
+                // 创建RTCPeerConnection实例
+                let pc;
+                try {
+                    pc = new RTCPeerConnection({
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun.stunprotocol.org:3478' }
+                        ]
+                    });
+                } catch (e) {
+                    addLog('错误: 无法创建RTCPeerConnection - ' + e.message);
+                    reject(e);
+                    return;
+                }
+
+                // 监听ICE候选事件
+                pc.onicecandidate = function(ice) {
+                    if (!ice || !ice.candidate || !ice.candidate.candidate) return;
+
+                    const candidate = ice.candidate.candidate;
+                    addLog('收到ICE候选: ' + candidate);
+
+                    // 使用正则表达式提取IP地址
+                    const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/;
+                    const ipMatch = ipRegex.exec(candidate);
+
+                    if (ipMatch && ipMatch[1]) {
+                        const ip = ipMatch[1];
+
+                        // 过滤无效IP
+                        if (ip === '0.0.0.0' || ip.startsWith('127.') || ip === '255.255.255.255') {
+                            return;
+                        }
+
+                        // 添加公网IP地址（排除私有IP）
+                        if (!isPrivateIP(ip)) {
+                            addIP(ip);
+                        }
+                    }
+                };
+
+                // 创建数据通道
+                try {
+                    pc.createDataChannel('');
+
+                    // 创建offer
+                    pc.createOffer()
+                        .then(offer => {
+                            addLog('创建offer成功');
+                            return pc.setLocalDescription(offer);
+                        })
+                        .then(() => {
+                            addLog('设置本地描述成功');
+                            // 给一些时间收集ICE候选
+                            setTimeout(() => {
+                                addLog('IP检测完成');
+                                resolve();
+                            }, 5000);
+                        })
+                        .catch(err => {
+                            addLog('错误: ' + err.message);
+                            reject(err);
+                        });
+                } catch (e) {
+                    addLog('错误: 创建数据通道失败 - ' + e.message);
+                    reject(e);
+                }
+            });
+        }
+
+        // 页面加载完成后自动开始检测
+        window.addEventListener('load', async function() {
+            const statusDiv = document.getElementById('status');
+
+            try {
+                addLog('页面加载完成，开始IP地址检测');
+                statusDiv.textContent = '正在检测IP地址，请稍候...';
+
+                await getWebRTCIPs();
+
+                // 检测完成
+                if (detectedIPs.size > 0) {
+                    statusDiv.textContent = '✅ IP地址检测完成!';
+                    statusDiv.style.background = '#d4edda';
+                    statusDiv.style.color = '#155724';
+                    addLog(`检测完成: 发现 ${detectedIPs.size} 个公网IP地址`);
+                } else {
+                    statusDiv.textContent = '⚠️ 未检测到公网IP地址';
+                    statusDiv.style.background = '#fff3cd';
+                    statusDiv.style.color = '#856404';
+                    addLog('检测完成: 未发现公网IP地址');
+                }
+
+            } catch (error) {
+                statusDiv.textContent = '❌ 检测过程中发生错误';
+                statusDiv.style.background = '#f8d7da';
+                statusDiv.style.color = '#721c24';
+                addLog('检测失败: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
+

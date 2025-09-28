@@ -1,0 +1,19 @@
+{
+  "ip_address": null,
+  "location": null,
+  "target_ip": "223.102.68.134",
+  "all_ips": [],
+  "logs": [
+    "访问网站: https://www.ip138.com/",
+    "等待页面加载...",
+    "等待JavaScript执行完成...",
+    "页面加载完成，分析内容...",
+    "页面文本长度: 1506 字符",
+    "在页面文本中找到IP: []",
+    "找到包含IP相关文本的元素: 8 个",
+    "未找到有效的公网IP地址",
+    "关闭浏览器..."
+  ],
+  "success": true,
+  "error": null
+}

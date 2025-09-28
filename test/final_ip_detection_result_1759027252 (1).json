@@ -1,0 +1,63 @@
+{
+  "ip_address": "154.64.226.146",
+  "location": null,
+  "source_apis": [
+    "ipify.org",
+    "icanhazip.com",
+    "ident.me",
+    "ipecho.net",
+    "myexternalip.com",
+    "my-ip.io"
+  ],
+  "all_results": [
+    {
+      "api_name": "ipify.org",
+      "ip_address": "154.64.226.146",
+      "status": "success"
+    },
+    {
+      "api_name": "icanhazip.com",
+      "ip_address": "154.64.226.146",
+      "status": "success"
+    },
+    {
+      "api_name": "ident.me",
+      "ip_address": "154.64.226.146",
+      "status": "success"
+    },
+    {
+      "api_name": "ipecho.net",
+      "ip_address": "154.64.226.146",
+      "status": "success"
+    },
+    {
+      "api_name": "myexternalip.com",
+      "ip_address": "154.64.226.146",
+      "status": "success"
+    },
+    {
+      "api_name": "my-ip.io",
+      "ip_address": "154.64.226.146",
+      "status": "success"
+    }
+  ],
+  "logs": [
+    "启动API方式IP地址检测",
+    "尝试API 1/6: ipify.org",
+    "API ipify.org 返回: 154.64.226.146",
+    "设置为主IP地址: 154.64.226.146",
+    "尝试API 2/6: icanhazip.com",
+    "API icanhazip.com 返回: 154.64.226.146",
+    "尝试API 3/6: ident.me",
+    "API ident.me 返回: 154.64.226.146",
+    "尝试API 4/6: ipecho.net",
+    "API ipecho.net 返回: 154.64.226.146",
+    "尝试API 5/6: myexternalip.com",
+    "API myexternalip.com 返回: 154.64.226.146",
+    "尝试API 6/6: my-ip.io",
+    "API my-ip.io 返回: 154.64.226.146"
+  ],
+  "success": true,
+  "error": null,
+  "timestamp": 1759027252
+}

@@ -1,0 +1,20 @@
+{
+  "local_ips": [],
+  "public_ips": [
+    "153.254.103.229"
+  ],
+  "logs": [
+    "[10:08:57] 页面加载完成，准备开始检测",
+    "[10:08:57] 开始IP地址检测",
+    "[10:08:57] 开始初始化RTCPeerConnection...",
+    "[10:08:57] 创建offer成功",
+    "[10:08:57] 设置本地描述成功",
+    "[10:08:57] 收到ICE候选: candidate:101135688 1 udp 2113937151 5be981d5-465a-47ad-9917-c7d4de22dfe2.local 57220 typ host generation 0 ufrag uXbA network-cost 999",
+    "[10:08:57] 收到ICE候选: candidate:3428326615 1 udp 1677729535 153.254.103.229 36059 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag uXbA network-cost 999",
+    "[10:08:57] 发现公网 IP: 153.254.103.229",
+    "[10:09:02] IP检测完成",
+    "[10:09:02] 检测完成: 发现 0 个本地IP, 1 个公网IP"
+  ],
+  "success": true,
+  "error": null
+}

@@ -1,0 +1,18 @@
+{
+  "webrtc_ips": [
+    "153.254.103.230"
+  ],
+  "logs": [
+    "[10:23:02] 页面加载完成，开始IP地址检测",
+    "[10:23:02] 开始初始化RTCPeerConnection...",
+    "[10:23:02] 创建offer成功",
+    "[10:23:02] 设置本地描述成功",
+    "[10:23:02] 收到ICE候选: candidate:420413607 1 udp 2113937151 326ef53c-1f48-4e2f-b1a3-ca2c7853671c.local 47629 typ host generation 0 ufrag cOF2 network-cost 999",
+    "[10:23:02] 收到ICE候选: candidate:3545246008 1 udp 1677729535 153.254.103.230 11725 typ srflx raddr 0.0.0.0 rport 0 generation 0 ufrag cOF2 network-cost 999",
+    "[10:23:02] 发现WebRTC IP: 153.254.103.230",
+    "[10:23:07] IP检测完成",
+    "[10:23:07] 检测完成: 发现 1 个公网IP地址"
+  ],
+  "success": true,
+  "error": null
+}
