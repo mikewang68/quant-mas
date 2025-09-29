@@ -17,15 +17,19 @@ from config.mongodb_config import MongoDBConfig
 
 # Import the router control function
 try:
-    from utils.enhanced_router_control import switch_ip
+    from utils.enhanced_router_control import TPLinkWAN2Controller
+
     ROUTER_CONTROL_AVAILABLE = True
 except ImportError:
-    print("Warning: Router control module not available. IP switching will be disabled.")
+    print(
+        "Warning: Router control module not available. IP switching will be disabled."
+    )
     ROUTER_CONTROL_AVAILABLE = False
 
 # Import the IP detection function
 try:
     from utils.get_isp_ip import get_current_ip
+
     IP_DETECTION_AVAILABLE = True
 except ImportError:
     print("Warning: IP detection module not available.")
@@ -41,7 +45,11 @@ def conn_mongo():
     uri = "mongodb://%s:%s@%s" % (
         mongo_config.get("username", "stock"),
         mongo_config.get("password", "681123"),
-        mongo_config.get("host", "192.168.1.2") + ":" + str(mongo_config.get("port", 27017)) + "/" + mongo_config.get("auth_database", "admin"),
+        mongo_config.get("host", "192.168.1.2")
+        + ":"
+        + str(mongo_config.get("port", 27017))
+        + "/"
+        + mongo_config.get("auth_database", "admin"),
     )
     client = MongoClient(uri)
     db = client[mongo_config.get("database", "stock")]
@@ -69,6 +77,33 @@ def get_code_name(db):
     return df
 
 
+def get_stocks_to_update(db):
+    """
+    获取需要更新的股票代码列表
+    条件：last_updated字段小于update_date数据集中的latest，或是空的股票集合
+    """
+    # 获取最新的更新日期
+    latest_date = get_lastest_date(db)
+
+    # 查询条件：last_updated为空或者小于latest_date
+    query = {
+        "$or": [
+            {"last_updated": {"$exists": False}},
+            {"last_updated": {"$lt": latest_date}}
+        ]
+    }
+
+    my_coll = db["code"]
+    cursor = my_coll.find(query)
+    df = pd.DataFrame(cursor)
+
+    # 如果DataFrame为空，返回空的DataFrame但保持列结构
+    if df.empty:
+        return pd.DataFrame(columns=["_id", "code", "name", "last_updated"])
+
+    return df
+
+
 # 获取上次更新时间
 def get_lastest_date(db):
     str_lastest = db.get_collection("update_date").find_one()
@@ -88,7 +123,7 @@ def set_lastest_date(db):
 
 # 写日k线
 def write_k_daily(db):
-    df_code = get_code_name(db)
+    df_code = get_stocks_to_update(db)
 
     start_date = get_lastest_date(db)
     # start_date = ""
@@ -99,12 +134,13 @@ def write_k_daily(db):
 
     # Get the initial IP before starting data collection
     if IP_DETECTION_AVAILABLE:
-        initial_ip = get_current_ip()
+        initial_ip = get_current_ip(max_retries=3, retry_delay=2)
         if initial_ip:
             used_ip.append(initial_ip)
             print(f"Initial IP added to used list: {initial_ip}")
         else:
-            print("Failed to get initial IP")
+            print("Failed to get initial IP - continuing without IP tracking")
+            # We'll continue without IP tracking if detection fails
 
     # Counter for IP switching
     stock_counter = 0
@@ -177,8 +213,24 @@ def write_k_daily(db):
                         {"$set": row},
                         upsert=True,
                     )
+
+                # 更新code数据集，将当前日期写入last_updated字段
+                current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+                db["code"].update_one(
+                    {"_id": code},
+                    {"$set": {"last_updated": current_date}},
+                    upsert=True,
+                )
             else:
                 print(f"Warning: No data found for code {code}. Skipping...")
+
+                # 即使没有数据，也更新code数据集的日期
+                current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+                db["code"].update_one(
+                    {"_id": code},
+                    {"$set": {"last_updated": current_date}},
+                    upsert=True,
+                )
 
             # Increment counters
             stock_counter += 1
@@ -188,40 +240,55 @@ def write_k_daily(db):
             # time.sleep(1)
 
             # Switch IP every 100 stocks
-            if ROUTER_CONTROL_AVAILABLE and stocks_since_last_switch >= 100:
+            if ROUTER_CONTROL_AVAILABLE and stocks_since_last_switch >= 300:
                 print(f"Switching IP after processing {stock_counter} stocks...")
 
                 # Switch the IP
-                success = switch_ip(router_ip="192.168.1.1", username="wangdg68", password="wap951020ZJL")
+                controller = TPLinkWAN2Controller(
+                    router_ip="192.168.1.1",
+                    username="wangdg68",
+                    password="wap951020ZJL",
+                )
+                success = controller.switch_ip()
                 if success:
                     print("IP switch successful")
 
                     # If IP detection is available, check and manage IP addresses
                     if IP_DETECTION_AVAILABLE:
-                        # Get the current IP
-                        current_ip = get_current_ip()
+                        # Get the current IP with retry mechanism
+                        current_ip = get_current_ip(max_retries=3, retry_delay=2)
                         if current_ip:
                             print(f"Current IP: {current_ip}")
 
                             # Check if this IP has been used before
                             while current_ip in used_ip:
-                                print(f"IP {current_ip} has been used before, switching again...")
+                                print(
+                                    f"IP {current_ip} has been used before, switching again..."
+                                )
                                 # Switch IP again
-                                switch_ip(router_ip="192.168.1.1", username="wangdg68", password="wap951020ZJL")
+                                controller = TPLinkWAN2Controller(
+                                    router_ip="192.168.1.1",
+                                    username="wangdg68",
+                                    password="wap951020ZJL",
+                                )
+                                controller.switch_ip()
                                 time.sleep(5)  # Wait for IP to change
-                                current_ip = get_current_ip()
+                                current_ip = get_current_ip(
+                                    max_retries=3, retry_delay=2
+                                )
                                 if current_ip:
                                     print(f"New IP: {current_ip}")
                                 else:
-                                    print("Failed to get current IP")
+                                    print("Failed to get current IP after switching")
                                     break
 
                             # Add the new IP to the used list
                             if current_ip and current_ip not in used_ip:
                                 used_ip.append(current_ip)
                                 print(f"Added {current_ip} to used IP list")
+                                print(f"Current used IP list: {used_ip}")
                         else:
-                            print("Failed to get current IP")
+                            print("Failed to get current IP after multiple attempts")
                 else:
                     print("IP switch failed")
                 stocks_since_last_switch = 0  # Reset the counter

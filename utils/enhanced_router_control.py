@@ -29,6 +29,64 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def setup_chrome_driver(headless=True, max_retries=3, retry_delay=1):
+    """
+    设置Chrome WebDriver with retry mechanism
+
+    Args:
+        headless (bool): 是否使用无头模式
+        max_retries (int): 最大重试次数
+        retry_delay (int): 重试间隔（秒）
+
+    Returns:
+        webdriver.Chrome: Chrome WebDriver实例
+    """
+    for attempt in range(max_retries):
+        try:
+            # 配置Chrome选项
+            chrome_options = Options()
+
+            # 无头模式
+            if headless:
+                chrome_options.add_argument("--headless")
+
+            # 其他有用的选项
+            chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-dev-shm-usage")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("--window-size=1920,1080")
+            chrome_options.add_argument("--ignore-certificate-errors")
+            chrome_options.add_argument("--ignore-ssl-errors")
+            chrome_options.add_argument("--allow-running-insecure-content")
+
+            # 禁用自动化控制特征
+            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
+            chrome_options.add_experimental_option("useAutomationExtension", False)
+
+            # 自动下载和设置ChromeDriver
+            service = Service(ChromeDriverManager().install())
+
+            # 创建WebDriver实例
+            driver = webdriver.Chrome(service=service, options=chrome_options)
+
+            # 绕过WebDriver检测
+            driver.execute_script(
+                "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+            )
+
+            return driver
+
+        except Exception as e:
+            logger.error(f"Chrome WebDriver设置失败 (尝试 {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay * (2 ** attempt))  # 指数退避
+                continue
+            return None
+
+    logger.error(f"经过 {max_retries} 次尝试后仍无法设置Chrome WebDriver")
+    return None
+
+
 class TPLinkWAN2Controller:
     def __init__(
         self,
@@ -72,29 +130,13 @@ class TPLinkWAN2Controller:
     def setup_driver(self):
         """设置Chrome WebDriver"""
         logger.info("设置Chrome WebDriver...")
-        chrome_options = Options()
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--ignore-certificate-errors")
-        chrome_options.add_argument("--ignore-ssl-errors")
-        chrome_options.add_argument("--allow-running-insecure-content")
-
-        # 根据参数决定是否使用headless模式
-        if self.headless:
-            chrome_options.add_argument("--headless")
-
-        # 设置窗口大小
-        chrome_options.add_argument("--window-size=1920,1080")
-
-        try:
-            # 自动下载并设置ChromeDriver
-            service = Service(ChromeDriverManager().install())
-            self.driver = webdriver.Chrome(service=service, options=chrome_options)
+        self.driver = setup_chrome_driver(headless=self.headless)
+        if self.driver:
             self.driver.implicitly_wait(3)  # 减少隐式等待时间
             logger.info("Chrome WebDriver设置成功")
             return True
-        except Exception as e:
-            logger.error(f"Chrome WebDriver设置失败: {e}")
+        else:
+            logger.error("Chrome WebDriver设置失败")
             return False
 
     def _safe_click(self, element):
@@ -400,7 +442,9 @@ class TPLinkWAN2Controller:
             wan2_element = None
             for selector_type, selector_value in wan2_selectors:
                 try:
-                    logger.debug(f"尝试定位WAN2元素: {selector_type} = {selector_value}")
+                    logger.debug(
+                        f"尝试定位WAN2元素: {selector_type} = {selector_value}"
+                    )
                     elements = self.driver.find_elements(selector_type, selector_value)
                     for element in elements:
                         if element.is_displayed():
@@ -418,12 +462,16 @@ class TPLinkWAN2Controller:
                 # 尝试查找右侧框架中的WAN2元素
                 try:
                     # 查找所有可能的WAN2元素
-                    wan2_elements = self.driver.find_elements(By.XPATH, "//*[contains(text(), 'WAN2')]")
+                    wan2_elements = self.driver.find_elements(
+                        By.XPATH, "//*[contains(text(), 'WAN2')]"
+                    )
                     for element in wan2_elements:
                         # 检查元素是否在右侧区域（通过x坐标判断）
                         location = element.location
                         size = self.driver.get_window_size()
-                        if location['x'] > size['width'] * 0.5:  # 如果元素在屏幕右半部分
+                        if (
+                            location["x"] > size["width"] * 0.5
+                        ):  # 如果元素在屏幕右半部分
                             if element.is_displayed():
                                 wan2_element = element
                                 logger.info("通过位置找到右侧WAN2设置选项")
@@ -690,42 +738,6 @@ class TPLinkWAN2Controller:
         if self.driver:
             self.driver.quit()
             logger.info("浏览器已关闭")
-
-
-def switch_ip(config_file=None, router_ip=None, username=None, password=None, headless=True):
-    """
-    直接调用的IP切换函数
-
-    Args:
-        config_file (str): 配置文件路径
-        router_ip (str): 路由器IP地址
-        username (str): 路由器用户名
-        password (str): 路由器密码
-        headless (bool): 是否使用headless模式
-
-    Returns:
-        bool: IP切换是否成功
-    """
-    logger.info("通过函数调用方式切换TP-Link路由器WAN2连接")
-
-    # 创建控制器实例
-    controller = TPLinkWAN2Controller(
-        config_file=config_file,
-        router_ip=router_ip,
-        username=username,
-        password=password,
-        headless=headless,
-    )
-
-    # 执行IP切换
-    success = controller.switch_ip()
-
-    if success:
-        logger.info("IP切换操作成功完成。")
-    else:
-        logger.error("IP切换操作失败。")
-
-    return success
 
 
 def main():

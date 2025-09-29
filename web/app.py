@@ -1809,25 +1809,52 @@ def register_routes(app: Flask):
             # Get the path to down2mongo.py
             down2mongo_path = Path(__file__).parent.parent / "utils" / "down2mongo.py"
 
-            # Run the script as a subprocess
-            result = subprocess.run(
+            # Run the script as a subprocess with real-time output
+            process = subprocess.Popen(
                 [sys.executable, str(down2mongo_path)],
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
-                timeout=300  # 5 minute timeout
+                bufsize=1,
+                universal_newlines=True
             )
 
-            if result.returncode == 0:
+            # Capture output in real-time and log it
+            stdout_lines = []
+            stderr_lines = []
+
+            # Read stdout and stderr in real-time
+            while True:
+                output = process.stdout.readline()
+                error = process.stderr.readline()
+
+                if output:
+                    print(f"[DOWN2MONGO STDOUT] {output.strip()}")
+                    stdout_lines.append(output)
+                    sys.stdout.flush()  # Force flush to console
+
+                if error:
+                    print(f"[DOWN2MONGO STDERR] {error.strip()}", file=sys.stderr)
+                    stderr_lines.append(error)
+                    sys.stderr.flush()  # Force flush to console
+
+                if output == '' and error == '' and process.poll() is not None:
+                    break
+
+            # Wait for the process to complete
+            returncode = process.poll()
+
+            if returncode == 0:
                 return jsonify({
                     "status": "success",
                     "message": "Market data updated successfully",
-                    "output": result.stdout
+                    "output": ''.join(stdout_lines)
                 })
             else:
                 return jsonify({
                     "status": "error",
                     "message": "Failed to update market data",
-                    "error": result.stderr
+                    "error": ''.join(stderr_lines)
                 }), 500
 
         except subprocess.TimeoutExpired:
