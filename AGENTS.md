@@ -345,6 +345,17 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **CREATED**: Comprehensive documentation and usage examples
 - **VERIFIED**: Functionality to ensure accurate control of right-side WAN2 interface
 
+### Dashboard Risk Metrics Calculation Enhancement
+- **FIXED**: Resolved "calculateVolatility is not defined" JavaScript error by properly scoping functions within script tags
+- **IMPLEMENTED**: Complete risk metrics calculation functionality including:
+  - Volatility calculation based on historical asset data standard deviation with annualization
+  - Sharpe Ratio calculation considering risk-free rate (assumed at 3%)
+  - VaR (Value at Risk) calculation using historical simulation method at 95% confidence level
+- **ENHANCED**: Improved robustness of calculation functions with proper edge case handling
+- **ADDED**: Comprehensive debugging information to help diagnose calculation issues
+- **VERIFIED**: Risk metrics now properly display on dashboard with real calculated values instead of default zeros
+- **UPDATED**: Documentation to reflect the enhanced dashboard risk metrics functionality
+
 ## Usage Patterns
 
 ### Running Agents
@@ -440,5 +451,5 @@ python -m backtesting.backtester
    - Improved formatting with thousand separators and right alignment for better readability
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-27*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-30*
 

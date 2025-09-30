@@ -1,0 +1,1859 @@
+{% extends "base.html" %}
+
+{% block title %}仪表板 - 量化交易系统{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="mb-0" style="font-size: 1.67rem; line-height: 1.2;">
+                    <i class="fas fa-tachometer-alt" style="font-size: 0.67em;"></i> 系统仪表板
+                </h1>
+                            <div class="d-flex align-items-center">
+                                <label for="accountSelect" class="form-label me-2 mb-0" style="font-size: 1rem;">选择账户:</label>
+                                <select class="form-select d-inline-block w-auto" id="accountSelect" style="font-size: 1rem; padding: 0.25rem 0.5rem;">
+                                    <option value="">加载中...</option>
+                                </select>
+                            </div>
+                        </div>
+                <hr>
+            </div>
+    </div>
+
+    <!-- Account Overview and Portfolio Performance Chart Section -->
+    <div class="row mb-4" id="accountOverviewSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-wallet"></i> 账户总览及历史收益曲线</h5>
+                        <div>
+                            <label for="benchmarkSelect" class="form-label me-2 mb-0 text-white" style="font-size: 1rem;">对比标的:</label>
+                            <select class="form-select d-inline-block w-auto" id="benchmarkSelect" style="font-size: 1rem; padding: 0.25rem 0.5rem;">
+                                <option value="000016">上证50</option>
+                                <option value="000300" selected>沪深300</option>
+                                <option value="000905">中证500</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <!-- Account Overview List (1/4 width) -->
+                        <div class="col-md-3 p-0">
+                            <div class="card h-100 m-0 border-0">
+                                <div class="card-body p-0">
+                                    <ul class="list-group">
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            初始资金
+                                            <span class="badge bg-secondary rounded-pill fs-6" id="initialCapital">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            持仓市值
+                                            <span class="badge bg-info rounded-pill fs-6" id="portfolioValue">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            现金
+                                            <span class="badge bg-success rounded-pill fs-6" id="cashValue">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            账户净值
+                                            <span class="badge bg-primary rounded-pill fs-6" id="accountNetValue">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            账户盈亏
+                                            <span class="badge bg-secondary rounded-pill fs-6" id="accountProfit">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            收益率
+                                            <span class="badge bg-success rounded-pill fs-6" id="cumulativeReturn">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            最大回撤（1年）
+                                            <span class="badge bg-warning rounded-pill fs-6" id="maxDrawdown">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            夏普比率
+                                            <span class="badge bg-info rounded-pill fs-6" id="sharpeRatio">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            胜率
+                                            <span class="badge bg-success rounded-pill fs-6" id="winRate">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            盈亏比
+                                            <span class="badge bg-info rounded-pill fs-6" id="profitLossRatio">0.00</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            波动率
+                                            <span class="badge bg-warning rounded-pill fs-6" id="volatility">0.00%</span>
+                                        </li>
+                                        <li class="list-group-item d-flex justify-content-between align-items-center fs-6">
+                                            VaR
+                                            <span class="badge bg-danger rounded-pill fs-6" id="varValue">0.00</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Portfolio Performance Chart (3/4 width) -->
+                        <div class="col-md-9">
+                            <div class="card h-100">
+                                <div class="card-body p-0">
+                                    <div id="portfolioChart" style="width: 100%; height: 100%; min-height: 300px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Remove the separate portfolio chart section -->
+
+    <!-- Remove the separate portfolio chart section -->
+
+    <!-- Positions and Risk Monitoring Section -->
+    <div class="row mb-4" id="positionsRiskSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <ul class="nav nav-tabs card-header-tabs" id="positionsRiskTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="positions-tab" data-bs-toggle="tab" href="#positions">持仓信息</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="risk-tab" data-bs-toggle="tab" href="#risk">风险监控</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Positions Tab -->
+                        <div class="tab-pane fade show active" id="positions">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h5><i class="fas fa-chart-pie"></i> 当前持仓</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>标的代码</th>
+                                                    <th>标的名称</th>
+                                                    <th>持仓数量</th>
+                                                    <th>当前市值</th>
+                                                    <th>持仓盈亏</th>
+                                                    <th>持仓天数</th>
+                                                    <th>止损/止盈线</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="positionsTableBody">
+                                                <!-- Positions will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-md-6">
+                                    <h6>持仓占比</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: 0%" id="positionRatio">0%</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>现金占比</h6>
+                                    <div class="progress">
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: 0%" id="cashRatio">0%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Risk Monitoring Tab -->
+                        <div class="tab-pane fade" id="risk">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h5><i class="fas fa-exclamation-triangle"></i> 风险监控</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>持仓标的</th>
+                                                    <th>波动率</th>
+                                                    <th>VaR</th>
+                                                    <th>止损/止盈线</th>
+                                                    <th>市场风险提示</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="riskMonitoringTableBody">
+                                                <!-- Risk monitoring data will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Records Section -->
+    <div class="row mb-4" id="tradingRecordsSection" style="display: none;">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <ul class="nav nav-tabs card-header-tabs" id="tradingRecordsTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="recent-trades-tab" data-bs-toggle="tab" href="#recentTrades">最近交易</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="open-trades-tab" data-bs-toggle="tab" href="#openTrades">未结交易</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content">
+                        <!-- Recent Trades Tab -->
+                        <div class="tab-pane fade show active" id="recentTrades">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>交易时间</th>
+                                            <th>标的代码</th>
+                                            <th>标的名称</th>
+                                            <th>交易类型</th>
+                                            <th>交易数量</th>
+                                            <th>交易价格</th>
+                                            <th>交易盈亏</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="recentTradesTableBody">
+                                        <!-- Recent trades will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Open Trades Tab -->
+                        <div class="tab-pane fade" id="openTrades">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>标的代码</th>
+                                            <th>标的名称</th>
+                                            <th>持仓数量</th>
+                                            <th>成本价格</th>
+                                            <th>当前价格</th>
+                                            <th>预期收益/亏损</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="openTradesTableBody">
+                                        <!-- Open trades will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<script>
+    let portfolioChart = null;
+
+    // Load accounts when page loads
+    $(document).ready(function() {
+        loadAccounts();
+    });
+
+    // Load all accounts
+    function loadAccounts() {
+            console.log('Loading accounts...');
+            $.get('/api/accounts')
+                .done(function(accounts) {
+                    console.log('Accounts loaded:', accounts);
+                const accountSelect = $('#accountSelect');
+                accountSelect.empty();
+
+                if (accounts.length === 0) {
+                    accountSelect.append('<option value="">暂无账户</option>');
+                    return;
+                }
+
+                // Add default option
+                accountSelect.append('<option value="">请选择账户</option>');
+
+                // Add all accounts
+                accounts.forEach(function(account) {
+                    const option = $('<option></option>');
+                    option.val(account._id);
+                    option.text(account.name || '未命名账户');
+                    accountSelect.append(option);
+                });
+
+                // Set default account to 'wdg' and load its data
+                const wdgOption = accountSelect.find('option').filter(function() {
+                    return $(this).text() === 'wdg';
+                });
+
+                if (wdgOption.length > 0) {
+                    const accountId = wdgOption.val();
+                    accountSelect.val(accountId).trigger('change');
+                } else if (accountSelect.find('option').length > 1) {
+                    // If 'wdg' not found, select the first account (excluding the "请选择账户" option)
+                    const firstAccountOption = accountSelect.find('option[value!=""]').first();
+                    if (firstAccountOption.length > 0) {
+                        firstAccountOption.prop('selected', true);
+                        accountSelect.trigger('change');
+                    }
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load accounts:', error);
+                $('#accountSelect').html('<option value="">加载失败</option>');
+            });
+    }
+    $('#accountSelect').change(function() {
+        const accountId = $(this).val();
+        if (accountId) {
+            loadAccountData(accountId);
+        } else {
+            // Hide all sections if no account selected
+            $('#accountOverviewSection').hide();
+            $('#positionsRiskSection').hide();
+            $('#tradingRecordsSection').hide();
+        }
+    });
+
+    // Handle benchmark selection change
+    $('#benchmarkSelect').change(function() {
+        const accountId = $('#accountSelect').val();
+        if (accountId) {
+            // Reload portfolio performance with new benchmark
+            loadPortfolioPerformance(accountId);
+        }
+    });
+
+    // Load account data
+    function loadAccountData(accountId) {
+        // Show all sections
+        $('#accountOverviewSection').show();
+        $('#positionsRiskSection').show();
+        $('#tradingRecordsSection').show();
+
+        // Load account overview
+        loadAccountOverview(accountId);
+
+        // Load positions
+        loadPositions(accountId);
+
+        // Load trading records
+        loadTradingRecords(accountId);
+
+        // Load risk monitoring data
+        loadRiskMonitoringData(accountId);
+
+        // Load portfolio performance data
+        loadPortfolioPerformance(accountId);
+    }
+
+    // Load portfolio performance data
+    function loadPortfolioPerformance(accountId) {
+        // First load account data to get initial cash
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const initialCash = account.initial_capital || 0;
+
+                    // Then load orders to calculate historical performance
+                    $.get('/api/orders')
+                        .done(function(orders) {
+                            // Filter orders for this account
+                            const accountOrders = orders.filter(order => order.account_id === accountId);
+
+                            if (accountOrders.length > 0) {
+                                // Calculate historical asset data
+                                calculateHistoricalAssetData(accountOrders, initialCash, accountId);
+                            } else {
+                                console.log('No orders found for this account');
+                                // Create empty chart if no orders
+                                createDualAxisChart([], []);
+                            }
+                        })
+                        .fail(function(xhr, status, error) {
+                            console.error('Failed to load orders:', error);
+                        });
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load account data:', error);
+            });
+    }
+
+    // Update account overview with asset data for max drawdown calculation
+    function updateAccountOverviewWithAssetData(initialCash, accountId, assetData) {
+        // Get the current account data to update the overview with asset data
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const cash = account.cash || 0;
+                    const stocks = account.stocks || [];
+
+                    // Calculate total stock value using latest prices from akshare
+                    let totalStockValue = 0;
+                    let processedStocks = 0;
+                    let stockCount = stocks.length;
+
+                    if (stockCount === 0) {
+                        // No stocks, update UI immediately
+                        updateAccountOverviewUI(initialCash, cash, 0, cash, assetData);
+                        return;
+                    }
+
+                    // For each stock, fetch latest price from akshare
+                    stocks.forEach(function(stock) {
+                        const code = stock.code || '';
+                        if (!code) {
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCash, cash, totalStockValue, totalStockValue + cash, assetData);
+                            }
+                            return;
+                        }
+
+                        // Fetch latest price data using akshare
+                        $.ajax({
+                            url: '/api/akshare/stock-data',
+                            method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({
+                                symbol: code,
+                                start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
+                                end_date: new Date().toISOString().split('T')[0]
+                            })
+                        }).done(function(response) {
+                            const priceData = response.data || [];
+                            if (priceData.length > 0) {
+                                // Use the latest closing price
+                                const latestPrice = priceData[priceData.length - 1].close || 0;
+                                const quantity = stock.quantity || 0;
+                                totalStockValue += latestPrice * quantity;
+                            }
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCash, cash, totalStockValue, totalStockValue + cash, assetData);
+                            }
+                        }).fail(function() {
+                            // If failed to get price, use cost price as fallback
+                            const costPrice = stock.cost || 0;
+                            const quantity = stock.quantity || 0;
+                            totalStockValue += costPrice * quantity;
+                            processedStocks++;
+                            if (processedStocks === stockCount) {
+                                updateAccountOverviewUI(initialCash, cash, totalStockValue, totalStockValue + cash, assetData);
+                            }
+                        });
+                    });
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load account overview with asset data:', error);
+            });
+    }
+
+    // Calculate historical asset data from orders
+    async function calculateHistoricalAssetData(orders, initialCash, accountId) {
+        try {
+            // Sort orders by date
+            const sortedOrders = orders.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Get first buy date
+            const firstBuyDate = sortedOrders[0].date;
+
+            // Get all unique stock codes from orders
+            const stockCodes = [...new Set(sortedOrders.map(order => order.code))];
+
+            // Get benchmark index data
+            const benchmarkSymbol = $('#benchmarkSelect').val();
+            const benchmarkData = await fetchIndexData(benchmarkSymbol, firstBuyDate);
+
+            // Get stock price data for all stocks
+            const stockPriceData = {};
+            for (const code of stockCodes) {
+                const prices = await fetchStockPriceData(code, firstBuyDate);
+                stockPriceData[code] = prices;
+            }
+
+            // Calculate daily asset values
+            const assetData = calculateDailyAssetValues(sortedOrders, initialCash, stockPriceData, firstBuyDate);
+
+            // Update account overview with asset data for max drawdown calculation
+            updateAccountOverviewWithAssetData(initialCash, accountId, assetData);
+
+            // Create ECharts chart with dual y-axes
+            createDualAxisChart(assetData, benchmarkData);
+
+        } catch (error) {
+            console.error('Error calculating historical asset data:', error);
+        }
+    }
+
+    // Fetch index data using akshare
+    async function fetchIndexData(symbol, startDate) {
+        try {
+            const response = await $.ajax({
+                url: '/api/akshare/index-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: symbol,
+                    start_date: startDate,
+                    end_date: new Date().toISOString().split('T')[0]
+                })
+            });
+            return response.data || [];
+        } catch (error) {
+            console.error('Error fetching index data:', error);
+            return [];
+        }
+    }
+
+    // Fetch stock price data using akshare
+    async function fetchStockPriceData(code, startDate) {
+        try {
+            const response = await $.ajax({
+                url: '/api/akshare/stock-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: code,
+                    start_date: startDate,
+                    end_date: new Date().toISOString().split('T')[0]
+                })
+            });
+            return response.data || [];
+        } catch (error) {
+            console.error('Error fetching stock price data:', error);
+            return [];
+        }
+    }
+
+    // Calculate daily asset values
+    function calculateDailyAssetValues(orders, initialCash, stockPriceData, startDate) {
+        const assetData = [];
+        let currentCash = initialCash;
+        const holdings = {}; // {code: {quantity: number, cost: number}}
+
+        // Get all trading dates from stock price data
+        const allDates = new Set();
+        Object.values(stockPriceData).forEach(prices => {
+            prices.forEach(price => allDates.add(price.date));
+        });
+
+        // Add order dates to ensure we don't miss any trading days
+        orders.forEach(order => allDates.add(order.date));
+
+        const sortedDates = Array.from(allDates).sort();
+
+        let orderIndex = 0;
+
+        for (const date of sortedDates) {
+            // Process orders for this date
+            while (orderIndex < orders.length && orders[orderIndex].date <= date) {
+                const order = orders[orderIndex];
+
+                if (order.quantity > 0) {
+                    // Buy order
+                    const cost = order.price * order.quantity;
+                    const commission = order.commission || 0;
+                    currentCash -= (cost + commission);
+
+                    if (!holdings[order.code]) {
+                        holdings[order.code] = { quantity: 0, totalCost: 0 };
+                    }
+                    holdings[order.code].quantity += order.quantity;
+                    holdings[order.code].totalCost += cost;
+                } else {
+                    // Sell order
+                    const quantity = Math.abs(order.quantity);
+                    const revenue = order.price * quantity;
+                    const commission = order.commission || 0;
+                    currentCash += (revenue - commission);
+
+                    if (holdings[order.code]) {
+                        holdings[order.code].quantity -= quantity;
+                        // Proportionally reduce total cost
+                        const costPerShare = holdings[order.code].totalCost / (holdings[order.code].quantity + quantity);
+                        holdings[order.code].totalCost -= costPerShare * quantity;
+
+                        if (holdings[order.code].quantity <= 0) {
+                            delete holdings[order.code];
+                        }
+                    }
+                }
+
+                orderIndex++;
+            }
+
+            // Calculate current portfolio value using market prices
+            let portfolioValue = 0;
+            const stockDetails = [];
+
+            for (const [code, holding] of Object.entries(holdings)) {
+                // Find the closest price data for this date
+                let priceData = stockPriceData[code]?.find(p => p.date === date);
+
+                // If no exact match, find the most recent price before this date
+                if (!priceData && stockPriceData[code]) {
+                    const availablePrices = stockPriceData[code].filter(p => p.date <= date);
+                    if (availablePrices.length > 0) {
+                        priceData = availablePrices[availablePrices.length - 1];
+                    }
+                }
+
+                if (priceData && holding.quantity > 0) {
+                    const marketValue = priceData.close * holding.quantity;
+                    const avgCost = holding.totalCost / holding.quantity;
+                    portfolioValue += marketValue;
+                    stockDetails.push({
+                        code: code,
+                        close: priceData.close,
+                        quantity: holding.quantity,
+                        marketValue: marketValue,
+                        avgCost: avgCost,
+                        totalCost: holding.totalCost
+                    });
+                }
+            }
+
+            const totalAssets = portfolioValue + currentCash;
+
+            assetData.push({
+                date: date,
+                cash: currentCash,
+                portfolioValue: portfolioValue,
+                totalAssets: totalAssets,
+                stocks: stockDetails,
+                initialCapital: initialCash
+            });
+        }
+
+        return assetData;
+    }
+
+    // Create ECharts chart with dual y-axes
+    function createDualAxisChart(assetData, benchmarkData) {
+        const chartDom = document.getElementById('portfolioChart');
+        if (portfolioChart) {
+            portfolioChart.dispose();
+        }
+        portfolioChart = echarts.init(chartDom);
+
+        if (assetData.length === 0) {
+            // Show empty chart message
+            const option = {
+                title: {
+                    text: '暂无数据',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: {
+                        color: '#999',
+                        fontSize: 16
+                    }
+                }
+            };
+            portfolioChart.setOption(option);
+            return;
+        }
+
+        // Prepare data
+        const dates = assetData.map(item => item.date);
+        const assetValues = assetData.map(item => item.totalAssets / 10000); // Convert to W units
+
+        // Align benchmark data with asset dates and normalize to start from same point
+        const benchmarkValues = [];
+        const benchmarkMap = new Map(benchmarkData.map(item => [item.date, item.close]));
+
+        // First, collect all benchmark values aligned with dates
+        for (const date of dates) {
+            const benchmarkValue = benchmarkMap.get(date);
+            if (benchmarkValue !== undefined) {
+                benchmarkValues.push(benchmarkValue);
+            } else {
+                // Find the closest available benchmark value
+                let closestValue = null;
+                let minDiff = Infinity;
+                for (const [benchDate, benchValue] of benchmarkMap) {
+                    const diff = Math.abs(new Date(benchDate) - new Date(date));
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestValue = benchValue;
+                    }
+                }
+                benchmarkValues.push(closestValue);
+            }
+        }
+
+        // Find the first valid benchmark value that corresponds to the first asset value
+        let firstBenchmarkValue = null;
+        let firstAssetValue = null;
+
+        for (let i = 0; i < Math.min(benchmarkValues.length, assetValues.length); i++) {
+            if (benchmarkValues[i] !== null && assetValues[i] !== null) {
+                firstBenchmarkValue = benchmarkValues[i];
+                firstAssetValue = assetValues[i];
+                break;
+            }
+        }
+
+        // Normalize benchmark to start at same point as assets - ensure exact same starting point
+        const normalizedBenchmarkValues = benchmarkValues.map(value =>
+            value !== null && firstBenchmarkValue !== null && firstAssetValue !== null ?
+            (value / firstBenchmarkValue) * firstAssetValue : null
+        );
+
+        // Calculate y-axis ranges to avoid starting from 0
+        const validAssetValues = assetValues.filter(v => v !== null && v !== undefined);
+        const validBenchmarkValues = benchmarkValues.filter(v => v !== null && v !== undefined);
+        const validNormalizedBenchmarkValues = normalizedBenchmarkValues.filter(v => v !== null && v !== undefined);
+
+        const assetMin = Math.min(...validAssetValues);
+        const assetMax = Math.max(...validAssetValues);
+        const assetRange = assetMax - assetMin;
+        const assetPadding = assetRange * 0.1; // 10% padding
+
+        // Use original benchmark values for left axis range calculation
+        const benchmarkMin = Math.min(...validBenchmarkValues);
+        const benchmarkMax = Math.max(...validBenchmarkValues);
+        const benchmarkRange = benchmarkMax - benchmarkMin;
+        const benchmarkPadding = benchmarkRange * 0.1; // 10% padding
+
+        // Use normalized values for right axis range calculation (combined with assets)
+        const rightAxisMin = Math.min(...validAssetValues, ...validNormalizedBenchmarkValues);
+        const rightAxisMax = Math.max(...validAssetValues, ...validNormalizedBenchmarkValues);
+        const rightAxisRange = rightAxisMax - rightAxisMin;
+        const rightAxisPadding = rightAxisRange * 0.1; // 10% padding
+
+        const option = {
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: {
+                    type: 'cross',
+                    label: {
+                        color: '#8B4513'
+                    }
+                },
+                formatter: function(params) {
+                    let result = '<div style="text-align: left;">';
+                    result += '<strong>' + params[0].axisValueLabel + '</strong><br/>';
+
+                    // Get asset data for this date
+                    const dataIndex = params[0].dataIndex;
+                    const assetDataForDate = assetData[dataIndex];
+
+                    params.forEach(function(item) {
+                        if (item.seriesName === '账户资产(万)') {
+                            result += item.marker + item.seriesName + ': ' + item.value.toFixed(2) + '万<br/>';
+                        } else if (item.seriesName === '对标指数') {
+                            // Show the original index value
+                            const originalValue = benchmarkValues[item.dataIndex];
+                            if (originalValue !== null) {
+                                result += item.marker + item.seriesName + ': ' + originalValue.toFixed(2) + '<br/>';
+                            }
+                        }
+                    });
+
+                    // Add detailed asset information
+                    if (assetDataForDate) {
+                        result += '<br/><strong>详细信息:</strong><br/>';
+                        result += '日期: ' + assetDataForDate.date + '<br/>';
+                        result += '现金: ' + (assetDataForDate.cash / 10000).toFixed(2) + '万<br/>';
+                        result += '持仓金额: ' + (assetDataForDate.portfolioValue / 10000).toFixed(2) + '万<br/>';
+                        result += '总资产: ' + (assetDataForDate.totalAssets / 10000).toFixed(2) + '万<br/>';
+
+                        // Calculate asset profit/loss based on initial capital
+                        if (assetDataForDate.initialCapital) {
+                            const assetProfitLoss = assetDataForDate.totalAssets - assetDataForDate.initialCapital;
+                            const assetProfitLossPercent = (assetProfitLoss / assetDataForDate.initialCapital) * 100;
+                            const assetProfitLossColor = assetProfitLoss >= 0 ? 'green' : 'red';
+                            result += '<span style="color:' + assetProfitLossColor + '">资产盈亏: ' + (assetProfitLoss / 10000).toFixed(2) + '万 (' + (assetProfitLoss >= 0 ? '+' : '') + assetProfitLossPercent.toFixed(2) + '%)</span><br/>';
+                        }
+
+                        if (assetDataForDate.stocks && assetDataForDate.stocks.length > 0) {
+                            result += '<br/><strong>持仓股票:</strong><br/>';
+                            assetDataForDate.stocks.forEach(function(stock) {
+                                result += '<strong>' + stock.code + '</strong>: ' + stock.quantity + '股<br/>';
+                                result += '&nbsp;&nbsp;当前价格: ' + stock.close.toFixed(2) + '<br/>';
+                                result += '&nbsp;&nbsp;成本价格: ' + stock.avgCost.toFixed(2) + '<br/>';
+                                result += '&nbsp;&nbsp;持仓市值: ' + (stock.marketValue / 10000).toFixed(2) + '万<br/>';
+                                result += '&nbsp;&nbsp;持仓成本: ' + (stock.totalCost / 10000).toFixed(2) + '万<br/>';
+                                const profitLoss = stock.marketValue - stock.totalCost;
+                                const profitLossPercent = (profitLoss / stock.totalCost) * 100;
+                                const profitLossColor = profitLoss >= 0 ? 'green' : 'red';
+                                result += '&nbsp;&nbsp;<span style="color:' + profitLossColor + '">盈亏: ' + (profitLoss / 10000).toFixed(2) + '万 (' + (profitLoss >= 0 ? '+' : '') + profitLossPercent.toFixed(2) + '%)</span><br/>';
+                            });
+                        }
+                    }
+
+                    result += '</div>';
+                    return result;
+                }
+            },
+            legend: {
+                data: ['账户资产(万)', '对标指数'],
+                textStyle: {
+                    color: function(params) {
+                        if (params.name === '账户资产(万)') {
+                            return '#ffff00';
+                        } else if (params.name === '对标指数') {
+                            return '#ffffff';
+                        }
+                        return '#ffffff';
+                    }
+                }
+            },
+            grid: {
+                left: '3%',
+                right: '4%',
+                bottom: '15%',
+                containLabel: true,
+                show: true,
+                borderWidth: 1,
+                borderColor: '#333',
+                backgroundColor: 'transparent'
+            },
+            toolbox: {
+                feature: {
+                    dataZoom: {
+                        yAxisIndex: 'none'
+                    },
+                    restore: {},
+                    saveAsImage: {}
+                }
+            },
+            dataZoom: [{
+                type: 'inside',
+                start: Math.max(0, 100 - (365 / dates.length * 100)), // Default to show last 1 year
+                end: 100
+            }, {
+                type: 'slider',
+                bottom: '5%',
+                start: Math.max(0, 100 - (365 / dates.length * 100)),
+                end: 100
+            }],
+            xAxis: {
+                type: 'category',
+                boundaryGap: false,
+                data: dates,
+                splitLine: {
+                    show: true,
+                    lineStyle: {
+                        color: '#333',
+                        type: 'solid'
+                    }
+                }
+            },
+            yAxis: [
+                {
+                    type: 'value',
+                    name: '指数',
+                    position: 'left',
+                    min: function(value) {
+                        return Math.max(0, benchmarkMin - benchmarkPadding);
+                    },
+                    max: function(value) {
+                        return benchmarkMax + benchmarkPadding;
+                    },
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#ffffff'
+                        }
+                    },
+                    axisLabel: {
+                        show: true,
+                        formatter: function(value) {
+                            return Math.round(value);
+                        },
+                        color: '#ffffff'
+                    },
+                    splitLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#333',
+                            type: 'solid'
+                        }
+                    }
+                },
+                {
+                    type: 'value',
+                    name: '资产(万)',
+                    position: 'right',
+                    min: function(value) {
+                        return Math.max(0, rightAxisMin - rightAxisPadding);
+                    },
+                    max: function(value) {
+                        return rightAxisMax + rightAxisPadding;
+                    },
+                    axisLine: {
+                        show: true,
+                        lineStyle: {
+                            color: '#ffff00'
+                        }
+                    },
+                    axisLabel: {
+                        formatter: function(value) {
+                            return Math.round(value) + '万';
+                        },
+                        color: '#ffff00'
+                    },
+                    splitLine: {
+                        show: false
+                    }
+                }
+            ],
+            series: [
+                {
+                    name: '账户资产(万)',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: assetValues,
+                    smooth: true,
+                    lineStyle: {
+                        width: 2,
+                        color: '#ffff00'
+                    },
+                    itemStyle: {
+                        color: '#ffff00'
+                    }
+                },
+                {
+                    name: '对标指数',
+                    type: 'line',
+                    yAxisIndex: 1,
+                    data: normalizedBenchmarkValues,
+                    smooth: true,
+                    lineStyle: {
+                        width: 2,
+                        color: '#ffffff'
+                    },
+                    itemStyle: {
+                        color: '#ffffff'
+                    }
+                },
+                {
+                    name: '指数刻度参考',
+                    type: 'line',
+                    yAxisIndex: 0,
+                    data: benchmarkValues,
+                    smooth: true,
+                    lineStyle: {
+                        width: 0,
+                        color: 'transparent'
+                    },
+                    itemStyle: {
+                        color: 'transparent'
+                    },
+                    showSymbol: false,
+                    silent: true,
+                    legendHoverLink: false
+                }
+            ]
+        };
+
+        portfolioChart.setOption(option);
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (portfolioChart) {
+                portfolioChart.resize();
+            }
+        });
+    }
+
+    // Load account overview data
+    function loadAccountOverview(accountId) {
+        // This function is now handled by updateAccountOverviewWithAssetData
+        // which is called when portfolio performance data is loaded
+        console.log('Account overview will be updated with asset data');
+    }
+
+    // Load positions data
+    function loadPositions(accountId) {
+        // First get account data
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const stocks = account.stocks || [];
+                    const positionsTableBody = $('#positionsTableBody');
+                    positionsTableBody.empty();
+
+                    if (stocks.length === 0) {
+                        positionsTableBody.append('<tr><td colspan="7" class="text-center">暂无持仓</td></tr>');
+                        return;
+                    }
+
+                    // Get orders for this account to calculate holding days and stop/take profit lines
+                    $.get('/api/orders')
+                        .done(function(orders) {
+                            // Filter orders for this account
+                            const accountOrders = orders.filter(order => order.account_id === accountId);
+
+                            // Calculate total value for position ratio
+                            const initialCapital = account.initial_capital || 0;
+                            const cash = account.cash || 0;
+                            let totalStockValue = 0;
+                            let processedStocks = 0;
+                            let stockCount = stocks.length;
+
+                            // First pass: calculate total stock value using akshare prices
+                            stocks.forEach(function(stock) {
+                                const code = stock.code || '';
+                                if (!code) {
+                                    processedStocks++;
+                                    if (processedStocks === stockCount) {
+                                        updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders);
+                                    }
+                                    return;
+                                }
+
+                                // Fetch latest price data using akshare
+                                $.ajax({
+                                    url: '/api/akshare/stock-data',
+                                    method: 'POST',
+                                    contentType: 'application/json',
+                                    data: JSON.stringify({
+                                        symbol: code,
+                                        start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
+                                        end_date: new Date().toISOString().split('T')[0]
+                                    })
+                                }).done(function(response) {
+                                    const priceData = response.data || [];
+                                    if (priceData.length > 0) {
+                                        // Use the latest closing price
+                                        const latestPrice = priceData[priceData.length - 1].close || 0;
+                                        const quantity = stock.quantity || 0;
+                                        totalStockValue += latestPrice * quantity;
+                                    }
+                                    processedStocks++;
+                                    if (processedStocks === stockCount) {
+                                        updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders);
+                                    }
+                                }).fail(function() {
+                                    // If failed to get price, use cost price as fallback
+                                    const costPrice = stock.cost || 0;
+                                    const quantity = stock.quantity || 0;
+                                    totalStockValue += costPrice * quantity;
+                                    processedStocks++;
+                                    if (processedStocks === stockCount) {
+                                        updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders);
+                                    }
+                                });
+                            });
+                        })
+                        .fail(function(xhr, status, error) {
+                            console.error('Failed to load orders:', error);
+                            // Fallback to original method if orders can't be loaded
+                            updatePositionsTable(stocks, account, 0, account.cash || 0);
+                        });
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load positions:', error);
+                $('#positionsTableBody').html('<tr><td colspan="7" class="text-center text-danger">加载持仓信息失败</td></tr>');
+            });
+    }
+
+    // Helper function to calculate trade profit/loss
+    function calculateTradeProfitLoss(orders, currentOrder) {
+        // Filter orders for the same stock and sort by date
+        const stockOrders = orders.filter(order => order.code === currentOrder.code)
+                                  .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // If this is a buy order, return commission as negative value
+        if (currentOrder.quantity > 0) {
+            const commission = currentOrder.commission || 0;
+            return -commission;
+        }
+
+        // This is a sell order, calculate profit/loss based on average cost
+        let totalQuantity = 0;
+        let totalCost = 0;
+
+        // Process orders chronologically to calculate average cost
+        for (const order of stockOrders) {
+            // Stop processing once we reach the current order
+            if (order._id === currentOrder._id) {
+                break;
+            }
+
+            if (order.quantity > 0) {
+                // Buy order - add to position
+                totalQuantity += order.quantity;
+                totalCost += order.quantity * order.price;
+            } else {
+                // Sell order - reduce position
+                const sellQuantity = Math.abs(order.quantity);
+                if (totalQuantity > 0) {
+                    const averageCost = totalCost / totalQuantity;
+                    totalQuantity -= sellQuantity;
+                    totalCost -= sellQuantity * averageCost;
+
+                    // Ensure we don't go below zero
+                    if (totalQuantity < 0) {
+                        totalQuantity = 0;
+                        totalCost = 0;
+                    }
+                }
+            }
+        }
+
+        // Calculate profit/loss for current sell order
+        if (totalQuantity > 0) {
+            const averageCost = totalCost / totalQuantity;
+            const sellQuantity = Math.abs(currentOrder.quantity);
+            const sellRevenue = sellQuantity * currentOrder.price;
+            const sellCost = sellQuantity * averageCost;
+            const commission = currentOrder.commission || 0;
+            const profitLoss = sellRevenue - sellCost - commission;
+
+            return profitLoss;
+        }
+
+        // No previous buy orders or position already closed
+        // Still consider commission even if no previous buys
+        const commission = currentOrder.commission || 0;
+        return -commission;
+    }
+
+    // Load trading records
+    function loadTradingRecords(accountId) {
+        $.get('/api/orders')
+            .done(function(orders) {
+                // Filter orders for this account
+                const accountOrders = orders.filter(order => order.account_id === accountId);
+
+                // Recent trades (last 10)
+                const recentTrades = accountOrders.slice(0, 10);
+                const recentTradesTableBody = $('#recentTradesTableBody');
+                recentTradesTableBody.empty();
+
+                if (recentTrades.length === 0) {
+                    recentTradesTableBody.append('<tr><td colspan="7" class="text-center">暂无交易记录</td></tr>');
+                } else {
+                    recentTrades.forEach(function(order) {
+                        // Calculate profit/loss for both buy and sell orders
+                        let profitLossText = '';
+                        if (order.quantity < 0) {
+                            // This is a sell order, calculate profit/loss
+                            const profitLoss = calculateTradeProfitLoss(accountOrders, order);
+                            if (profitLoss !== null) {
+                                const formattedProfitLoss = profitLoss.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                const profitLossClass = profitLoss >= 0 ? 'text-success' : 'text-danger';
+                                profitLossText = `<span class="${profitLossClass}">${profitLoss >= 0 ? '+' : ''}${formattedProfitLoss}</span>`;
+                            }
+                        } else {
+                            // This is a buy order, show commission cost as negative value
+                            const commission = order.commission || 0;
+                            if (commission > 0) {
+                                const formattedCommission = commission.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                                profitLossText = `<span class="text-danger">-${formattedCommission}</span>`;
+                            } else {
+                                profitLossText = `<span class="text-danger">0.00</span>`;
+                            }
+                        }
+
+                        const row = `
+                            <tr>
+                                <td>${order.date}</td>
+                                <td>${order.code}</td>
+                                <td>${order.name}</td>
+                                <td class="${order.quantity > 0 ? 'text-success' : 'text-danger'}">${order.quantity > 0 ? '买入' : '卖出'}</td>
+                                <td>${Math.abs(order.quantity)}</td>
+                                <td>${order.price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td class="text-end">${profitLossText}</td>
+                            </tr>
+                        `;
+                        recentTradesTableBody.append(row);
+                    });
+                }
+
+                // Open trades (would need to calculate from positions)
+                const openTradesTableBody = $('#openTradesTableBody');
+                openTradesTableBody.empty();
+                openTradesTableBody.append('<tr><td colspan="6" class="text-center">暂无未结交易</td></tr>');
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load trading records:', error);
+                $('#recentTradesTableBody').html('<tr><td colspan="7" class="text-center text-danger">加载交易记录失败</td></tr>');
+                $('#openTradesTableBody').html('<tr><td colspan="6" class="text-center text-danger">加载未结交易失败</td></tr>');
+            });
+    }
+
+    // Helper function to calculate 1-year maximum drawdown
+    function calculateMaxDrawdown(assetData) {
+        if (!assetData || assetData.length === 0) {
+            return 0;
+        }
+
+        // Get the date one year ago from today
+        const oneYearAgo = new Date();
+        oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+        // Filter asset data to only include data from the last year
+        const filteredData = assetData.filter(item => new Date(item.date) >= oneYearAgo);
+
+        if (filteredData.length === 0) {
+            return 0;
+        }
+
+        let peak = filteredData[0].totalAssets;
+        let maxDrawdown = 0;
+
+        for (let i = 1; i < filteredData.length; i++) {
+            const currentValue = filteredData[i].totalAssets;
+
+            // Update peak if current value is higher
+            if (currentValue > peak) {
+                peak = currentValue;
+            }
+
+            // Calculate drawdown
+            const drawdown = (peak - currentValue) / peak * 100;
+
+            // Update maximum drawdown
+            if (drawdown > maxDrawdown) {
+                maxDrawdown = drawdown;
+            }
+        }
+
+        return maxDrawdown;
+    }
+
+    // Helper function to calculate win rate and profit/loss ratio from orders
+    function calculateWinRateAndProfitLossRatio(orders, accountId) {
+        // Filter orders for this account
+        const accountOrders = orders.filter(order => order.account_id === accountId);
+
+        // Debug logging
+        console.log('Account orders:', accountOrders);
+        console.log('Account ID:', accountId);
+
+        // Check if account orders exist
+        if (!accountOrders || accountOrders.length === 0) {
+            console.log('No orders found for account');
+            return { winRate: 0, profitLossRatio: 0 };
+        }
+
+        // Group orders by stock code
+        const ordersByStock = {};
+        accountOrders.forEach(order => {
+            if (!ordersByStock[order.code]) {
+                ordersByStock[order.code] = [];
+            }
+            ordersByStock[order.code].push(order);
+        });
+
+        // Calculate profit/loss for each complete transaction
+        const transactions = [];
+        for (const code in ordersByStock) {
+            // Sort orders by date
+            const stockOrders = ordersByStock[code].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            // Debug logging
+            console.log(`Processing stock ${code}:`, stockOrders);
+
+            let totalQuantity = 0;
+            let totalCost = 0;
+
+            for (const order of stockOrders) {
+                if (order.quantity > 0) {
+                    // Buy order
+                    const cost = order.price * order.quantity;
+                    totalQuantity += order.quantity;
+                    totalCost += cost;
+                    console.log(`Buy: ${order.quantity} shares at ${order.price}, totalQuantity: ${totalQuantity}, totalCost: ${totalCost}`);
+                } else {
+                    // Sell order
+                    const sellQuantity = Math.abs(order.quantity);
+                    const sellRevenue = order.price * sellQuantity;
+
+                    // Calculate cost of sold shares (weighted average)
+                    const avgCost = totalQuantity > 0 ? totalCost / totalQuantity : 0;
+                    const soldCost = avgCost * sellQuantity;
+
+                    // Update remaining holdings
+                    totalQuantity -= sellQuantity;
+                    totalCost -= soldCost;
+
+                    // Calculate profit/loss for this sell order
+                    const commission = (order.commission || 0);
+                    const profitLoss = sellRevenue - soldCost - commission;
+
+                    console.log(`Sell: ${sellQuantity} shares at ${order.price}, avgCost: ${avgCost}, profitLoss: ${profitLoss}`);
+
+                    // If this closes the position (quantity <= 0), record the transaction
+                    if (totalQuantity <= 0) {
+                        transactions.push({
+                            code: order.code,
+                            name: order.name,
+                            profitLoss: profitLoss,
+                            isWin: profitLoss > 0
+                        });
+                        // Reset for potential new position in same stock
+                        totalQuantity = 0;
+                        totalCost = 0;
+                        console.log(`Transaction completed for ${order.code}, profitLoss: ${profitLoss}`);
+                    }
+                }
+            }
+        }
+
+        // Debug logging
+        console.log('Transactions:', transactions);
+
+        // Calculate win rate and profit/loss ratio
+        if (transactions.length === 0) {
+            console.log('No transactions found');
+            return { winRate: 0, profitLossRatio: 0 };
+        }
+
+        const winningTransactions = transactions.filter(t => t.isWin);
+        const winRate = (winningTransactions.length / transactions.length) * 100;
+
+        // Calculate average profit and average loss
+        const totalProfit = winningTransactions.reduce((sum, t) => sum + t.profitLoss, 0);
+        const averageProfit = winningTransactions.length > 0 ? totalProfit / winningTransactions.length : 0;
+
+        const losingTransactions = transactions.filter(t => !t.isWin);
+        const totalLoss = losingTransactions.reduce((sum, t) => sum + Math.abs(t.profitLoss), 0);
+        const averageLoss = losingTransactions.length > 0 ? totalLoss / losingTransactions.length : 0;
+
+        const profitLossRatio = averageLoss !== 0 ? averageProfit / averageLoss : 0;
+
+        console.log(`Win rate: ${winRate}%, Profit/Loss ratio: ${profitLossRatio}`);
+        console.log(`Total transactions: ${transactions.length}, Winning transactions: ${winningTransactions.length}`);
+
+        return {
+            winRate: winRate,
+            profitLossRatio: profitLossRatio,
+            transactions: transactions.length,
+            winningTransactions: winningTransactions.length
+        };
+    }
+
+    // Helper function to update account overview UI
+    function updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalValue, assetData) {
+        // 1. 账户净值 = 持仓市值 + 现金
+        const accountNetValue = totalStockValue + cash;
+
+        // 2. 账户盈亏 = 账户净值 - 初始资金
+        const profitAmount = accountNetValue - initialCapital;
+
+        // 3. 收益率 = (账户盈亏 / 初始资金) * 100%
+        const profitRatio = initialCapital !== 0 ? (profitAmount / initialCapital) * 100 : 0;
+
+        // Calculate 1-year maximum drawdown
+        const maxDrawdown = calculateMaxDrawdown(assetData);
+
+        // Update UI
+        $('#initialCapital').text(initialCapital.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#portfolioValue').text(totalStockValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#cashValue').text(cash.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#accountNetValue').text(accountNetValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+        $('#accountProfit').text(profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}))
+            .removeClass('bg-success bg-danger')
+            .addClass(profitAmount >= 0 ? 'bg-success' : 'bg-danger');
+
+        // Set other metrics to default values (would be calculated in real implementation)
+        $('#cumulativeReturn').text(`${profitRatio.toFixed(2)}%`)
+            .removeClass('bg-success bg-danger')
+            .addClass(profitRatio >= 0 ? 'bg-success' : 'bg-danger');
+        $('#maxDrawdown').text(`${maxDrawdown.toFixed(2)}%`);
+
+        // Calculate and display Sharpe Ratio (assuming risk-free rate of 3%)
+        const sharpeRatio = calculateSharpeRatio(assetData, 0.03);
+        $('#sharpeRatio').text(sharpeRatio.toFixed(2));
+
+        // Load orders to calculate win rate and profit/loss ratio
+        const accountId = $('#accountSelect').val();
+        console.log('Calculating win rate and profit/loss ratio for account:', accountId);
+        if (accountId) {
+            $.get('/api/orders')
+                .done(function(orders) {
+                    console.log('Orders loaded for win rate calculation:', orders);
+                    const metrics = calculateWinRateAndProfitLossRatio(orders, accountId);
+                    console.log('Calculated metrics:', metrics);
+                    $('#winRate').text(`${metrics.winRate.toFixed(2)}%`)
+                        .removeClass('bg-success bg-danger')
+                        .addClass(metrics.winRate >= 50 ? 'bg-success' : (metrics.winRate > 0 ? 'bg-warning' : 'bg-danger'));
+                    $('#profitLossRatio').text(metrics.profitLossRatio.toFixed(2))
+                        .removeClass('bg-success bg-danger')
+                        .addClass(metrics.profitLossRatio >= 1 ? 'bg-success' : 'bg-danger');
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('Failed to load orders for win rate calculation:', error);
+                    $('#winRate').text('0.00%');
+                    $('#profitLossRatio').text('0.00');
+                });
+        } else {
+            console.log('No account ID found for win rate calculation');
+            $('#winRate').text('0.00%');
+            $('#profitLossRatio').text('0.00');
+        }
+
+        // Calculate volatility based on historical asset data
+        const volatility = calculateVolatility(assetData);
+        $('#volatility').text(`${volatility.toFixed(2)}%`);
+
+        // Calculate and display Sharpe Ratio (assuming risk-free rate of 3%)
+        const sharpeRatio = calculateSharpeRatio(assetData, 0.03);
+        $('#sharpeRatio').text(sharpeRatio.toFixed(2));
+
+        // Calculate and display VaR (Value at Risk) at 95% confidence level
+        const varValue = calculateVaR(assetData, 0.95);
+        $('#varValue').text(varValue.toFixed(2));
+    }
+
+    // Helper function to calculate account volatility
+    function calculateVolatility(assetData) {
+        if (!assetData || assetData.length < 2) {
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        if (returns.length < 2) {
+            return 0;
+        }
+
+        // Calculate mean return
+        const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+
+        // Calculate standard deviation of returns
+        const squaredDiffs = returns.map(ret => Math.pow(ret - meanReturn, 2));
+        const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / (returns.length - 1);
+        const stdDev = Math.sqrt(variance);
+
+        // Annualize volatility (assuming 252 trading days in a year)
+        const annualizedVolatility = stdDev * Math.sqrt(252) * 100; // Convert to percentage
+
+        return annualizedVolatility;
+    }
+
+    // Helper function to calculate Sharpe Ratio
+    function calculateSharpeRatio(assetData, riskFreeRate) {
+        if (!assetData || assetData.length < 2) {
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        if (returns.length < 2) {
+            return 0;
+        }
+
+        // Calculate mean return
+        const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+
+        // Calculate standard deviation of returns (already calculated as volatility)
+        const volatility = calculateVolatility(assetData) / 100; // Convert from percentage to decimal
+
+        // Calculate Sharpe Ratio: (Mean Return - Risk Free Rate) / Volatility
+        // Annualize the mean return (assuming 252 trading days)
+        const annualizedReturn = Math.pow(1 + meanReturn, 252) - 1;
+        const sharpeRatio = volatility !== 0 ? (annualizedReturn - riskFreeRate) / volatility : 0;
+
+        return sharpeRatio;
+    }
+
+    // Helper function to calculate Value at Risk (VaR)
+    function calculateVaR(assetData, confidenceLevel) {
+        if (!assetData || assetData.length < 2) {
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        if (returns.length === 0) {
+            return 0;
+        }
+
+        // Sort returns in ascending order
+        returns.sort((a, b) => a - b);
+
+        // Calculate VaR using historical simulation method
+        // For 95% confidence level, we want the 5th percentile
+        const percentileIndex = Math.floor((1 - confidenceLevel) * returns.length);
+        const varValue = -returns[percentileIndex] * 100; // Convert to percentage and make positive
+
+        return varValue;
+    }
+
+    // Helper function to calculate holding days, stop-loss, and take-profit lines
+    function calculateHoldingAndLimits(stockOrders, cost, priceData) {
+        // Sort orders by date
+        stockOrders.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        // Calculate holding days (days since first purchase)
+        let holdingDays = 0;
+            let firstPurchaseDate = null;
+            if (stockOrders.length > 0) {
+                firstPurchaseDate = new Date(stockOrders[0].date);
+            const today = new Date();
+            holdingDays = Math.floor((today - firstPurchaseDate) / (1000 * 60 * 60 * 24));
+        }
+
+        // Calculate stop-loss line (cost basis * 0.95)
+        const stopLossLine = (cost || 0) * 0.95;
+
+        // Calculate take-profit line (highest price since opening position * 0.93)
+        let takeProfitLine = (cost || 0) * 1.05; // Default to 5% above cost if no price data
+
+        // Process orders to track highest price since opening position
+            if (stockOrders.length > 0 && priceData.length > 0 && firstPurchaseDate) {
+                // Find the highest price since the first purchase
+                let highestPrice = 0;
+                priceData.forEach(item => {
+                    const itemDate = new Date(item.date);
+                    if (itemDate >= firstPurchaseDate && item.high > highestPrice) {
+                        highestPrice = item.high;
+                }
+            });
+
+            // If we found a higher price, use it for take-profit calculation
+            if (highestPrice > 0) {
+                takeProfitLine = highestPrice * 0.93;
+            }
+        }
+
+        return { holdingDays, stopLossLine, takeProfitLine };
+    }
+
+    // Helper function to update positions table with order data
+    function updatePositionsTableWithOrders(stocks, account, totalStockValue, cash, accountOrders) {
+        const positionsTableBody = $('#positionsTableBody');
+        positionsTableBody.empty();
+
+        if (stocks.length === 0) {
+            positionsTableBody.append('<tr><td colspan="7" class="text-center">暂无持仓</td></tr>');
+            return;
+        }
+
+        // Process each stock to calculate holding days, stop-loss, and take-profit lines
+        let processedStocks = 0;
+        let stockCount = stocks.length;
+
+        stocks.forEach(function(stock) {
+            const code = stock.code || '';
+            if (!code) {
+                processedStocks++;
+                return;
+            }
+
+            // Determine the first purchase date for this stock
+            const stockOrders = accountOrders.filter(order => order.code === code);
+            let firstPurchaseDate = null;
+            if (stockOrders.length > 0) {
+                // Sort orders by date to find the earliest purchase
+                stockOrders.sort((a, b) => new Date(a.date) - new Date(b.date));
+                firstPurchaseDate = new Date(stockOrders[0].date);
+            }
+
+            // Fetch price data from first purchase date to today
+            const startDate = firstPurchaseDate ? firstPurchaseDate.toISOString().split('T')[0] : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            const endDate = new Date().toISOString().split('T')[0];
+
+            $.ajax({
+                url: '/api/akshare/stock-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: code,
+                    start_date: startDate,
+                    end_date: endDate
+                })
+            }).done(function(response) {
+                const priceData = response.data || [];
+                let currentPrice = 0;
+                if (priceData.length > 0) {
+                    // Use the latest closing price
+                    currentPrice = priceData[priceData.length - 1].close || 0;
+                } else {
+                    // Fallback to cost price if akshare fails
+                    currentPrice = stock.cost || 0;
+                }
+
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                // Calculate holding days, stop-loss, and take-profit lines based on orders
+                const stockOrders = accountOrders.filter(order => order.code === code);
+                const { holdingDays, stopLossLine, takeProfitLine } = calculateHoldingAndLimits(stockOrders, stock.cost, priceData);
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>${holdingDays}</td>
+                        <td>${stopLossLine.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${takeProfitLine.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            }).fail(function() {
+                // If failed to get price, use cost price as fallback
+                const currentPrice = stock.cost || 0;
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>0</td>
+                        <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            });
+        });
+    }
+
+    // Helper function to update positions table (fallback)
+    function updatePositionsTable(stocks, account, totalStockValue, cash) {
+        const positionsTableBody = $('#positionsTableBody');
+        positionsTableBody.empty();
+
+        // Second pass: populate table with akshare prices
+        let processedStocks = 0;
+        let stockCount = stocks.length;
+
+        if (stockCount === 0) {
+            positionsTableBody.append('<tr><td colspan="7" class="text-center">暂无持仓</td></tr>');
+            return;
+        }
+
+        stocks.forEach(function(stock) {
+            const code = stock.code || '';
+            if (!code) {
+                processedStocks++;
+                return;
+            }
+
+            // Fetch latest price data using akshare
+            $.ajax({
+                url: '/api/akshare/stock-data',
+                method: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    symbol: code,
+                    start_date: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Last 365 days as fallback
+                    end_date: new Date().toISOString().split('T')[0]
+                })
+            }).done(function(response) {
+                const priceData = response.data || [];
+                let currentPrice = 0;
+                if (priceData.length > 0) {
+                    // Use the latest closing price
+                    currentPrice = priceData[priceData.length - 1].close || 0;
+                } else {
+                    // Fallback to cost price if akshare fails
+                    currentPrice = stock.cost || 0;
+                }
+
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>0</td>
+                        <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            }).fail(function() {
+                // If failed to get price, use cost price as fallback
+                const currentPrice = stock.cost || 0;
+                const marketValue = currentPrice * (stock.quantity || 0);
+                const costValue = (stock.cost || 0) * (stock.quantity || 0);
+                const profitAmount = marketValue - costValue;
+                const profitRatio = costValue !== 0 ? (profitAmount / costValue) * 100 : 0;
+
+                const row = `
+                    <tr>
+                        <td>${stock.code}</td>
+                        <td>${stock.name}</td>
+                        <td>${stock.quantity}</td>
+                        <td>${marketValue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                        <td class="${profitAmount >= 0 ? 'text-success' : 'text-danger'}">
+                            ${profitAmount >= 0 ? '+' : ''}${profitAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} (${profitRatio >= 0 ? '+' : ''}${profitRatio.toFixed(2)}%)
+                        </td>
+                        <td>0</td>
+                        <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    </tr>
+                `;
+                positionsTableBody.append(row);
+
+                processedStocks++;
+                if (processedStocks === stockCount) {
+                    // Update position and cash ratios
+                    const totalValue = cash + totalStockValue;
+                    if (totalValue > 0) {
+                        const positionRatio = (totalStockValue / totalValue) * 100;
+                        const cashRatio = (cash / totalValue) * 100;
+                        $('#positionRatio').css('width', `${positionRatio}%`).text(`${positionRatio.toFixed(1)}%`);
+                        $('#cashRatio').css('width', `${cashRatio}%`).text(`${cashRatio.toFixed(1)}%`);
+                    }
+                }
+            });
+        });
+    }
+
+    // Load risk monitoring data
+    function loadRiskMonitoringData(accountId) {
+        $.get(`/api/accounts`)
+            .done(function(accounts) {
+                const account = accounts.find(acc => acc._id === accountId);
+                if (account) {
+                    const stocks = account.stocks || [];
+                    const riskMonitoringTableBody = $('#riskMonitoringTableBody');
+                    riskMonitoringTableBody.empty();
+
+                    if (stocks.length === 0) {
+                        riskMonitoringTableBody.append('<tr><td colspan="5" class="text-center">暂无持仓</td></tr>');
+                        return;
+                    }
+
+                    stocks.forEach(function(stock) {
+                        const row = `
+                            <tr>
+                                <td>${stock.code} (${stock.name})</td>
+                                <td>0.00%</td>
+                                <td>0.00</td>
+                                <td>${(stock.cost * 0.95).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / ${(stock.cost * 1.05).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                                <td class="text-warning">无特殊风险提示</td>
+                            </tr>
+                        `;
+                        riskMonitoringTableBody.append(row);
+                    });
+                }
+            })
+            .fail(function(xhr, status, error) {
+                console.error('Failed to load risk monitoring data:', error);
+                $('#riskMonitoringTableBody').html('<tr><td colspan="5" class="text-center text-danger">加载风险监控数据失败</td></tr>');
+            });
+    }
+
+    // Initialize chart when account overview section is shown
+        $('#accountOverviewSection').on('shown.bs.collapse', function() {
+            // Chart will be initialized when account data is loaded
+});
+</script>
+{% endblock %}
+

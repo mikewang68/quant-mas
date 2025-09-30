@@ -92,14 +92,15 @@ class AkshareClient:
             DataFrame with K-line data
         """
         try:
-            global _access_count
-
-            # 检查访问次数，每200次sleep 3秒
-            _access_count += 1
-            if _access_count >= _ACCESS_LIMIT:
-                self.logger.info(f"Access limit reached ({_access_count}), sleeping for {_SLEEP_DURATION} seconds...")
-                time.sleep(_SLEEP_DURATION)
-                _access_count = 0  # 重置计数器
+            # 注释掉访问限制逻辑，使用外部的 IP 切换机制
+            # global _access_count
+            #
+            # # 检查访问次数，每1次sleep 0.5秒
+            # _access_count += 1
+            # if _access_count >= _ACCESS_LIMIT:
+            #     self.logger.info(f"Access limit reached ({_access_count}), sleeping for {_SLEEP_DURATION} seconds...")
+            #     time.sleep(_SLEEP_DURATION)
+            #     _access_count = 0  # 重置计数器
 
             # Format code for akshare (add exchange prefix)
             formatted_code = self._format_stock_code(code)
@@ -159,7 +160,8 @@ class AkshareClient:
 
         except Exception as e:
             self.logger.error(f"Error getting daily K-data for {code}: {e}")
-            return pd.DataFrame()
+            # Re-raise the exception to allow upper-level error handling and IP switching
+            raise e
     
     def get_weekly_k_data(self, code: str, start_date: str, end_date: str) -> pd.DataFrame:
         """
