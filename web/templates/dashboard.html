@@ -570,6 +570,7 @@
         orders.forEach(order => allDates.add(order.date));
 
         const sortedDates = Array.from(allDates).sort();
+        console.log('Calculating daily asset values with sorted dates:', sortedDates);
 
         let orderIndex = 0;
 
@@ -643,6 +644,7 @@
             }
 
             const totalAssets = portfolioValue + currentCash;
+            console.log(`Date: ${date}, Cash: ${currentCash}, Portfolio Value: ${portfolioValue}, Total Assets: ${totalAssets}`);
 
             assetData.push({
                 date: date,
@@ -654,6 +656,7 @@
             });
         }
 
+        console.log('Final assetData:', assetData);
         return assetData;
     }
 
@@ -1249,6 +1252,8 @@
 
     // Helper function to update account overview UI
     function updateAccountOverviewUI(initialCapital, cash, totalStockValue, totalValue, assetData) {
+        console.log('updateAccountOverviewUI called with:', { initialCapital, cash, totalStockValue, totalValue, assetData });
+
         // 1. 账户净值 = 持仓市值 + 现金
         const accountNetValue = totalStockValue + cash;
 
@@ -1275,11 +1280,48 @@
             .removeClass('bg-success bg-danger')
             .addClass(profitRatio >= 0 ? 'bg-success' : 'bg-danger');
         $('#maxDrawdown').text(`${maxDrawdown.toFixed(2)}%`);
-        $('#sharpeRatio').text('0.00');
-        $('#winRate').text('0.00%');
-        $('#profitLossRatio').text('0.00');
-        $('#volatility').text('0.00%');
-        $('#varValue').text('0.00');
+
+        // Calculate and display volatility based on historical asset data
+        const volatility = calculateVolatility(assetData);
+        console.log('Calculated volatility:', volatility);
+        $('#volatility').text(`${volatility.toFixed(2)}%`);
+
+        // Calculate and display Sharpe Ratio (assuming risk-free rate of 3%)
+        const sharpeRatio = calculateSharpeRatio(assetData, 0.03);
+        console.log('Calculated Sharpe Ratio:', sharpeRatio);
+        $('#sharpeRatio').text(sharpeRatio.toFixed(2));
+
+        // Calculate and display VaR (Value at Risk) at 95% confidence level
+        const varValue = calculateVaR(assetData, 0.95);
+        console.log('Calculated VaR:', varValue);
+        $('#varValue').text(varValue.toFixed(2));
+
+        // Load orders to calculate win rate and profit/loss ratio
+        const accountId = $('#accountSelect').val();
+        console.log('Calculating win rate and profit/loss ratio for account:', accountId);
+        if (accountId) {
+            $.get('/api/orders')
+                .done(function(orders) {
+                    console.log('Orders loaded for win rate calculation:', orders);
+                    const metrics = calculateWinRateAndProfitLossRatio(orders, accountId);
+                    console.log('Calculated metrics:', metrics);
+                    $('#winRate').text(`${metrics.winRate.toFixed(2)}%`)
+                        .removeClass('bg-success bg-danger')
+                        .addClass(metrics.winRate >= 50 ? 'bg-success' : (metrics.winRate > 0 ? 'bg-warning' : 'bg-danger'));
+                    $('#profitLossRatio').text(metrics.profitLossRatio.toFixed(2))
+                        .removeClass('bg-success bg-danger')
+                        .addClass(metrics.profitLossRatio >= 1 ? 'bg-success' : 'bg-danger');
+                })
+                .fail(function(xhr, status, error) {
+                    console.error('Failed to load orders for win rate calculation:', error);
+                    $('#winRate').text('0.00%');
+                    $('#profitLossRatio').text('0.00');
+                });
+        } else {
+            console.log('No account ID found for win rate calculation');
+            $('#winRate').text('0.00%');
+            $('#profitLossRatio').text('0.00');
+        }
     }
 
     // Helper function to calculate holding days, stop-loss, and take-profit lines
@@ -1599,6 +1641,251 @@
         $('#accountOverviewSection').on('shown.bs.collapse', function() {
             // Chart will be initialized when account data is loaded
 });
+
+    // Helper function to calculate account volatility
+    function calculateVolatility(assetData) {
+        console.log('Calculating volatility with assetData:', assetData);
+
+        if (!assetData || assetData.length < 2) {
+            console.log('Insufficient data for volatility calculation');
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        console.log('Calculated returns:', returns);
+
+        if (returns.length < 2) {
+            console.log('Insufficient returns for volatility calculation');
+            return 0;
+        }
+
+        // Check if all returns are zero
+        const allZero = returns.every(ret => ret === 0);
+        if (allZero) {
+            console.log('All returns are zero, returning 0 volatility');
+            return 0;
+        }
+
+        // Calculate standard deviation of returns
+        const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+        const squaredDiffs = returns.map(ret => Math.pow(ret - meanReturn, 2));
+        const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / (returns.length - 1);
+        const stdDev = Math.sqrt(variance);
+
+        // Annualize volatility (assuming 252 trading days in a year)
+        const annualizedVolatility = stdDev * Math.sqrt(252) * 100; // Convert to percentage
+
+        console.log('Calculated annualized volatility:', annualizedVolatility);
+
+        return annualizedVolatility;
+    }
+
+    // Helper function to calculate Sharpe Ratio
+    function calculateSharpeRatio(assetData, riskFreeRate) {
+        console.log('Calculating Sharpe Ratio with assetData:', assetData, 'riskFreeRate:', riskFreeRate);
+
+        if (!assetData || assetData.length < 2) {
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        if (returns.length < 2) {
+            return 0;
+        }
+
+        // Calculate mean return
+        const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+
+        // Calculate standard deviation of returns (already calculated as volatility)
+        const volatility = calculateVolatility(assetData) / 100; // Convert from percentage to decimal
+
+        // Calculate Sharpe Ratio: (Mean Return - Risk Free Rate) / Volatility
+        // Annualize the mean return (assuming 252 trading days)
+        const annualizedReturn = Math.pow(1 + meanReturn, 252) - 1;
+        const sharpeRatio = volatility !== 0 ? (annualizedReturn - riskFreeRate) / volatility : 0;
+
+        console.log('Calculated Sharpe Ratio:', sharpeRatio);
+
+        return sharpeRatio;
+    }
+
+    // Helper function to calculate Value at Risk (VaR)
+    function calculateVaR(assetData, confidenceLevel) {
+        if (!assetData || assetData.length < 2) {
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        if (returns.length === 0) {
+            return 0;
+        }
+
+        // Sort returns in ascending order
+        returns.sort((a, b) => a - b);
+
+        // Calculate VaR using historical simulation method
+        // For 95% confidence level, we want the 5th percentile
+        const percentileIndex = Math.floor((1 - confidenceLevel) * returns.length);
+        const varValue = -returns[percentileIndex] * 100; // Convert to percentage and make positive
+
+        return varValue;
+    }
+
 </script>
 {% endblock %}
+
+    // Helper function to calculate account volatility
+    function calculateVolatility(assetData) {
+        console.log('Calculating volatility with assetData:', assetData);
+
+        if (!assetData || assetData.length < 2) {
+            console.log('Insufficient data for volatility calculation');
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        console.log('Calculated returns:', returns);
+
+        if (returns.length < 2) {
+            console.log('Insufficient returns for volatility calculation');
+            return 0;
+        }
+
+        // Check if all returns are zero
+        const allZero = returns.every(ret => ret === 0);
+        if (allZero) {
+            console.log('All returns are zero, returning 0 volatility');
+            return 0;
+        }
+
+        // Calculate standard deviation of returns
+        const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+        const squaredDiffs = returns.map(ret => Math.pow(ret - meanReturn, 2));
+        const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / (returns.length - 1);
+        const stdDev = Math.sqrt(variance);
+
+        // Annualize volatility (assuming 252 trading days in a year)
+        const annualizedVolatility = stdDev * Math.sqrt(252) * 100; // Convert to percentage
+
+        console.log('Calculated annualized volatility:', annualizedVolatility);
+
+        return annualizedVolatility;
+    }
+
+    // Helper function to calculate Sharpe Ratio
+    function calculateSharpeRatio(assetData, riskFreeRate) {
+        console.log('Calculating Sharpe Ratio with assetData:', assetData, 'riskFreeRate:', riskFreeRate);
+
+        if (!assetData || assetData.length < 2) {
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        if (returns.length < 2) {
+            return 0;
+        }
+
+        // Calculate mean return
+        const meanReturn = returns.reduce((sum, ret) => sum + ret, 0) / returns.length;
+
+        // Calculate standard deviation of returns (already calculated as volatility)
+        const volatility = calculateVolatility(assetData) / 100; // Convert from percentage to decimal
+
+        // Calculate Sharpe Ratio: (Mean Return - Risk Free Rate) / Volatility
+        // Annualize the mean return (assuming 252 trading days)
+        const annualizedReturn = Math.pow(1 + meanReturn, 252) - 1;
+        const sharpeRatio = volatility !== 0 ? (annualizedReturn - riskFreeRate) / volatility : 0;
+
+        console.log('Calculated Sharpe Ratio:', sharpeRatio);
+
+        return sharpeRatio;
+    }
+
+    // Helper function to calculate Value at Risk (VaR)
+    function calculateVaR(assetData, confidenceLevel) {
+        if (!assetData || assetData.length < 2) {
+            return 0;
+        }
+
+        // Calculate daily returns
+        const returns = [];
+        for (let i = 1; i < assetData.length; i++) {
+            const previousValue = assetData[i-1].totalAssets;
+            const currentValue = assetData[i].totalAssets;
+
+            if (previousValue > 0) {
+                const dailyReturn = (currentValue - previousValue) / previousValue;
+                returns.push(dailyReturn);
+            }
+        }
+
+        if (returns.length === 0) {
+            return 0;
+        }
+
+        // Sort returns in ascending order
+        returns.sort((a, b) => a - b);
+
+        // Calculate VaR using historical simulation method
+        // For 95% confidence level, we want the 5th percentile
+        const percentileIndex = Math.floor((1 - confidenceLevel) * returns.length);
+        const varValue = -returns[percentileIndex] * 100; // Convert to percentage and make positive
+
+        return varValue;
+    }
 

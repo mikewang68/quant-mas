@@ -80,7 +80,7 @@ def get_code_name(db):
 def get_stocks_to_update(db):
     """
     获取需要更新的股票代码列表
-    条件：last_updated字段小于update_date数据集中的latest，或是空的股票集合
+    条件：last_updated字段小于或等于update_date数据集中的latest，或是空的股票集合
     """
     # 获取最新的更新日期
     latest_date = get_lastest_date(db)
@@ -89,7 +89,7 @@ def get_stocks_to_update(db):
     query = {
         "$or": [
             {"last_updated": {"$exists": False}},
-            {"last_updated": {"$lt": latest_date}}
+            {"last_updated": {"$lte": latest_date}},
         ]
     }
 
@@ -143,10 +143,15 @@ def write_k_daily(db):
             # We'll continue without IP tracking if detection fails
 
     # Counter for IP switching
-    stock_counter = 0
-    stocks_since_last_switch = 0
+    error_count = 0
+    max_errors_before_switch = 3
 
-    for code in df_code["code"]:
+    # Convert df_code to a list for easier manipulation
+    codes = df_code["code"].tolist()
+    current_index = 0
+
+    while current_index < len(codes):
+        code = codes[current_index]
         try:
             print("daily: " + code)
             df_n = ak.stock_zh_a_hist(
@@ -170,6 +175,9 @@ def write_k_daily(db):
                 end_date=end_date,
                 adjust="qfq",
             )
+            # Reset error count on successful data retrieval
+            error_count = 0
+
             if not df_n.empty:
                 df_h.rename(
                     columns={
@@ -232,16 +240,43 @@ def write_k_daily(db):
                     upsert=True,
                 )
 
-            # Increment counters
-            stock_counter += 1
-            stocks_since_last_switch += 1
+            # Move to the next stock
+            current_index += 1
 
-            # Add a 1-second delay after processing each stock
-            # time.sleep(1)
+            # Add a small delay after processing each stock to avoid overwhelming the server
+            time.sleep(0.5)
 
-            # Switch IP every 100 stocks
-            if ROUTER_CONTROL_AVAILABLE and stocks_since_last_switch >= 300:
-                print(f"Switching IP after processing {stock_counter} stocks...")
+        except Exception as e:
+            error_count += 1
+            print(f"Error processing code {code}: {str(e)}")
+            print(f"Error count: {error_count}")
+
+            # Check if the error is related to rate limiting (HTTP 429, 403, etc.)
+            error_str = str(e).lower()
+            is_rate_limit_error = (
+                "429" in error_str
+                or "403" in error_str
+                or "too many requests" in error_str
+                or "forbidden" in error_str
+                or "502" in error_str
+                or "503" in error_str
+                or "504" in error_str
+                or "bad gateway" in error_str
+                or "service unavailable" in error_str
+                or "gateway timeout" in error_str
+            )
+
+            # If we've hit the maximum number of errors, or encountered a rate limit error, switch IP
+            if ROUTER_CONTROL_AVAILABLE and (
+                error_count >= max_errors_before_switch or is_rate_limit_error
+            ):
+                print(
+                    f"Switching IP after {error_count} consecutive errors or rate limit error..."
+                )
+
+                # If it's a rate limit error, we want to switch immediately
+                if is_rate_limit_error:
+                    print("Rate limit error detected. Switching IP immediately.")
 
                 # Switch the IP
                 controller = TPLinkWAN2Controller(
@@ -291,12 +326,16 @@ def write_k_daily(db):
                             print("Failed to get current IP after multiple attempts")
                 else:
                     print("IP switch failed")
-                stocks_since_last_switch = 0  # Reset the counter
 
-        except KeyError as e:
-            print(
-                f"Error: Stock code {code} not found in the dictionary. Skipping this code."
-            )
+                # Reset error count after IP switch
+                error_count = 0
+                # Continue with the same stock after IP switch
+                time.sleep(1)
+            else:
+                # Move to the next stock if we haven't hit the error threshold and it's not a rate limit error
+                current_index += 1
+                # Add a delay before trying the next stock
+                time.sleep(1)
 
 
 def find_missing_k_data(db):
