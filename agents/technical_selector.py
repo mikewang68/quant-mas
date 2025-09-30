@@ -302,7 +302,7 @@ class TechnicalStockSelector(BaseAgent, DataProviderInterface):
         for code in stock_codes:
             try:
                 # Get data from k_data collection for the specified date range
-                # Using 前复权 data (fields with 'q' suffix)
+                # Using 前复权 data (fields with 'qfq' suffix)
                 k_data_records = list(
                     k_data_collection.find(
                         {

@@ -356,6 +356,18 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **VERIFIED**: Risk metrics now properly display on dashboard with real calculated values instead of default zeros
 - **UPDATED**: Documentation to reflect the enhanced dashboard risk metrics functionality
 
+### Data Source Migration to k_data Collection
+- **COMPLETED**: Migrated all agent data sources to use k_data collection with forward-adjusted (前复权) data
+- **TECHNICAL SELECTOR**: Modified to use k_data collection with proper field mapping ("q" suffix fields: 开盘q, 收盘q, etc.)
+- **FUNDAMENTAL SELECTOR**: Updated to use k_data collection with 120 days of daily data for fundamental analysis
+- **PUBLIC OPINION SELECTOR**: Optimized to return empty DataFrame as it doesn't require K-line data
+- **SIGNAL GENERATOR**: Optimized to return empty DataFrame as it doesn't require K-line data
+- **FIELD MAPPING**: Implemented proper mapping from k_data fields to standard format:
+  - "开盘q" → "open", "收盘q" → "close", "成交量q" → "volume", etc.
+- **DATA VALIDATION**: Enhanced data validation using StandardDataFormat interface
+- **COMPATIBILITY**: Ensured backward compatibility with existing strategy implementations
+- **VERIFIED**: All modifications tested and confirmed working correctly
+
 ## Usage Patterns
 
 ### Running Agents

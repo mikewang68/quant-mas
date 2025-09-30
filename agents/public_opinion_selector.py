@@ -281,162 +281,24 @@ class PublicOpinionStockSelector(BaseAgent, DataProviderInterface):
 
     def get_standard_data(self, stock_codes: List[str]) -> Dict[str, pd.DataFrame]:
         """
-        Get standard format data for the given stock codes (90 days of daily data).
+        Get standard format data for the given stock codes.
+        For public opinion analysis, we don't need K-line data, so return empty DataFrames.
 
         Args:
             stock_codes: List of stock codes to get data for
 
         Returns:
-            Dictionary mapping stock codes to standard format DataFrames
+            Dictionary mapping stock codes to standard format DataFrames (empty for public opinion analysis)
         """
-        self.log_info(f"Getting standard data for {len(stock_codes)} stocks")
+        self.log_info(f"Public opinion analysis - no K-line data needed for {len(stock_codes)} stocks")
 
-        # Prepare stock data for all stocks (90 days of data)
+        # For public opinion analysis, we don't need K-line data
+        # Return empty DataFrames for compatibility with the interface
         stock_data = {}
-        end_date = datetime.now().strftime("%Y-%m-%d")
-        start_date = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
-
-        # Get buf_data collection
-        buf_data_collection = self.db_manager.db["buf_data"]
-
         for code in stock_codes:
-            try:
-                # Check if we have data in buf_data for this stock within the last 90 days
-                buf_record = buf_data_collection.find_one(
-                    {"code": code, "date": {"$gte": start_date, "$lte": end_date}}
-                )
+            stock_data[code] = StandardDataFormat.create_empty_dataframe()
 
-                # Try to get data from buf_data first
-                k_data = pd.DataFrame()
-                if buf_record:
-                    # Use cached data from buf_data
-                    if "data" in buf_record:
-                        k_data = pd.DataFrame(buf_record["data"])
-                    else:
-                        # Try to get individual records from buf_data
-                        buf_records = list(
-                            buf_data_collection.find(
-                                {
-                                    "code": code,
-                                    "date": {"$gte": start_date, "$lte": end_date},
-                                }
-                            )
-                        )
-                        if buf_records:
-                            # Convert list of records to DataFrame
-                            k_data = pd.DataFrame(buf_records)
-                            # Remove MongoDB _id field
-                            if "_id" in k_data.columns:
-                                k_data = k_data.drop("_id", axis=1)
-
-                if not k_data.empty:
-                    if "date" in k_data.columns:
-                        k_data["date"] = pd.to_datetime(k_data["date"])
-                        k_data = k_data.sort_values("date").reset_index(drop=True)
-                    self.log_info(f"Using cached data for {code} from buf_data")
-                else:
-                    # If no data in buf_data, fetch from data source with rate limiting
-                    # Add rate limiting delay (1 second as requested)
-                    import time
-
-                    time.sleep(1.0)  # 1 second delay between requests
-
-                    # Get adjustment setting from system configuration
-                    adjust_setting = self.db_manager.get_adjustment_setting()
-                    # Map database config values to Akshare client parameters
-                    adjust_mapping = {
-                        'qfq': 'q',      # 前复权 -> 'q'
-                        'hfq': 'h',      # 后复权 -> 'h'
-                        '': 'none'       # 不复权 -> 'none'
-                    }
-                    adjust_type = adjust_mapping.get(adjust_setting, 'q')  # Default to 前复权
-
-                    # Fetch data with the configured adjustment type
-                    k_data = self.data_fetcher.get_daily_k_data(
-                        code, start_date, end_date, adjust_type
-                    )
-
-                    # Save each day's data to buf_data with _id as date:code
-                    if not k_data.empty:
-                        self.log_info(
-                            f"Saving {len(k_data)} records to buf_data for {code}"
-                        )
-                        records_to_insert = []
-                        for _, row in k_data.iterrows():
-                            # Handle date conversion properly
-                            if isinstance(row["date"], str):
-                                record_date = row["date"]
-                            else:
-                                # Convert to datetime if needed and then format
-                                try:
-                                    # Try to convert using pandas to_datetime which handles various formats
-                                    record_date = pd.to_datetime(row["date"]).strftime("%Y-%m-%d")
-                                except Exception:
-                                    # Fallback to string conversion
-                                    record_date = str(row["date"])
-
-                            record_id = f"{record_date}:{code}"
-
-                            # Check if record already exists
-                            existing_record = buf_data_collection.find_one(
-                                {"_id": record_id}
-                            )
-                            if not existing_record:
-                                # Include additional fields: amount, amplitude, pct_change, change_amount, turnover_rate
-                                record = {
-                                    "_id": record_id,
-                                    "code": code,
-                                    "date": record_date,
-                                    "open": float(row["open"]),
-                                    "high": float(row["high"]),
-                                    "low": float(row["low"]),
-                                    "close": float(row["close"]),
-                                    "volume": float(row["volume"])
-                                    if "volume" in row
-                                    else 0,
-                                    "amount": float(row["amount"])
-                                    if "amount" in row
-                                    else 0,
-                                    "amplitude": float(row["amplitude"])
-                                    if "amplitude" in row
-                                    else 0,
-                                    "pct_change": float(row["pct_change"])
-                                    if "pct_change" in row
-                                    else 0,
-                                    "change_amount": float(row["change_amount"])
-                                    if "change_amount" in row
-                                    else 0,
-                                    "turnover_rate": float(row["turnover_rate"])
-                                    if "turnover_rate" in row
-                                    else 0,
-                                }
-                                records_to_insert.append(record)
-
-                        # Bulk insert new records
-                        if records_to_insert:
-                            try:
-                                buf_data_collection.insert_many(records_to_insert)
-                                self.log_info(
-                                    f"Inserted {len(records_to_insert)} new records to buf_data for {code}"
-                                )
-                            except Exception as insert_error:
-                                self.log_error(
-                                    f"Error inserting records to buf_data for {code}: {insert_error}"
-                                )
-                    else:
-                        self.log_warning(f"No data available for {code}")
-
-                # Validate and store data for this stock
-                if not k_data.empty and StandardDataFormat.validate_data(k_data):
-                    stock_data[code] = k_data
-                else:
-                    self.log_warning(f"Invalid or no data available for {code}")
-
-            except Exception as e:
-                self.log_error(f"Error processing data for {code}: {e}")
-                continue
-
-        self.log_info(f"Prepared standard data for {len(stock_data)} stocks")
+        self.log_info(f"Returned empty data for {len(stock_data)} stocks (public opinion analysis)")
         return stock_data
 
     def get_data_for_stock(self, stock_code: str) -> pd.DataFrame:
