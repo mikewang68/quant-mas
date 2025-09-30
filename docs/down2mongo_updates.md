@@ -5,6 +5,26 @@
 
 ## 修改历史
 
+### 2025年9月30日
+
+#### 1. 修复股票数据获取的 start_date 逻辑
+**问题**: 在 `write_k_daily` 函数中，所有股票使用相同的 start_date，而不是每个股票使用其自身的 last_updated 日期。
+
+**解决方案**:
+- 修改 `write_k_daily` 函数，为每个股票单独获取其 last_updated 日期作为 start_date
+- 使用 `codes_with_dates = list(zip(df_code["code"].tolist(), df_code["last_updated"].tolist()))` 创建包含代码和日期的元组列表
+- 在循环中解包元组获取每个股票的代码和对应的 last_updated 日期
+
+**代码变更**:
+```python
+# Convert df_code to a list of tuples for easier manipulation
+codes_with_dates = list(zip(df_code["code"].tolist(), df_code["last_updated"].tolist()))
+current_index = 0
+
+while current_index < len(codes_with_dates):
+    code, start_date = codes_with_dates[current_index]
+```
+
 ### 2025年9月29日
 
 #### 1. 添加股票更新时间戳功能

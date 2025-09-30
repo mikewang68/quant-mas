@@ -83,13 +83,13 @@ def get_stocks_to_update(db):
     条件：last_updated字段小于或等于update_date数据集中的latest，或是空的股票集合
     """
     # 获取最新的更新日期
-    latest_date = get_lastest_date(db)
+    latest_date = get_lastest_date()
 
     # 查询条件：last_updated为空或者小于latest_date
     query = {
         "$or": [
             {"last_updated": {"$exists": False}},
-            {"last_updated": {"$lte": latest_date}},
+            {"last_updated": {"$lt": latest_date}},
         ]
     }
 
@@ -105,9 +105,14 @@ def get_stocks_to_update(db):
 
 
 # 获取上次更新时间
-def get_lastest_date(db):
-    str_lastest = db.get_collection("update_date").find_one()
-    return str_lastest["lastest"]
+def get_lastest_date():
+    # 原来的语句保留，注释掉
+    # str_lastest = db.get_collection("update_date").find_one()
+    # last_date = str_lastest["lastest"]
+    # return last_date
+
+    # 返回当前日期，格式为"20250930"
+    return time.strftime("%Y%m%d", time.localtime(time.time()))
 
 
 # 设置本次更新时间
@@ -125,7 +130,7 @@ def set_lastest_date(db):
 def write_k_daily(db):
     df_code = get_stocks_to_update(db)
 
-    start_date = get_lastest_date(db)
+    # start_date = get_lastest_date(db)
     # start_date = ""
     end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
 
@@ -146,12 +151,14 @@ def write_k_daily(db):
     error_count = 0
     max_errors_before_switch = 3
 
-    # Convert df_code to a list for easier manipulation
-    codes = df_code["code"].tolist()
+    # Convert df_code to a list of tuples for easier manipulation
+    codes_with_dates = list(
+        zip(df_code["code"].tolist(), df_code["last_updated"].tolist())
+    )
     current_index = 0
 
-    while current_index < len(codes):
-        code = codes[current_index]
+    while current_index < len(codes_with_dates):
+        code, start_date = codes_with_dates[current_index]
         try:
             print("daily: " + code)
             df_n = ak.stock_zh_a_hist(
@@ -371,13 +378,13 @@ def get_k_data_by_code(db, code):
 def main():
     db = conn_mongo()
     update_code_name(db)
-    last_date = get_lastest_date(db)
-    current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
-    if current_date > last_date:
-        write_k_daily(db)
-        set_lastest_date(db)
-    else:
-        print("no upgrade data")
+    # last_date = get_lastest_date()
+    # current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+    # if current_date >= last_date:
+    write_k_daily(db)
+    set_lastest_date(db)
+    # else:
+    #     print("no upgrade data")
 
     # print(find_missing_k_data(db))
     # print(get_k_data_by_code(db, "000011"))
