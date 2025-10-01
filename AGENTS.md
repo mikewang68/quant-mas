@@ -375,6 +375,7 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **CONFIRMED**: All data fetched from Akshare uses forward-adjusted (前复权) pricing for consistency
 - **OPTIMIZED**: Chart rendering to display all available data instead of paginated subsets
 - **VERIFIED**: DataZoom functionality working properly for interactive chart exploration
+- **ENHANCED**: Added synchronized y-axis crosshair functionality across all three charts (K-line, indicator, volume) - when hovering over any chart, the y-axis position is displayed on all three charts simultaneously
 
 ### K-line Chart Enhancement with Akshare Integration
 - **IMPLEMENTED**: Modified stock_kline_v2.html to fetch real-time K-line data from Akshare instead of database
@@ -385,6 +386,22 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **ENHANCED**: DataZoom functionality with proper default range configuration for better user experience
 - **OPTIMIZED**: Chart rendering to display all available data instead of paginated subsets
 - **VERIFIED**: DataZoom functionality working properly for interactive chart exploration
+
+### Stock K-line Chart V2 Enhancement and Tooltips Optimization
+- **ENHANCED**: Modified stock K-line v2 chart with comprehensive navigation and display improvements
+- **ADDED**: Three-group navigation tabs in single row layout:
+  - Period selection: 日线 | 周线
+  - Main overlay: 无叠加 | MA | BOLL
+  - Technical indicators: MACD | RSI | KDJ | OBV | ROC
+- **IMPLEMENTED**: Weekly data conversion functionality using daily data to generate weekly K-line data
+- **OPTIMIZED**: Default display to show 90 days of data instead of 120 days for better focus on recent trends
+- **ENHANCED**: Tooltips display with comprehensive formatting:
+  - K-line data displayed in vertical stacked format with detailed price information
+  - Volume data divided by 10000 and displayed as integer with "W" suffix (e.g., "12W")
+  - All other numerical values formatted to 2 decimal places
+  - Left-aligned layout for better readability
+- **FIXED**: Missing function definitions for `convertDailyToWeekly` and `switchMainOverlay`
+- **VERIFIED**: All navigation and display features working correctly
 
 ## Usage Patterns
 

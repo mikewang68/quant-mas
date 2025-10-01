@@ -240,63 +240,74 @@
     }
 
     .combined-tabs-container {
-            margin: 2px 0 5px 0;
-            padding: 0;
-        }
-    
-        .combined-tabs {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            width: 100%;
-        }
-    
-        .main-overlay-tabs-container {
-            flex: 1;
-        }
-    
-        .indicator-tabs-container {
-            flex: 1;
-            text-align: right;
-        }
-    
-        .main-overlay-tabs-container .nav-tabs,
-        .indicator-tabs-container .nav-tabs {
-            border-bottom: 1px solid #444;
-            margin-bottom: 0;
-        }
-    
-        .main-overlay-tabs-container .nav-tabs .nav-link,
-        .indicator-tabs-container .nav-tabs .nav-link {
-            padding: 4px 12px;
-            font-size: 0.85rem;
-            border: 1px solid #444;
-            border-bottom: none;
-            color: #bbb;
-            border-top-left-radius: 2px;
-            border-top-right-radius: 2px;
-            margin-right: 2px;
-        }
-    
-        .main-overlay-tabs-container .nav-tabs .nav-link.active,
-        .indicator-tabs-container .nav-tabs .nav-link.active {
-            background-color: #3a3a5a;
-            color: #fff;
-            border-color: #555 #555 #3a3a5a;
-        }
-    
-        .main-overlay-tabs-container .nav-tabs .nav-link:hover,
-        .indicator-tabs-container .nav-tabs .nav-link:hover {
-            background-color: #33334d;
-            border-color: #555 #555 #444;
-        }
-    
-        .main-overlay-tabs-container .nav-tabs .nav-link.active,
-        .indicator-tabs-container .nav-tabs .nav-link.active {
-            color: #fff;
-            background-color: #444466;
-            border-color: #444;
-            border-bottom: 1px solid #444466;
+        margin: 2px 0 5px 0;
+        padding: 0;
+    }
+
+    .combined-tabs {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        width: 100%;
+        gap: 10px; /* 减少组间间隙 */
+        flex-wrap: nowrap;
+        overflow-x: auto;
+    }
+
+    .period-tabs-container,
+    .main-overlay-tabs-container,
+    .indicator-tabs-container {
+        flex: none;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .period-tabs-container .nav-tabs,
+    .main-overlay-tabs-container .nav-tabs,
+    .indicator-tabs-container .nav-tabs {
+        border-bottom: 1px solid #444;
+        margin-bottom: 0;
+        display: inline-flex;
+        justify-content: center;
+        flex-wrap: nowrap;
+    }
+
+    .period-tabs-container .nav-tabs .nav-link,
+    .main-overlay-tabs-container .nav-tabs .nav-link,
+    .indicator-tabs-container .nav-tabs .nav-link {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+        border: 1px solid #444;
+        border-bottom: none;
+        color: #bbb;
+        border-top-left-radius: 2px;
+        border-top-right-radius: 2px;
+        margin-right: 1px;
+        white-space: nowrap;
+    }
+
+    .period-tabs-container .nav-tabs .nav-link.active,
+    .main-overlay-tabs-container .nav-tabs .nav-link.active,
+    .indicator-tabs-container .nav-tabs .nav-link.active {
+        background-color: #3a3a5a;
+        color: #fff;
+        border-color: #555 #555 #3a3a5a;
+    }
+
+    .period-tabs-container .nav-tabs .nav-link:hover,
+    .main-overlay-tabs-container .nav-tabs .nav-link:hover,
+    .indicator-tabs-container .nav-tabs .nav-link:hover {
+        background-color: #33334d;
+        border-color: #555 #555 #444;
+    }
+
+    .period-tabs-container .nav-tabs .nav-link.active,
+    .main-overlay-tabs-container .nav-tabs .nav-link.active,
+    .indicator-tabs-container .nav-tabs .nav-link.active {
+        color: #fff;
+        background-color: #444466;
+        border-color: #444;
+        border-bottom: 1px solid #444466;
     }
 </style>
 
@@ -314,6 +325,18 @@
                     <!-- 主图叠加和指标图选项卡 -->
                     <div class="combined-tabs-container">
                         <div class="combined-tabs">
+                            <!-- 周期选择选项卡 -->
+                            <div class="period-tabs-container">
+                                <ul class="nav nav-tabs" id="periodTabs">
+                                    <li class="nav-item">
+                                        <a class="nav-link active" data-period="daily" href="#">日线</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="nav-link" data-period="weekly" href="#">周线</a>
+                                    </li>
+                                </ul>
+                            </div>
+
                             <!-- 主图叠加选项卡 -->
                             <div class="main-overlay-tabs-container">
                                 <ul class="nav nav-tabs" id="mainOverlayTabs">
@@ -328,7 +351,7 @@
                                     </li>
                                 </ul>
                             </div>
-        
+
                             <!-- 指标图选项卡 -->
                             <div class="indicator-tabs-container">
                                 <ul class="nav nav-tabs" id="indicatorTabs">
@@ -412,6 +435,7 @@
     let indicatorType = 'macd';  // 指标图类型: macd, rsi, kdj
     let stockPool = [];  // 股票池数据
     let currentStockIndex = -1;  // 当前股票在股票池中的索引
+    let currentPeriod = 'daily'; // 当前周期: daily, weekly
 
     // Function to initialize the page with stock data
     function initializeStockKline(code, name) {
@@ -742,8 +766,17 @@
     // Function to render charts
     function renderCharts() {
         console.log('Rendering charts with klineData:', klineData);
+
         // Use all data instead of paginated data for charts
-        const pageData = klineData;
+        let displayData = klineData;
+
+        // Convert to weekly data if weekly period is selected
+        if (currentPeriod === 'weekly') {
+            displayData = convertDailyToWeekly(klineData);
+            console.log('Converted to weekly data:', displayData);
+        }
+
+        const pageData = displayData;
 
         console.log('Page data:', pageData);
 
@@ -960,7 +993,81 @@
                     trigger: 'axis',
                     axisPointer: {
                         type: 'cross'
+                    },
+                    formatter: function(params) {
+                        let result = `<div style="font-size: 14px; margin-bottom: 5px;">${params[0].axisValue}</div>`;
+
+                        params.forEach(param => {
+                            if (param.seriesName === 'K线图') {
+                                // K线数据 - 先显示基本信息
+                                const data = param.data;
+                                result += `<div style="display: flex; align-items: center; margin: 2px 0;">
+                                    <span style="color: ${param.color}; margin-right: 8px;">●</span>
+                                    <span style="min-width: 60px;">${param.seriesName}</span>
+                                </div>
+                                <div style="margin-left: 24px; margin-bottom: 4px;">
+                                    <div>开: ${data[0].toFixed(2)}</div>
+                                    <div>收: ${data[1].toFixed(2)}</div>
+                                    <div>低: ${data[2].toFixed(2)}</div>
+                                    <div>高: ${data[3].toFixed(2)}</div>
+                                </div>`;
+                            } else if (param.seriesName === '成交量' || param.seriesName === '短期成交量MA' || param.seriesName === '中期成交量MA') {
+                                // 成交量数据 - 包括MA成交量
+                                const volume = param.data;
+                                result += `<div style="display: flex; align-items: center; margin: 2px 0;">
+                                    <span style="color: ${param.color}; margin-right: 8px;">●</span>
+                                    <span style="min-width: 60px;">${param.seriesName}</span>
+                                    <span style="margin-left: 10px;">${Math.round(volume / 10000)}W</span>
+                                </div>`;
+                            } else if (param.seriesName === 'Histogram') {
+                                // MACD柱状图
+                                result += `<div style="display: flex; align-items: center; margin: 2px 0;">
+                                    <span style="color: ${param.color}; margin-right: 8px;">●</span>
+                                    <span style="min-width: 60px;">${param.seriesName}</span>
+                                    <span style="margin-left: 10px;">${param.data.toFixed(2)}</span>
+                                </div>`;
+                            } else {
+                                // 其他指标数据
+                                result += `<div style="display: flex; align-items: center; margin: 2px 0;">
+                                    <span style="color: ${param.color}; margin-right: 8px;">●</span>
+                                    <span style="min-width: 60px;">${param.seriesName}</span>
+                                    <span style="margin-left: 10px;">${param.data !== null && param.data !== undefined ? param.data.toFixed(2) : '--'}</span>
+                                </div>`;
+                            }
+                        });
+
+                        return result;
                     }
+                            },
+                            axisPointer: {
+                                link: [
+                                    {
+                                        xAxisIndex: 'all'
+                                    }
+                                ],
+                                label: {
+                                    backgroundColor: '#777',
+                                    formatter: function(params) {
+                                        // Format y-axis value based on the grid
+                                        if (params.axisDimension === 'y') {
+                                            if (params.seriesIndex === undefined || params.seriesIndex === null) {
+                                                // For K-line grid (gridIndex 0)
+                                                if (params.axisIndex === 0) {
+                                                    return params.value.toFixed(2);
+                                                }
+                                                // For indicator grid (gridIndex 1)
+                                                else if (params.axisIndex === 1) {
+                                                    return params.value.toFixed(2);
+                                                }
+                                                // For volume grid (gridIndex 2)
+                                                else if (params.axisIndex === 2) {
+                                                    return Math.round(params.value / 10000) + 'W';
+                                                }
+                                            }
+                                        }
+                                        return params.value;
+                                    }
+                                }
                 },
                 grid: [
                     {
@@ -1074,7 +1181,7 @@
                     {
                         type: 'inside',
                         xAxisIndex: [0, 1, 2],
-                        start: Math.max(0, 100 - (120 / dates.length) * 100),
+                        start: Math.max(0, 100 - (90 / dates.length) * 100),
                         end: 100
                     },
                     {
@@ -1083,7 +1190,7 @@
                         type: 'slider',
                         bottom: 0,
                         height: 10,
-                        start: Math.max(0, 100 - (120 / dates.length) * 100),
+                        start: Math.max(0, 100 - (90 / dates.length) * 100),
                         end: 100
                     }
                 ],
@@ -1304,19 +1411,36 @@
         }
     }
 
+    // Function to switch period (daily/weekly)
+    function switchPeriod(periodType) {
+        currentPeriod = periodType;
+
+        // Save user preference to localStorage
+        localStorage.setItem('selectedPeriod', periodType);
+
+        // Update active tab
+        document.querySelectorAll('#periodTabs .nav-link').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelector(`[data-period="${periodType}"]`).classList.add('active');
+
+        // Re-render charts with the selected period data
+        renderCharts();
+    }
+
     // Function to switch main chart overlay
     function switchMainOverlay(overlayType) {
         mainOverlayType = overlayType;
 
         // Save user preference to localStorage
         localStorage.setItem('selectedMainOverlay', overlayType);
-    
+
             // Update active tab
             document.querySelectorAll('#mainOverlayTabs .nav-link').forEach(tab => {
                 tab.classList.remove('active');
             });
             document.querySelector(`[data-overlay="${overlayType}"]`).classList.add('active');
-    
+
         renderCharts();
     }
 
@@ -1508,7 +1632,66 @@
 
         return { k: kValues, d: dValues, j: jValues };
         }
-    
+
+        // Function to convert daily data to weekly data
+        function convertDailyToWeekly(dailyData) {
+            if (!dailyData || dailyData.length === 0) return [];
+
+            const weeklyData = [];
+            let currentWeek = null;
+
+            // Sort data by date (ascending)
+            const sortedData = [...dailyData].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            for (const day of sortedData) {
+                const date = new Date(day.date);
+                const year = date.getFullYear();
+                const week = getWeekNumber(date);
+                const weekKey = `${year}-${week}`;
+
+                if (!currentWeek || currentWeek.weekKey !== weekKey) {
+                    // Start a new week
+                    if (currentWeek) {
+                        weeklyData.push(currentWeek);
+                    }
+                    currentWeek = {
+                        date: day.date, // Keep the original date for display
+                        weekKey: weekKey,
+                        open: day.open,
+                        high: day.high,
+                        low: day.low,
+                        close: day.close,
+                        volume: day.volume
+                    };
+                } else {
+                    // Update current week data
+                    currentWeek.high = Math.max(currentWeek.high, day.high);
+                    currentWeek.low = Math.min(currentWeek.low, day.low);
+                    currentWeek.close = day.close;
+                    currentWeek.volume += day.volume;
+                    // Update date to the last day of the week
+                    currentWeek.date = day.date;
+                }
+            }
+
+            // Add the last week
+            if (currentWeek) {
+                weeklyData.push(currentWeek);
+            }
+
+            console.log('Converted weekly data:', weeklyData);
+            return weeklyData;
+        }
+
+        // Helper function to get week number
+        function getWeekNumber(date) {
+            const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+            const dayNum = d.getUTCDay() || 7;
+            d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+            return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+        }
+
         // Helper function to calculate OBV (On Balance Volume)
         function calculateOBV(closes, volumes) {
             if (!closes || !volumes || closes.length !== volumes.length || closes.length < 2) return [];
@@ -1671,6 +1854,17 @@
         } else {
             console.error('No stock code provided');
         }
+
+        // Add event listeners for period tabs
+        document.querySelectorAll('#periodTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                const periodType = this.getAttribute('data-period');
+
+                // Switch period
+                switchPeriod(periodType);
+            });
+        });
 
         // Add event listeners for main overlay tabs
         document.querySelectorAll('#mainOverlayTabs .nav-link').forEach(tab => {
