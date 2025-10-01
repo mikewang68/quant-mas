@@ -242,27 +242,27 @@ class AkshareClient:
     def get_realtime_data(self, codes: List[str]) -> pd.DataFrame:
         """
         Get real-time data for multiple stocks.
-        
+
         Args:
             codes: List of stock codes
-            
+
         Returns:
             DataFrame with real-time data
         """
         try:
             # Format codes for akshare
             formatted_codes = [self._format_stock_code(code) for code in codes]
-            
+
             # Get real-time data
             realtime_data = ak.stock_zh_a_spot_em()
-            
+
             # Filter for requested codes
             filtered_data = realtime_data[realtime_data['代码'].isin(formatted_codes)]
-            
+
             if filtered_data.empty:
                 self.logger.warning(f"No real-time data found for codes: {codes}")
                 return pd.DataFrame()
-            
+
             # Rename columns
             column_mapping = {
                 '代码': 'code',
@@ -278,17 +278,20 @@ class AkshareClient:
                 '昨收': 'prev_close',
                 '换手率': 'turnover_rate'
             }
-            
+
             filtered_data = filtered_data.rename(columns=column_mapping)
-            
-            # Select needed columns
-            needed_columns = ['code', 'name', 'price', 'pct_change', 'volume', 'amount', 
+
+            # Select needed columns - FIXED: include turnover_rate and rename pct_change to change_percent
+            needed_columns = ['code', 'name', 'price', 'pct_change', 'turnover_rate', 'volume', 'amount',
                             'open', 'high', 'low', 'prev_close']
             filtered_data = filtered_data[needed_columns]
-            
+
+            # Rename pct_change to change_percent to match API expectations
+            filtered_data = filtered_data.rename(columns={'pct_change': 'change_percent'})
+
             self.logger.info(f"Retrieved real-time data for {len(filtered_data)} stocks")
             return filtered_data
-            
+
         except Exception as e:
             self.logger.error(f"Error getting real-time data: {e}")
             return pd.DataFrame()

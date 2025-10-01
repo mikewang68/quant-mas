@@ -432,7 +432,7 @@
     // Function to load K-line data for a stock
     function loadStockKlineData(code) {
         console.log('Loading K-line data for code:', code);
-        fetch(`/api/stock-kline/${code}`)
+        fetch(`/api/stock-kline-realtime/${code}`)
             .then(response => {
                 console.log('API response status:', response.status);
                     if (!response.ok) {
@@ -742,10 +742,8 @@
     // Function to render charts
     function renderCharts() {
         console.log('Rendering charts with klineData:', klineData);
-        // Get the current page data
-        const startIndex = currentPage * pageSize;
-        const endIndex = Math.min(startIndex + pageSize, klineData.length);
-        const pageData = klineData.slice(startIndex, endIndex);
+        // Use all data instead of paginated data for charts
+        const pageData = klineData;
 
         console.log('Page data:', pageData);
 
@@ -1076,7 +1074,7 @@
                     {
                         type: 'inside',
                         xAxisIndex: [0, 1, 2],
-                        start: 0,
+                        start: Math.max(0, 100 - (120 / dates.length) * 100),
                         end: 100
                     },
                     {
@@ -1085,7 +1083,7 @@
                         type: 'slider',
                         bottom: 0,
                         height: 10,
-                        start: 0,
+                        start: Math.max(0, 100 - (120 / dates.length) * 100),
                         end: 100
                     }
                 ],

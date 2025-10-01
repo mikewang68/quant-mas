@@ -1293,7 +1293,7 @@ def register_routes(app: Flask):
 
     @app.route("/api/latest-pool-stocks")
     def get_latest_pool_stocks():
-        """Get the latest pool record with stock information"""
+        """Get the latest pool record with stock information using k_data for latest data"""
         try:
             # Check if MongoDB connection is available
             if app.config["MONGO_DB"] is None:
@@ -1335,37 +1335,61 @@ def register_routes(app: Flask):
                 except Exception as e:
                     logger.error(f"Error getting stock names from code collection: {e}")
 
-            # Get latest data from buf_data collection
-            buf_data = {}
+            # Get latest data from k_data collection
+            k_data_latest = {}
             if stock_codes:
                 try:
-                    buf_data_collection = app.config["MONGO_DB"]["buf_data"]
+                    # Get k_data collection
+                    k_data_collection = app.config["MONGO_DB"]["k_data"]
 
-                    # For each stock, get the latest record from buf_data
+                    # For each stock, get the latest record from k_data
                     for code in stock_codes:
-                        latest_buf_record = buf_data_collection.find_one(
-                            {"code": code},
-                            sort=[("date", -1)]  # Sort by date descending to get latest
+                        latest_k_record = k_data_collection.find_one(
+                            {"代码": code},
+                            sort=[("日期", -1)]
                         )
-                        if latest_buf_record:
-                            buf_data[code] = {
-                                "price": float(latest_buf_record.get("close", 0.0)),
-                                "change_percent": float(latest_buf_record.get("pct_change", 0.0)),
-                                "turnover_rate": float(latest_buf_record.get("turnover_rate", 0.0)),
-                            }
-                except Exception as e:
-                    logger.error(f"Error getting data from buf_data collection: {e}")
 
-            # Combine pool data with stock names and buf_data
+                        if latest_k_record:
+                            # Get adjustment setting to determine which fields to use
+                            adjust_type = app.config["MONGO_MANAGER"].get_adjustment_setting()
+
+                            # Use appropriate fields based on adjustment setting
+                            if adjust_type == 'qfq':  # 前复权 (qfq)
+                                price = float(latest_k_record.get("收盘q", 0.0))
+                                change_percent = float(latest_k_record.get("涨跌幅q", 0.0))
+                                turnover_rate = float(latest_k_record.get("换手率q", 0.0))
+                            elif adjust_type == 'hfq':  # 后复权 (hfq)
+                                price = float(latest_k_record.get("收盘h", 0.0))
+                                change_percent = float(latest_k_record.get("涨跌幅h", 0.0))
+                                turnover_rate = float(latest_k_record.get("换手率h", 0.0))
+                            else:  # No adjustment
+                                price = float(latest_k_record.get("收盘", 0.0))
+                                change_percent = float(latest_k_record.get("涨跌幅", 0.0))
+                                turnover_rate = float(latest_k_record.get("换手率", 0.0))
+
+                            k_data_latest[code] = {
+                                "price": price,
+                                "change_percent": change_percent,
+                                "turnover_rate": turnover_rate,
+                            }
+
+                    logger.info(f"Found k_data for {len(k_data_latest)} stocks from pool")
+                except Exception as e:
+                    logger.error(f"Error getting k_data: {e}")
+
+            # Combine pool data with stock names and k_data
             result_stocks = []
             for stock in stocks:
                 code = stock.get("code", "")
+                # Get k_data for this specific stock
+                stock_k_data = k_data_latest.get(code, {})
+
                 stock_info = {
                     "code": code,
                     "name": stock_names.get(code, ""),
-                    "price": buf_data.get(code, {}).get("price", 0.0),
-                    "change_percent": buf_data.get(code, {}).get("change_percent", 0.0),
-                    "turnover_rate": buf_data.get(code, {}).get("turnover_rate", 0.0),
+                    "price": stock_k_data.get("price", 0.0),
+                    "change_percent": stock_k_data.get("change_percent", 0.0),
+                    "turnover_rate": stock_k_data.get("turnover_rate", 0.0),
                     "signal": stock.get("signals", {}),
                     "trend": {
                         "score": stock.get("trend", {}).get("score", 0.0)
@@ -1427,6 +1451,49 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error getting K-line data for stock {code}: {e}")
             return jsonify({"error": f"Failed to get K-line data: {str(e)}"}), 500
+    @app.route("/api/stock-kline-realtime/<code>")
+    def get_stock_kline_realtime_data(code):
+        """Get real-time K-line data for a specific stock from Akshare (last 1 year)"""
+        try:
+            # Initialize AkshareClient
+            from utils.akshare_client import AkshareClient
+            akshare_client = AkshareClient()
+
+            # Calculate date range (last 1 year)
+            import datetime
+            end_date = datetime.date.today()
+            start_date = end_date - datetime.timedelta(days=365)
+
+            # Format dates as strings (YYYY-MM-DD format for Akshare)
+            start_date_str = start_date.strftime("%Y-%m-%d")
+            end_date_str = end_date.strftime("%Y-%m-%d")
+
+            # Get daily K-line data from Akshare (with explicit pre-adjusted data)
+            kline_df = akshare_client.get_daily_k_data(code, start_date_str, end_date_str, "q")
+
+            if kline_df.empty:
+                logger.warning(f"No real-time K-line data found for stock {code}")
+                return jsonify({"error": "No real-time K-line data found"}), 404
+
+            # Process the data for charting
+            kline_data = []
+            for _, row in kline_df.iterrows():
+                kline_data.append({
+                    "date": row.get("date").strftime("%Y-%m-%d") if hasattr(row.get("date"), 'strftime') else str(row.get("date")),
+                    "open": float(row.get("open", 0.0)),
+                    "high": float(row.get("high", 0.0)),
+                    "low": float(row.get("low", 0.0)),
+                    "close": float(row.get("close", 0.0)),
+                    "volume": float(row.get("volume", 0.0)),
+                    "amount": float(row.get("amount", 0.0)),
+                    "turnover_rate": float(row.get("turnover_rate", 0.0)) if "turnover_rate" in row else 0.0,
+                })
+
+            return jsonify(kline_data), 200
+
+        except Exception as e:
+            logger.error(f"Error getting real-time K-line data for stock {code}: {e}")
+            return jsonify({"error": f"Failed to get real-time K-line data: {str(e)}"}), 500
 
     @app.route("/api/strategy-by-name/<string:strategy_name>", methods=["GET"])
     def get_strategy_by_name(strategy_name):

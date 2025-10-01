@@ -368,6 +368,24 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **COMPATIBILITY**: Ensured backward compatibility with existing strategy implementations
 - **VERIFIED**: All modifications tested and confirmed working correctly
 
+### Web Interface Enhancement for Stock Display and K-line Charts
+- **MODIFIED**: Updated stock list page to fetch latest price, change percentage, and turnover rate from k_data collection instead of akshare real-time data
+- **ENHANCED**: Stock K-line v2 chart to fetch real-time data from Akshare with last 1 year of daily data
+- **IMPROVED**: K-line chart default display to show last 120 days of data with zoom functionality for full dataset viewing
+- **CONFIRMED**: All data fetched from Akshare uses forward-adjusted (前复权) pricing for consistency
+- **OPTIMIZED**: Chart rendering to display all available data instead of paginated subsets
+- **VERIFIED**: DataZoom functionality working properly for interactive chart exploration
+
+### K-line Chart Enhancement with Akshare Integration
+- **IMPLEMENTED**: Modified stock_kline_v2.html to fetch real-time K-line data from Akshare instead of database
+- **ADDED**: New API endpoint `/api/stock-kline-realtime/<code>` to serve Akshare data with 1-year historical range
+- **CONFIGURED**: Default display to show last 120 days of data with zoom functionality for full dataset exploration
+- **VERIFIED**: All data fetched from Akshare uses explicit forward-adjusted (前复权) pricing for consistency
+- **OPTIMIZED**: Chart rendering to display all available data instead of paginated subsets
+- **ENHANCED**: DataZoom functionality with proper default range configuration for better user experience
+- **OPTIMIZED**: Chart rendering to display all available data instead of paginated subsets
+- **VERIFIED**: DataZoom functionality working properly for interactive chart exploration
+
 ## Usage Patterns
 
 ### Running Agents
@@ -463,5 +481,5 @@ python -m backtesting.backtester
    - Improved formatting with thousand separators and right alignment for better readability
 
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-09-30*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-01*
 
