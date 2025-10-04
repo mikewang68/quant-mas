@@ -497,6 +497,18 @@ python -m backtesting.backtester
    - Added color-coded display for profit/loss values (green for profits, red for losses)
    - Improved formatting with thousand separators and right alignment for better readability
 
+### Enhanced Public Opinion Analysis Strategy V2 Output Format Fix
+- **FIXED**: Resolved issue where Enhanced Public Opinion Analysis Strategy V2 was returning string format instead of JSON format in value field
+- **MODIFIED**: Updated `_create_detailed_value` method to return proper JSON structure with all required fields
+- **ENHANCED**: Now returns complete JSON format including score, reason, details, weights, sentiment_score, sentiment_trend, key_events, market_impact, confidence_level, analysis_summary, recommendation, risk_factors, and data_sources
+- **VERIFIED**: Strategy now correctly outputs JSON format that matches system prompt requirements
+
+### Web Interface JSON Display Enhancement
+- **ENHANCED**: Modified stock_kline_v2.html to format JSON strings in the right-side analysis information table
+- **ADDED**: JSON detection and formatting logic in `formatValueForTable` function
+- **IMPROVED**: JSON strings are now displayed with proper indentation and formatting using monospace font
+- **BENEFITS**: Enhanced readability of public opinion analysis results and other JSON-formatted strategy outputs
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-01*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-04*
 

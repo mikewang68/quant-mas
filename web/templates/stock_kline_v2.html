@@ -740,6 +740,18 @@
 
     // Helper function to format values for table display
     function formatValueForTable(value) {
+        // If value is a string that looks like JSON, try to parse and format it
+        if (typeof value === 'string' && value.trim().startsWith('{') && value.trim().endsWith('}')) {
+            try {
+                const parsedValue = JSON.parse(value);
+                // Format the JSON with proper indentation
+                return '<div class="json-display">' + JSON.stringify(parsedValue, null, 2) + '</div>';
+            } catch (e) {
+                // If parsing fails, return the original string
+                return String(value);
+            }
+        }
+
         // If value is an object, format it nicely
         if (typeof value === 'object' && value !== null) {
             // For objects with multiple properties, display each property
