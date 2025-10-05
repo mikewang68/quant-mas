@@ -104,6 +104,19 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Added example strategy and database insertion scripts to help users get started
 - Created utility script to initialize and configure the 舆情分析Agent in MongoDB database with proper Chinese description
 
+### Enhanced Public Opinion Analysis Strategy V2 Output Format Optimization and Bug Fixes
+- **COMPLETED**: Successfully fixed multiple issues with EastMoney Guba data crawling functionality
+- **OUTPUT FORMAT OPTIMIZATION**: Modified output format to use concise "时间：内容" format instead of verbose "标题:" and "发布时间:" prefixes
+- **AKSHARE NEWS FORMAT**: Updated AkShare news output to use "时间：内容" format, removing "日期:" and "摘要:" prefixes
+- **TIME-BASED SORTING**: Implemented reverse chronological sorting to display latest data first
+- **FUNCTION DEFINITION FIXES**: Resolved multiple function definition issues including:
+  - Added missing `_format_posts` static method
+  - Added missing `_parse_time` static method for time-based sorting
+  - Fixed function definition order issues between `scrape_guba_data` and `scrape_all_guba_data`
+- **LOGGING ENHANCEMENT**: Added comprehensive logging functionality to output results to console
+- **VERIFICATION**: Created and ran comprehensive test scripts to verify all functionality works correctly
+- **FORMAL PROGRAM INTEGRATION**: Confirmed that formal running program (`utils.run_public_opinion_selector`) now uses the fixed code
+
 ### Enhanced Public Opinion Analysis Strategy V2 Implementation
 - Successfully implemented new Enhanced Public Opinion Analysis Strategy V2 with expanded data sources
 - Added support for Eastmoney Guba (股吧) data collection including user focus index, institutional ratings, and participation data

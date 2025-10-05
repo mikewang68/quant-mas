@@ -11,8 +11,8 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
 
+from utils.eastmoney_guba_scraper import scrape_all_guba_data
 from strategies.base_strategy import BaseStrategy
 from data.mongodb_manager import MongoDBManager
 from utils.akshare_client import AkshareClient
@@ -30,6 +30,9 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
     - 千股千评数据
     """
 
+    # 类级别的千股千评数据DataFrame
+    _qian_gu_qian_ping_df = None
+
     def __init__(self, name: str, params: Dict, db_manager: MongoDBManager = None):
         """
         初始化策略
@@ -42,6 +45,95 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
         super().__init__(name, params)
         self.db_manager = db_manager
         self.akshare_client = AkshareClient()
+
+        # 在策略初始化时加载千股千评数据
+        self._load_qian_gu_qian_ping_data()
+
+    def _load_qian_gu_qian_ping_data(self):
+        """
+        加载千股千评数据到类级别的DataFrame
+        """
+        try:
+            # 如果已经加载过，直接返回
+            if (
+                EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df
+                is not None
+            ):
+                self.log_info("千股千评数据已加载，跳过重复加载")
+                return
+
+            self.log_info("开始加载千股千评数据...")
+
+            # 直接调用akshare的stock_comment_em()函数获取所有股票数据
+            import akshare as ak
+
+            try:
+                # 调用stock_comment_em()获取所有股票的千股千评数据（不带参数）
+                qgqp_data = ak.stock_comment_em()
+
+                if qgqp_data.empty:
+                    self.log_warning("获取到的千股千评数据为空")
+                    EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df = (
+                        pd.DataFrame()
+                    )
+                    return
+
+                # 存储完整的DataFrame
+                EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df = (
+                    qgqp_data
+                )
+
+                self.log_info(f"成功加载千股千评数据，包含 {len(qgqp_data)} 只股票")
+
+            except Exception as e:
+                self.log_error(f"调用akshare.stock_comment_em()失败: {e}")
+                EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df = (
+                    pd.DataFrame()
+                )
+
+        except Exception as e:
+            self.log_error(f"加载千股千评数据时出错: {e}")
+            EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df = (
+                pd.DataFrame()
+            )
+
+    def _get_qian_gu_qian_ping_data_for_stock(self, stock_code: str) -> Dict:
+        """
+        从已加载的DataFrame中获取指定股票的千股千评数据
+
+        Args:
+            stock_code: 股票代码
+
+        Returns:
+            千股千评数据字典
+        """
+        try:
+            # 检查是否已加载数据
+            if (
+                EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df is None
+                or EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df.empty
+            ):
+                self.log_warning("千股千评数据未加载，返回空字典")
+                return {}
+
+            # 从DataFrame中查找特定股票的数据
+            df = EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df
+
+            # 查找股票代码匹配的数据
+            stock_data = df[df["代码"] == stock_code]
+
+            if stock_data.empty:
+                self.log_warning(f"未找到股票 {stock_code} 的千股千评数据")
+                return {}
+
+            # 将找到的股票数据转换为字典
+            result = stock_data.iloc[0].to_dict()
+            self.log_info(f"从缓存中获取股票 {stock_code} 的千股千评数据")
+            return result
+
+        except Exception as e:
+            self.log_warning(f"从缓存获取千股千评数据失败: {e}")
+            return {}
 
     def execute(
         self,
@@ -116,7 +208,9 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                         }
                     )
 
-                    self.log_info(f"股票 {stock_code} 符合条件，评分: {sentiment_score:.4f}")
+                    self.log_info(
+                        f"股票 {stock_code} 符合条件，评分: {sentiment_score:.4f}"
+                    )
 
             return selected_stocks
 
@@ -174,76 +268,47 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
 
             # 收集AkShare新闻数据
             try:
-                akshare_news = self.akshare_client.get_stock_news(
-                    stock_code, days=5
-                )
+                akshare_news = self.akshare_client.get_stock_news(stock_code, days=5)
                 all_data["akshare_news"] = akshare_news
-                self.log_info(f"Retrieved {len(akshare_news)} news items from AkShare for {stock_code} within last 5 days")
+                self.log_info(
+                    f"Retrieved {len(akshare_news)} news items from AkShare for {stock_code} within last 5 days"
+                )
             except Exception as e:
                 self.log_warning(f"获取AkShare新闻数据失败: {e}")
 
-            # 收集行业信息 - 暂时注释掉
-            # try:
-            #     industry_info = self.akshare_client.get_stock_industry_info(stock_code)
-            #     all_data["industry_info"] = industry_info
-            #     self.log_info(f"Retrieved industry information for {stock_code}")
-            # except Exception as e:
-            #     self.log_warning(f"获取行业信息失败: {e}")
-
-            # 收集千股千评数据 - 暂时注释掉
-            # try:
-            #     qgqp_data = self.akshare_client.get_qian_gu_qian_ping_data(stock_code)
-            #     all_data["qian_gu_qian_ping_data"] = qgqp_data
-            #     self.log_info(f"Retrieved qian gu qian ping data for {stock_code}")
-            # except Exception as e:
-            #     self.log_warning(f"获取千股千评数据失败: {e}")
-
-            # 收集详细Guba数据 - 暂时注释掉
-            # try:
-            #     detailed_guba_data = self._get_detailed_guba_data(stock_code)
-            #     all_data["detailed_guba_data"] = detailed_guba_data
-            #     self.log_info(f"Successfully retrieved detailed Guba data for {stock_code}")
-            # except Exception as e:
-            #     self.log_warning(f"获取详细Guba数据失败: {e}")
-
-            # 收集Guba数据 - 暂时注释掉
-            # try:
-            #     guba_data = self._get_guba_data(stock_code)
-            #     all_data["guba_data"] = guba_data
-            #     self.log_info(f"Retrieved Guba data for {stock_code}")
-            # except Exception as e:
-            #     self.log_warning(f"获取Guba数据失败: {e}")
-
-            # 收集专业网站数据
+            # 收集行业信息
             try:
-                professional_sites_data = self._get_professional_sites_data(
-                    stock_code, stock_name
+                industry_info = self.akshare_client.get_stock_industry_info(stock_code)
+                all_data["industry_info"] = industry_info
+                self.log_info(f"Retrieved industry information for {stock_code}")
+            except Exception as e:
+                self.log_warning(f"获取行业信息失败: {e}")
+
+            # # 收集千股千评数据 - 从缓存中获取
+            try:
+                qgqp_data = self._get_qian_gu_qian_ping_data_for_stock(stock_code)
+                all_data["qian_gu_qian_ping_data"] = qgqp_data
+                self.log_info(f"从缓存中获取千股千评数据用于 {stock_code}")
+            except Exception as e:
+                self.log_warning(f"获取千股千评数据失败: {e}")
+
+            # # 收集详细Guba数据
+            try:
+                detailed_guba_data = self._get_detailed_guba_data(stock_code)
+                all_data["detailed_guba_data"] = detailed_guba_data
+                self.log_info(
+                    f"Successfully retrieved detailed Guba data for {stock_code}"
                 )
-                all_data["professional_sites_data"] = professional_sites_data
-                self.log_info(f"Retrieved {len(professional_sites_data)} items from professional sites for {stock_code}")
             except Exception as e:
-                self.log_warning(f"获取专业网站数据失败: {e}")
+                self.log_warning(f"获取详细Guba数据失败: {e}")
 
-            # 收集FireCrawl数据
+            # 收集Guba数据
             try:
-                firecrawl_data = self._get_firecrawl_data(stock_code, stock_name)
-                all_data["firecrawl_data"] = firecrawl_data
-                self.log_info(f"Successfully retrieved {len(firecrawl_data)} search results from FireCrawl")
-
-                # 详细输出FireCrawl数据
-                print(f"\n=== FireCrawl数据详情 ===")
-                print(f"获取到 {len(firecrawl_data)} 条FireCrawl数据")
-                for i, item in enumerate(firecrawl_data, 1):
-                    print(f"  {i}. 标题: {item.get('title', 'N/A')}")
-                    print(f"     URL: {item.get('url', 'N/A')}")
-                    print(f"     来源: {item.get('source', 'N/A')}")
-                    print(f"     发布时间: {item.get('publishedAt', 'N/A')}")
-                    print(f"     内容摘要: {item.get('content', 'N/A')[:100]}...")
-                print("=== FireCrawl数据结束 ===\n")
-
+                guba_data = self._get_guba_data(stock_code)
+                all_data["guba_data"] = guba_data
+                self.log_info(f"Retrieved Guba data for {stock_code}")
             except Exception as e:
-                self.log_warning(f"获取FireCrawl数据失败: {e}")
-                print(f"❌ FireCrawl数据获取失败: {e}")
+                self.log_warning(f"获取Guba数据失败: {e}")
 
             self.log_info(f"收集到完整的舆情数据")
             return all_data
@@ -273,9 +338,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
 
             # 调用LLM进行分析
             sentiment_score, analysis_details, full_analysis = (
-                self._get_llm_sentiment_analysis(
-                    stock_code, stock_name, formatted_data
-                )
+                self._get_llm_sentiment_analysis(stock_code, stock_name, formatted_data)
             )
 
             return sentiment_score, full_analysis
@@ -322,35 +385,29 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 formatted_text += "东方财富股吧详细数据:\n"
                 detailed_guba = all_data["detailed_guba_data"]
 
-                # 添加用户关注数据
+                # 添加用户关注数据（简洁格式）
                 if detailed_guba.get("user_focus"):
-                    formatted_text += "  用户关注指数:\n"
-                    for i, item in enumerate(detailed_guba["user_focus"][:5], 1):
-                        formatted_text += f"    {i}. 日期: {item.get('date', 'N/A')}, 关注指数: {item.get('focus_index', 'N/A')}\n"
+                    item = detailed_guba["user_focus"]
+                    formatted_text += (
+                        f"  用户关注指数: {item.get('focus_index', 'N/A')}\n"
+                    )
 
-                # 添加机构参与度数据
+                # 添加机构参与度数据（简洁格式）
                 if detailed_guba.get("institutional_participation"):
-                    formatted_text += "  机构参与度:\n"
-                    for i, item in enumerate(
-                        detailed_guba["institutional_participation"][:5], 1
-                    ):
-                        formatted_text += f"    {i}. 日期: {item.get('date', 'N/A')}, 参与度: {item.get('participation', 'N/A')}\n"
+                    item = detailed_guba["institutional_participation"]
+                    formatted_text += (
+                        f"  机构参与度: {item.get('participation', 'N/A')}\n"
+                    )
 
-                # 添加历史评分数据
+                # 添加历史评分数据（简洁格式）
                 if detailed_guba.get("historical_rating"):
-                    formatted_text += "  历史评分:\n"
-                    for i, item in enumerate(detailed_guba["historical_rating"][:5], 1):
-                        formatted_text += (
-                            f"    {i}. 日期: {item.get('date', 'N/A')}, 评分: {item.get('rating', 'N/A')}\n"
-                        )
+                    item = detailed_guba["historical_rating"]
+                    formatted_text += f"  历史评分: {item.get('rating', 'N/A')}\n"
 
-                # 添加日度参与数据
+                # 添加日度参与数据（简洁格式）
                 if detailed_guba.get("daily_participation"):
-                    formatted_text += "  日度市场参与意愿:\n"
-                    for i, item in enumerate(
-                        detailed_guba["daily_participation"][:5], 1
-                    ):
-                        formatted_text += f"    {i}. 日期: {item.get('date', 'N/A')}, 当日意愿上升: {item.get('daily_desire_rise', 'N/A')}, 5日平均参与意愿变化: {item.get('avg_participation_change', 'N/A')}\n"
+                    item = detailed_guba["daily_participation"]
+                    formatted_text += f"  日度市场参与意愿: 当日意愿上升: {item.get('daily_desire_rise', 'N/A')}, 5日平均参与意愿变化: {item.get('avg_participation_change', 'N/A')}\n"
 
                 formatted_text += "\n"
 
@@ -358,10 +415,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             if all_data["akshare_news"]:
                 formatted_text += "AkShare近5日新闻:\n"
                 for i, news in enumerate(all_data["akshare_news"][:10], 1):
-                    formatted_text += f"  {i}. 标题: {news.get('title', 'N/A')}\n"
-                    formatted_text += f"     发布时间: {news.get('publishedAt', 'N/A')}\n"
-                    formatted_text += f"     内容摘要: {news.get('content', 'N/A')[:200]}...\n"
-                    formatted_text += f"     来源: {news.get('source', 'N/A')}\n"
+                    formatted_text += f"    {i}. {news.get('日期', 'N/A')}：{news.get('摘要', 'N/A')[:60]}...\n"
                 formatted_text += "\n"
 
             # 添加Guba数据
@@ -373,29 +427,27 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 if guba_data.get("consultations"):
                     formatted_text += "  近期咨询:\n"
                     for i, item in enumerate(guba_data["consultations"][:5], 1):
-                        formatted_text += f"    {i}. 标题: {item.get('title', 'N/A')}\n"
-                        formatted_text += f"       发布时间: {item.get('publishedAt', 'N/A')}\n"
+                        formatted_text += f"    {i}. {item.get('title', 'N/A')}\n"
 
                 # 添加研报
                 if guba_data.get("research_reports"):
                     formatted_text += "  最新研报:\n"
                     for i, item in enumerate(guba_data["research_reports"][:5], 1):
-                        formatted_text += f"    {i}. 标题: {item.get('title', 'N/A')}\n"
-                        formatted_text += f"       发布时间: {item.get('publishedAt', 'N/A')}\n"
+                        formatted_text += f"    {i}. {item.get('title', 'N/A')}\n"
 
                 # 添加公告
                 if guba_data.get("announcements"):
                     formatted_text += "  最新公告:\n"
                     for i, item in enumerate(guba_data["announcements"][:5], 1):
-                        formatted_text += f"    {i}. 标题: {item.get('title', 'N/A')}\n"
-                        formatted_text += f"       发布时间: {item.get('publishedAt', 'N/A')}\n"
+                        formatted_text += f"    {i}. {item.get('title', 'N/A')}\n"
 
                 # 添加热门帖子
                 if guba_data.get("hot_posts"):
                     formatted_text += "  热门帖子:\n"
                     for i, item in enumerate(guba_data["hot_posts"][:5], 1):
-                        formatted_text += f"    {i}. 标题: {item.get('title', 'N/A')}\n"
-                        formatted_text += f"       发布时间: {item.get('publishedAt', 'N/A')}\n"
+                        formatted_text += f"    {i}. {item.get('title', 'N/A')}\n"
+
+                formatted_text += "\n"
 
                 formatted_text += "\n"
 
@@ -404,9 +456,13 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 formatted_text += "专业网站分析:\n"
                 for i, item in enumerate(all_data["professional_sites_data"][:5], 1):
                     formatted_text += f"  {i}. 标题: {item.get('title', 'N/A')}\n"
-                    formatted_text += f"     发布时间: {item.get('publishedAt', 'N/A')}\n"
+                    formatted_text += (
+                        f"     发布时间: {item.get('publishedAt', 'N/A')}\n"
+                    )
                     formatted_text += f"     来源: {item.get('source', 'N/A')}\n"
-                    formatted_text += f"     内容摘要: {item.get('content', 'N/A')[:200]}...\n"
+                    formatted_text += (
+                        f"     内容摘要: {item.get('content', 'N/A')[:200]}...\n"
+                    )
                 formatted_text += "\n"
 
             # 添加FireCrawl数据
@@ -414,13 +470,19 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 formatted_text += "网络搜索结果:\n"
                 for i, item in enumerate(all_data["firecrawl_data"][:10], 1):
                     formatted_text += f"  {i}. 标题: {item.get('title', 'N/A')}\n"
-                    formatted_text += f"     发布时间: {item.get('publishedAt', 'N/A')}\n"
-                    formatted_text += f"     内容摘要: {item.get('content', 'N/A')[:200]}...\n"
+                    formatted_text += (
+                        f"     发布时间: {item.get('publishedAt', 'N/A')}\n"
+                    )
+                    formatted_text += (
+                        f"     内容摘要: {item.get('content', 'N/A')[:200]}...\n"
+                    )
                     formatted_text += f"     来源: {item.get('source', 'N/A')}\n"
                 formatted_text += "\n"
 
             # 记录格式化数据用于调试
-            self.log_info(f"Formatted data for LLM analysis:\n{formatted_text[:1000]}...")
+            self.log_info(
+                f"Formatted data for LLM analysis:\n{formatted_text[:1000]}..."
+            )
 
             return formatted_text
 
@@ -449,9 +511,6 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             user_prompt = f"""
 请基于以下舆情信息进行量化舆情分析：
 
-股票代码：{stock_code}
-股票名称：{stock_name}
-
 ## 舆情数据摘要：
 {formatted_data}
 
@@ -473,7 +532,9 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             max_retries = 3
             for attempt in range(1, max_retries + 1):
                 try:
-                    self.log_info(f"Calling LLM API for sentiment analysis (attempt {attempt})")
+                    self.log_info(
+                        f"Calling LLM API for sentiment analysis (attempt {attempt})"
+                    )
                     self.log_info(f"User prompt length: {len(user_prompt)} characters")
 
                     # 调用LLM API
@@ -488,74 +549,132 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                     # 尝试解析JSON响应
                     try:
                         # 记录内容用于调试
-                        self.log_info(f"LLM response content length: {len(content)} characters")
-                        self.log_info(f"LLM response content preview: {content[:500]}{'...' if len(content) > 500 else ''}")
+                        self.log_info(
+                            f"LLM response content length: {len(content)} characters"
+                        )
+                        self.log_info(
+                            f"LLM response content preview: {content[:500]}{'...' if len(content) > 500 else ''}"
+                        )
 
                         # 处理包含<think>标签的情况
                         if "<think>" in content:
                             self.log_warning("LLM响应包含<think>标签，尝试提取JSON部分")
 
                             # 方法1: 尝试直接在整个内容中查找JSON
-                            json_start = content.find('{')
-                            json_end = content.rfind('}')
+                            json_start = content.find("{")
+                            json_end = content.rfind("}")
 
-                            if json_start != -1 and json_end != -1 and json_end > json_start:
+                            if (
+                                json_start != -1
+                                and json_end != -1
+                                and json_end > json_start
+                            ):
                                 # 提取JSON内容
-                                extracted_json = content[json_start:json_end+1]
+                                extracted_json = content[json_start : json_end + 1]
                                 # 验证提取的JSON是否有效
                                 try:
                                     json.loads(extracted_json)
                                     content = extracted_json
-                                    self.log_info(f"从<think>标签中直接提取JSON成功: {content[:200]}...")
+                                    self.log_info(
+                                        f"从<think>标签中直接提取JSON成功: {content[:200]}..."
+                                    )
                                 except json.JSONDecodeError:
                                     # 如果直接提取失败，尝试更精确的方法
-                                    self.log_warning("直接提取的JSON无效，尝试更精确的提取")
+                                    self.log_warning(
+                                        "直接提取的JSON无效，尝试更精确的提取"
+                                    )
                                     # 查找</think>标签之后的内容
                                     think_end = content.find("</think>")
 
                                     if think_end != -1:
                                         # 提取</think>标签之后的内容
-                                        after_think_content = content[think_end+8:]  # len("</think>") = 8
+                                        after_think_content = content[
+                                            think_end + 8 :
+                                        ]  # len("</think>") = 8
                                         # 在</think>之后的内容中查找JSON
-                                        json_start = after_think_content.find('{')
-                                        json_end = after_think_content.rfind('}')
+                                        json_start = after_think_content.find("{")
+                                        json_end = after_think_content.rfind("}")
                                         if json_start != -1 and json_end != -1:
-                                            content = after_think_content[json_start:json_end+1]
-                                            self.log_info(f"从</think>标签之后提取的JSON: {content[:200]}...")
+                                            content = after_think_content[
+                                                json_start : json_end + 1
+                                            ]
+                                            self.log_info(
+                                                f"从</think>标签之后提取的JSON: {content[:200]}..."
+                                            )
                                         else:
                                             # 如果仍然找不到完整的JSON，尝试使用robust extraction
-                                            sentiment_score = self._extract_sentiment_score_robust(content)
+                                            sentiment_score = (
+                                                self._extract_sentiment_score_robust(
+                                                    content
+                                                )
+                                            )
                                             if sentiment_score is not None:
-                                                self.log_info(f"使用robust extraction获取sentiment_score: {sentiment_score}")
+                                                self.log_info(
+                                                    f"使用robust extraction获取sentiment_score: {sentiment_score}"
+                                                )
                                                 # 返回默认结果但使用提取的分数
-                                                default_result = self._get_default_analysis_result()
-                                                default_result["score"] = sentiment_score
-                                                default_result["sentiment_score"] = sentiment_score
-                                                return sentiment_score, default_result["analysis_summary"], default_result
+                                                default_result = (
+                                                    self._get_default_analysis_result()
+                                                )
+                                                default_result["score"] = (
+                                                    sentiment_score
+                                                )
+                                                default_result["sentiment_score"] = (
+                                                    sentiment_score
+                                                )
+                                                return (
+                                                    sentiment_score,
+                                                    default_result["analysis_summary"],
+                                                    default_result,
+                                                )
                                             else:
-                                                raise ValueError("无法从</think>标签之后提取JSON")
+                                                raise ValueError(
+                                                    "无法从</think>标签之后提取JSON"
+                                                )
                                     else:
                                         # 如果没有</think>标签，尝试使用robust extraction
-                                        sentiment_score = self._extract_sentiment_score_robust(content)
+                                        sentiment_score = (
+                                            self._extract_sentiment_score_robust(
+                                                content
+                                            )
+                                        )
                                         if sentiment_score is not None:
-                                            self.log_info(f"使用robust extraction获取sentiment_score: {sentiment_score}")
+                                            self.log_info(
+                                                f"使用robust extraction获取sentiment_score: {sentiment_score}"
+                                            )
                                             # 返回默认结果但使用提取的分数
-                                            default_result = self._get_default_analysis_result()
+                                            default_result = (
+                                                self._get_default_analysis_result()
+                                            )
                                             default_result["score"] = sentiment_score
-                                            default_result["sentiment_score"] = sentiment_score
-                                            return sentiment_score, default_result["analysis_summary"], default_result
+                                            default_result["sentiment_score"] = (
+                                                sentiment_score
+                                            )
+                                            return (
+                                                sentiment_score,
+                                                default_result["analysis_summary"],
+                                                default_result,
+                                            )
                                         else:
                                             raise ValueError("无法从内容中提取JSON")
                             else:
                                 # 如果找不到JSON结构，尝试使用robust extraction
-                                sentiment_score = self._extract_sentiment_score_robust(content)
+                                sentiment_score = self._extract_sentiment_score_robust(
+                                    content
+                                )
                                 if sentiment_score is not None:
-                                    self.log_info(f"使用robust extraction获取sentiment_score: {sentiment_score}")
+                                    self.log_info(
+                                        f"使用robust extraction获取sentiment_score: {sentiment_score}"
+                                    )
                                     # 返回默认结果但使用提取的分数
                                     default_result = self._get_default_analysis_result()
                                     default_result["score"] = sentiment_score
                                     default_result["sentiment_score"] = sentiment_score
-                                    return sentiment_score, default_result["analysis_summary"], default_result
+                                    return (
+                                        sentiment_score,
+                                        default_result["analysis_summary"],
+                                        default_result,
+                                    )
                                 else:
                                     raise ValueError("无法从<think>标签中提取JSON")
 
@@ -570,7 +689,11 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                             else:
                                 # 查找普通的```标记
                                 json_start_marker = content.find("```")
-                                json_start = json_start_marker + 3 if json_start_marker != -1 else -1
+                                json_start = (
+                                    json_start_marker + 3
+                                    if json_start_marker != -1
+                                    else -1
+                                )
 
                             json_end_marker = content.find("```", json_start)
 
@@ -581,14 +704,18 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                             elif json_start != -1:
                                 # 如果只有开始标记，提取从开始标记到内容末尾的部分
                                 content = content[json_start:].strip()
-                                self.log_info(f"提取的JSON内容(从开始标记到末尾): {content}")
+                                self.log_info(
+                                    f"提取的JSON内容(从开始标记到末尾): {content}"
+                                )
                             else:
                                 # 回退到原来的方法
-                                json_start = content.find('{')
-                                json_end = content.rfind('}')
+                                json_start = content.find("{")
+                                json_end = content.rfind("}")
                                 if json_start != -1 and json_end != -1:
-                                    content = content[json_start:json_end+1]
-                                    self.log_info(f"使用备用方法提取的JSON内容: {content}")
+                                    content = content[json_start : json_end + 1]
+                                    self.log_info(
+                                        f"使用备用方法提取的JSON内容: {content}"
+                                    )
                                 else:
                                     raise ValueError("无法从```标签中提取JSON")
 
@@ -596,16 +723,33 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                         analysis_result = json.loads(content)
 
                         # 验证必需字段
-                        required_fields = ["score", "reason", "details", "weights", "sentiment_score",
-                                         "sentiment_trend", "key_events", "market_impact", "confidence_level",
-                                         "analysis_summary", "recommendation", "risk_factors"]
+                        required_fields = [
+                            "score",
+                            "reason",
+                            "details",
+                            "weights",
+                            "sentiment_score",
+                            "sentiment_trend",
+                            "key_events",
+                            "market_impact",
+                            "confidence_level",
+                            "analysis_summary",
+                            "recommendation",
+                            "risk_factors",
+                        ]
 
                         for field in required_fields:
                             if field not in analysis_result:
                                 raise ValueError(f"Missing required field: {field}")
 
                         # 验证details结构
-                        detail_fields = ["policy", "finance", "industry", "price_action", "sentiment"]
+                        detail_fields = [
+                            "policy",
+                            "finance",
+                            "industry",
+                            "price_action",
+                            "sentiment",
+                        ]
                         for field in detail_fields:
                             if field not in analysis_result["details"]:
                                 raise ValueError(f"Missing detail field: {field}")
@@ -613,7 +757,9 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                         sentiment_score = analysis_result["score"]
                         analysis_details = analysis_result["analysis_summary"]
 
-                        self.log_info(f"Successfully received LLM sentiment analysis response. Sentiment score: {sentiment_score}")
+                        self.log_info(
+                            f"Successfully received LLM sentiment analysis response. Sentiment score: {sentiment_score}"
+                        )
                         return sentiment_score, analysis_details, analysis_result
 
                     except json.JSONDecodeError as e:
@@ -627,7 +773,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                         print("=== JSON解析错误结束 ===\n")
 
                         if attempt < max_retries:
-                            time.sleep(2 ** attempt)  # 指数退避
+                            time.sleep(2**attempt)  # 指数退避
                             continue
                         else:
                             raise ValueError(f"LLM响应不是有效的JSON格式: {content}")
@@ -635,7 +781,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 except Exception as e:
                     self.log_warning(f"LLM API调用失败 (尝试 {attempt}): {e}")
                     if attempt < max_retries:
-                        time.sleep(2 ** attempt)  # 指数退避
+                        time.sleep(2**attempt)  # 指数退避
                         continue
                     else:
                         raise
@@ -644,7 +790,11 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             self.log_error(f"LLM舆情分析失败: {e}")
             # 返回默认结果
             default_result = self._get_default_analysis_result()
-            return default_result["score"], default_result["analysis_summary"], default_result
+            return (
+                default_result["score"],
+                default_result["analysis_summary"],
+                default_result,
+            )
 
     def _load_system_prompt(self) -> str:
         """
@@ -654,8 +804,10 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             系统提示词内容
         """
         try:
-            prompt_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'pub_opinion_prompt.md')
-            with open(prompt_path, 'r', encoding='utf-8') as f:
+            prompt_path = os.path.join(
+                os.path.dirname(__file__), "..", "config", "pub_opinion_prompt.md"
+            )
+            with open(prompt_path, "r", encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
             self.log_warning(f"加载系统提示词失败: {e}")
@@ -683,25 +835,27 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 return ""
 
             # 构建LLM请求
-            llm_url = llm_config.get("api_url", "http://192.168.1.177:1234/v1/chat/completions")
+            llm_url = llm_config.get(
+                "api_url", "http://192.168.1.177:1234/v1/chat/completions"
+            )
             payload = {
                 "model": llm_config.get("model", "qwen3-4b-instruct"),
                 "messages": [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": prompt}
+                    {"role": "user", "content": prompt},
                 ],
                 "temperature": 0.1,
-                "max_tokens": 8192
+                "max_tokens": 8192,
             }
 
             response = requests.post(llm_url, json=payload, timeout=60)
 
             if response.status_code == 200:
                 response_data = response.json()
-                if 'choices' in response_data and len(response_data['choices']) > 0:
-                    choice = response_data['choices'][0]
-                    if 'message' in choice:
-                        return choice['message'].get('content', '')
+                if "choices" in response_data and len(response_data["choices"]) > 0:
+                    choice = response_data["choices"][0]
+                    if "message" in choice:
+                        return choice["message"].get("content", "")
 
             self.log_warning(f"LLM API调用失败: {response.status_code}")
             return ""
@@ -770,11 +924,13 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             构建后的LLM配置
         """
         return {
-            "api_url": config_item.get("api_url", "http://192.168.1.177:1234/v1/chat/completions"),
+            "api_url": config_item.get(
+                "api_url", "http://192.168.1.177:1234/v1/chat/completions"
+            ),
             "model": config_item.get("model", "qwen3-4b-instruct"),
             "provider": config_item.get("provider", "ailibaba"),
             "timeout": config_item.get("timeout", 60),
-            "api_key_env_var": config_item.get("api_key_env_var", "")
+            "api_key_env_var": config_item.get("api_key_env_var", ""),
         }
 
     def _get_default_llm_config(self) -> Dict:
@@ -789,7 +945,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             "model": "qwen3-4B",
             "provider": "ailibaba",
             "timeout": 60,
-            "api_key_env_var": ""
+            "api_key_env_var": "",
         }
 
     def _get_default_analysis_result(self) -> Dict:
@@ -807,9 +963,15 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 "finance": {"score": 0.5, "reason": "信息不足"},
                 "industry": {"score": 0.5, "reason": "信息不足"},
                 "price_action": {"score": 0.5, "reason": "信息不足"},
-                "sentiment": {"score": 0.5, "reason": "信息不足"}
+                "sentiment": {"score": 0.5, "reason": "信息不足"},
             },
-            "weights": {"finance": 0.30, "industry": 0.25, "policy": 0.15, "price_action": 0.20, "sentiment": 0.10},
+            "weights": {
+                "finance": 0.30,
+                "industry": 0.25,
+                "policy": 0.15,
+                "price_action": 0.20,
+                "sentiment": 0.10,
+            },
             "sentiment_score": 0.5,
             "sentiment_trend": "无明显趋势",
             "key_events": [],
@@ -817,7 +979,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             "confidence_level": 0.5,
             "analysis_summary": "由于信息不足，无法进行准确的舆情分析。",
             "recommendation": "观望",
-            "risk_factors": ["信息不足"]
+            "risk_factors": ["信息不足"],
         }
 
     def _extract_sentiment_score_robust(self, content: str) -> Optional[float]:
@@ -849,12 +1011,12 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 return max(0.0, min(1.0, sentiment_score))  # 限制在0-1范围内
 
             # 方法3: 查找任何看起来像情感分数的数字
-            number_matches = re.findall(r'(\d+\.?\d*)', content)
+            number_matches = re.findall(r"(\d+\.?\d*)", content)
             for match in number_matches:
                 try:
                     score = float(match)
                     # 检查是否在有效范围内且有合理的小数位数
-                    if 0 <= score <= 1 and len(match.split('.')[-1]) <= 2:
+                    if 0 <= score <= 1 and len(match.split(".")[-1]) <= 2:
                         return score
                 except ValueError:
                     continue
@@ -883,6 +1045,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             # 如果存在完整的LLM分析结果，直接返回JSON字符串
             if full_analysis:
                 import json
+
                 # 将完整的LLM分析结果转换为JSON字符串
                 json_output = json.dumps(full_analysis, ensure_ascii=False, indent=2)
                 return json_output
@@ -894,16 +1057,504 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             self.log_error(f"创建详细原因时出错: {e}")
             return basic_reason
 
-    # 以下方法需要根据实际情况实现
+    def _extract_guba_posts_from_markdown(
+        self, firecrawl_data: List[Dict], limit: int = 5
+    ) -> List[Dict]:
+        """
+        从FireCrawl返回的markdown数据中提取股吧帖子数据
+
+        Args:
+            firecrawl_data: FireCrawl返回的数据列表
+            limit: 提取的条数限制
+
+        Returns:
+            帖子数据列表
+        """
+        try:
+            posts = []
+
+            if not firecrawl_data:
+                return posts
+
+            # 获取第一个条目的markdown内容
+            markdown_content = ""
+            for item in firecrawl_data:
+                if "markdown" in item:
+                    markdown_content = item["markdown"]
+                    break
+
+            if not markdown_content:
+                return posts
+
+            lines = markdown_content.split("\n")
+
+            # 查找表格开始位置
+            table_start = -1
+            for i, line in enumerate(lines):
+                if "| 阅读  | 评论  | 标题  | 作者  | 最后更新 |" in line:
+                    table_start = i
+                    break
+
+            if table_start == -1:
+                # 尝试其他可能的表头格式
+                for i, line in enumerate(lines):
+                    if "| 阅读" in line and "| 评论" in line and "| 标题" in line:
+                        table_start = i
+                        break
+
+            if table_start != -1:
+                # 解析表格数据
+                for i in range(
+                    table_start + 2, min(table_start + 2 + limit * 2, len(lines))
+                ):
+                    if len(posts) >= limit:
+                        break
+                    line = lines[i].strip()
+                    if line.startswith("|") and line.endswith("|"):
+                        # 解析表格行
+                        cells = [cell.strip() for cell in line.split("|")[1:-1]]
+                        if len(cells) >= 5:
+                            read_count = cells[0]
+                            comment_count = cells[1]
+                            title = cells[2]
+                            author = cells[3]
+                            last_update = cells[4]
+
+                            # 提取标题中的链接文本
+                            import re
+
+                            title_match = re.search(r"\[(.*?)\]", title)
+                            if title_match:
+                                title_text = title_match.group(1)
+                            else:
+                                title_text = title
+
+                            posts.append(
+                                {
+                                    "read_count": read_count,
+                                    "comment_count": comment_count,
+                                    "title": title_text,
+                                    "author": author,
+                                    "last_update": last_update,
+                                    "type": "table_post",
+                                }
+                            )
+
+            return posts
+
+        except Exception as e:
+            self.log_warning(f"从markdown提取股吧帖子数据失败: {e}")
+            return []
+
     def _get_detailed_guba_data(self, stock_code: str) -> Dict:
-        """获取详细Guba数据"""
-        return {}
+        """
+        获取东方财富股吧详细数据
+
+        Args:
+            stock_code: 股票代码
+
+        Returns:
+            详细股吧数据字典，包含：
+            - user_focus: 用户关注指数（最新值）
+            - institutional_participation: 机构参与度（最新值）
+            - historical_rating: 历史评分（最新值）
+            - daily_participation: 日度市场参与意愿（最新值）
+        """
+        try:
+            self.log_info(f"开始获取详细股吧数据: {stock_code}")
+
+            detailed_guba_data = {
+                "user_focus": None,
+                "institutional_participation": None,
+                "historical_rating": None,
+                "daily_participation": None,
+            }
+
+            # 1. 获取用户关注指数（最新值）
+            try:
+                import akshare as ak
+
+                user_focus_data = ak.stock_comment_detail_scrd_focus_em(
+                    symbol=stock_code
+                )
+                if not user_focus_data.empty:
+                    # 获取最新一条数据
+                    latest_row = user_focus_data.iloc[-1]
+                    # 使用通用数据提取，不依赖特定列名
+                    detailed_guba_data["user_focus"] = {
+                        "date": latest_row.iloc[0] if len(latest_row) > 0 else "",
+                        "focus_index": latest_row.iloc[1]
+                        if len(latest_row) > 1
+                        else "",
+                        "change": latest_row.iloc[2] if len(latest_row) > 2 else "",
+                    }
+                    self.log_info(
+                        f"成功获取用户关注指数最新数据: {detailed_guba_data['user_focus']}"
+                    )
+            except Exception as e:
+                self.log_warning(f"获取用户关注指数失败: {e}")
+
+            # 2. 获取机构参与度（最新值）
+            try:
+                import akshare as ak
+
+                institutional_data = ak.stock_comment_detail_zlkp_jgcyd_em(
+                    symbol=stock_code
+                )
+                if not institutional_data.empty:
+                    # 获取最新一条数据
+                    latest_row = institutional_data.iloc[-1]
+                    # 使用通用数据提取，不依赖特定列名
+                    detailed_guba_data["institutional_participation"] = {
+                        "date": latest_row.iloc[0] if len(latest_row) > 0 else "",
+                        "participation": latest_row.iloc[1]
+                        if len(latest_row) > 1
+                        else "",
+                        "change": latest_row.iloc[2] if len(latest_row) > 2 else "",
+                    }
+                    self.log_info(
+                        f"成功获取机构参与度最新数据: {detailed_guba_data['institutional_participation']}"
+                    )
+            except Exception as e:
+                self.log_warning(f"获取机构参与度失败: {e}")
+
+            # 3. 获取历史评分（最新值）
+            try:
+                import akshare as ak
+
+                historical_rating_data = ak.stock_comment_detail_zhpj_lspf_em(
+                    symbol=stock_code
+                )
+                if not historical_rating_data.empty:
+                    # 获取最新一条数据
+                    latest_row = historical_rating_data.iloc[-1]
+                    # 使用通用数据提取，不依赖特定列名
+                    detailed_guba_data["historical_rating"] = {
+                        "date": latest_row.iloc[0] if len(latest_row) > 0 else "",
+                        "rating": latest_row.iloc[1] if len(latest_row) > 1 else "",
+                        "trend": latest_row.iloc[2] if len(latest_row) > 2 else "",
+                    }
+                    self.log_info(
+                        f"成功获取历史评分最新数据: {detailed_guba_data['historical_rating']}"
+                    )
+            except Exception as e:
+                self.log_warning(f"获取历史评分失败: {e}")
+
+            # 4. 获取日度市场参与意愿（最新值）
+            try:
+                import akshare as ak
+
+                daily_participation_data = ak.stock_comment_detail_scrd_desire_daily_em(
+                    symbol=stock_code
+                )
+                if not daily_participation_data.empty:
+                    # 获取最新一条数据
+                    latest_row = daily_participation_data.iloc[-1]
+                    # 使用通用数据提取，不依赖特定列名
+                    detailed_guba_data["daily_participation"] = {
+                        "date": latest_row.iloc[0] if len(latest_row) > 0 else "",
+                        "daily_desire_rise": latest_row.iloc[1]
+                        if len(latest_row) > 1
+                        else "",
+                        "avg_participation_change": latest_row.iloc[2]
+                        if len(latest_row) > 2
+                        else "",
+                    }
+                    self.log_info(
+                        f"成功获取日度市场参与意愿最新数据: {detailed_guba_data['daily_participation']}"
+                    )
+            except Exception as e:
+                self.log_warning(f"获取日度市场参与意愿失败: {e}")
+
+            self.log_info(
+                f"详细股吧数据收集完成: 用户关注指数({detailed_guba_data['user_focus'] is not None}), 机构参与度({detailed_guba_data['institutional_participation'] is not None}), 历史评分({detailed_guba_data['historical_rating'] is not None}), 日度参与意愿({detailed_guba_data['daily_participation'] is not None})"
+            )
+            return detailed_guba_data
+
+        except Exception as e:
+            self.log_error(f"获取详细股吧数据时出错: {e}")
+            return {
+                "user_focus": None,
+                "institutional_participation": None,
+                "historical_rating": None,
+                "daily_participation": None,
+            }
+
+    def _get_firecrawl_config(self) -> Dict:
+        """
+        从数据库获取FireCrawl配置
+
+        Returns:
+            FireCrawl配置字典
+        """
+        try:
+            if not self.db_manager:
+                self.log_warning("没有数据库管理器，无法获取FireCrawl配置")
+                return {}
+
+            # 从strategies集合获取策略配置
+            strategy_config = self.db_manager.get_strategy_by_name(self.name)
+
+            if not strategy_config or "parameters" not in strategy_config:
+                self.log_warning("无法找到策略配置，无法获取FireCrawl配置")
+                return {}
+
+            # 获取FireCrawl配置
+            parameters = strategy_config["parameters"]
+            firecrawl_config = parameters.get("firecrawl_config", {})
+
+            if not firecrawl_config:
+                self.log_warning("策略配置中没有FireCrawl配置")
+                return {}
+
+            self.log_info(
+                f"成功获取FireCrawl配置: {firecrawl_config.get('api_url', 'N/A')}"
+            )
+            return firecrawl_config
+
+        except Exception as e:
+            self.log_warning(f"获取FireCrawl配置失败: {e}")
+            return {}
+
+    def _call_firecrawl_api(self, url: str, firecrawl_config: Dict) -> List[Dict]:
+        """
+        调用FireCrawl API爬取数据
+
+        Args:
+            url: 要爬取的URL
+            firecrawl_config: FireCrawl配置
+
+        Returns:
+            爬取到的数据列表
+        """
+        try:
+            import requests
+            import json
+
+            # 如果没有配置，直接返回空列表
+            if not firecrawl_config:
+                self.log_warning("FireCrawl配置为空，无法调用API")
+                return []
+
+            api_url = firecrawl_config.get("api_url")
+            if not api_url:
+                self.log_warning("FireCrawl配置中没有API URL")
+                return []
+
+            max_retries = firecrawl_config.get("max_retries", 3)
+            timeout = firecrawl_config.get("timeout", 30)
+
+            # 构建FireCrawl v1 API请求
+            # FireCrawl v1 API格式：https://docs.firecrawl.dev/api-reference/scrape
+            # 使用最基本的字段，避免不支持的字段
+            payload = {"url": url, "formats": ["markdown"], "onlyMainContent": True}
+
+            # 重试机制
+            for attempt in range(max_retries):
+                try:
+                    response = requests.post(
+                        f"{api_url}/scrape", json=payload, timeout=timeout
+                    )
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        if data.get("success"):
+                            # 直接返回FireCrawl数据，让调用方处理解析
+                            return [data]
+                        else:
+                            self.log_warning(
+                                f"FireCrawl API返回失败: {data.get('error', 'Unknown error')}"
+                            )
+                            return []
+                    else:
+                        self.log_warning(
+                            f"FireCrawl API调用失败 (状态码 {response.status_code}): {response.text}"
+                        )
+
+                except Exception as e:
+                    self.log_warning(f"FireCrawl API调用异常 (尝试 {attempt + 1}): {e}")
+                    if attempt < max_retries - 1:
+                        import time
+
+                        time.sleep(firecrawl_config.get("retry_delay", 1))
+                        continue
+
+            return []
+
+        except Exception as e:
+            self.log_warning(f"调用FireCrawl API失败: {e}")
+            return []
+
+    def _extract_guba_posts_from_markdown(
+        self, firecrawl_data: List[Dict], limit: int = 5
+    ) -> List[Dict]:
+        """
+        从FireCrawl返回的markdown数据中提取股吧帖子数据
+
+        Args:
+            firecrawl_data: FireCrawl返回的数据列表
+            limit: 提取的条数限制
+
+        Returns:
+            帖子数据列表
+        """
+        try:
+            posts = []
+
+            if not firecrawl_data:
+                return posts
+
+            # 获取第一个条目的markdown内容
+            markdown_content = ""
+            for item in firecrawl_data:
+                if "markdown" in item:
+                    markdown_content = item["markdown"]
+                    break
+
+            if not markdown_content:
+                return posts
+
+            lines = markdown_content.split("\n")
+
+            # 查找表格开始位置
+            table_start = -1
+            for i, line in enumerate(lines):
+                if "| 阅读  | 评论  | 标题  | 作者  | 最后更新 |" in line:
+                    table_start = i
+                    break
+
+            if table_start == -1:
+                # 尝试其他可能的表头格式
+                for i, line in enumerate(lines):
+                    if "| 阅读" in line and "| 评论" in line and "| 标题" in line:
+                        table_start = i
+                        break
+
+            if table_start != -1:
+                # 解析表格数据
+                for i in range(
+                    table_start + 2, min(table_start + 2 + limit * 2, len(lines))
+                ):
+                    if len(posts) >= limit:
+                        break
+                    line = lines[i].strip()
+                    if line.startswith("|") and line.endswith("|"):
+                        # 解析表格行
+                        cells = [cell.strip() for cell in line.split("|")[1:-1]]
+                        if len(cells) >= 5:
+                            read_count = cells[0]
+                            comment_count = cells[1]
+                            title = cells[2]
+                            author = cells[3]
+                            last_update = cells[4]
+
+                            # 提取标题中的链接文本
+                            import re
+
+                            title_match = re.search(r"\[(.*?)\]", title)
+                            if title_match:
+                                title_text = title_match.group(1)
+                            else:
+                                title_text = title
+
+                            posts.append(
+                                {
+                                    "read_count": read_count,
+                                    "comment_count": comment_count,
+                                    "title": title_text,
+                                    "author": author,
+                                    "last_update": last_update,
+                                    "type": "table_post",
+                                }
+                            )
+
+            return posts
+
+        except Exception as e:
+            self.log_warning(f"从markdown提取股吧帖子数据失败: {e}")
+            return []
+
+    def _scrape_with_firecrawl(self, url: str, data_type: str) -> List[Dict]:
+        """
+        使用FireCrawl爬取股吧数据
+
+        Args:
+            url: 要爬取的URL
+            data_type: 数据类型（用于日志）
+
+        Returns:
+            爬取到的数据列表
+        """
+        try:
+            # 获取FireCrawl配置
+            firecrawl_config = self._get_firecrawl_config()
+            if not firecrawl_config:
+                self.log_warning(f"无法获取FireCrawl配置，无法爬取{data_type}数据")
+                return []
+
+            # 使用FireCrawl爬取数据
+            firecrawl_data = self._call_firecrawl_api(url, firecrawl_config)
+            if firecrawl_data:
+                self.log_info(f"成功使用FireCrawl爬取{data_type}数据")
+                return firecrawl_data
+            else:
+                self.log_warning(f"FireCrawl爬取{data_type}数据为空")
+                return []
+
+        except Exception as e:
+            self.log_warning(f"使用FireCrawl爬取{data_type}数据失败: {e}")
+            return []
 
     def _get_guba_data(self, stock_code: str) -> Dict:
-        """获取Guba数据"""
-        return {}
+        """
+        获取东方财富股吧基础数据
 
-    def _get_professional_sites_data(self, stock_code: str, stock_name: str) -> List[Dict]:
+        Args:
+            stock_code: 股票代码
+
+        Returns:
+            基础股吧数据字典，包含：
+            - consultations: 近期咨询
+            - research_reports: 最新研报
+            - announcements: 最新公告
+            - hot_posts: 热门帖子
+        """
+        try:
+            self.log_info(f"开始获取基础股吧数据: {stock_code}")
+
+            # 获取FireCrawl配置
+            firecrawl_config = self._get_firecrawl_config()
+            if not firecrawl_config:
+                self.log_warning("无法获取FireCrawl配置，返回空数据")
+                return {
+                    "consultations": [],
+                    "research_reports": [],
+                    "announcements": [],
+                    "hot_posts": [],
+                }
+
+            # 使用公共函数爬取所有类型的股吧数据
+            all_guba_data = scrape_all_guba_data(
+                stock_code, firecrawl_config, limit_per_type=5
+            )
+
+            self.log_info(
+                f"基础股吧数据收集完成: 近期咨询({len(all_guba_data['consultations'])}), 最新研报({len(all_guba_data['research_reports'])}), 最新公告({len(all_guba_data['announcements'])}), 热门帖子({len(all_guba_data['hot_posts'])})"
+            )
+            return all_guba_data
+
+        except Exception as e:
+            self.log_error(f"获取基础股吧数据时出错: {e}")
+            return {
+                "consultations": [],
+                "research_reports": [],
+                "announcements": [],
+                "hot_posts": [],
+            }
+
+    def _get_professional_sites_data(
+        self, stock_code: str, stock_name: str
+    ) -> List[Dict]:
         """
         获取专业网站数据
 
@@ -928,20 +1579,24 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                     "title": f"{stock_name}近期业绩分析报告",
                     "publishedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     "source": "专业财经网站",
-                    "content": f"{stock_name}近期业绩表现稳定，公司基本面良好，具备长期投资价值。"
+                    "content": f"{stock_name}近期业绩表现稳定，公司基本面良好，具备长期投资价值。",
                 },
                 {
                     "title": f"{stock_name}行业地位分析",
-                    "publishedAt": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"),
+                    "publishedAt": (datetime.now() - timedelta(days=1)).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
                     "source": "专业投资平台",
-                    "content": f"{stock_name}在所属行业中具有较强竞争力，市场份额稳步提升。"
+                    "content": f"{stock_name}在所属行业中具有较强竞争力，市场份额稳步提升。",
                 },
                 {
                     "title": f"{stock_name}技术面分析",
-                    "publishedAt": (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S"),
+                    "publishedAt": (datetime.now() - timedelta(days=2)).strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    ),
                     "source": "专业技术分析平台",
-                    "content": f"{stock_name}技术指标显示短期存在调整压力，但中长期趋势向好。"
-                }
+                    "content": f"{stock_name}技术指标显示短期存在调整压力，但中长期趋势向好。",
+                },
             ]
 
             professional_data.extend(sample_articles)
@@ -970,12 +1625,16 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 return pd.DataFrame()
 
             # 创建一个包含基本信息的DataFrame
-            signals_df = pd.DataFrame({
-                'date': data.index if hasattr(data.index, 'name') and data.index.name == 'date' else data.index,
-                'signal': 'HOLD',  # 舆情分析策略默认持有
-                'strength': 0.0,   # 信号强度
-                'reason': '舆情分析策略'  # 原因
-            })
+            signals_df = pd.DataFrame(
+                {
+                    "date": data.index
+                    if hasattr(data.index, "name") and data.index.name == "date"
+                    else data.index,
+                    "signal": "HOLD",  # 舆情分析策略默认持有
+                    "strength": 0.0,  # 信号强度
+                    "reason": "舆情分析策略",  # 原因
+                }
+            )
 
             return signals_df
 
@@ -983,8 +1642,9 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             self.log_error(f"生成信号时出错: {e}")
             return pd.DataFrame()
 
-    def calculate_position_size(self, signal: str, portfolio_value: float,
-                              price: float) -> float:
+    def calculate_position_size(
+        self, signal: str, portfolio_value: float, price: float
+    ) -> float:
         """
         计算仓位大小
 
@@ -1045,7 +1705,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 "东方财富网",
                 "雪球网",
                 "新浪财经",
-                "腾讯财经"
+                "腾讯财经",
             ]
 
             # 构建要爬取的URL列表
@@ -1056,63 +1716,57 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 f"{stock_name} {stock_code} 最新消息",
                 f"{stock_name} 股票分析",
                 f"{stock_name} 业绩报告",
-                f"{stock_name} 行业动态"
+                f"{stock_name} 行业动态",
             ]
 
             # 为每个专业网站构建URL
             for site in professional_sites:
                 for query in search_queries:
                     # 这里应该根据实际的网站URL模式构建
-                    if site == '东方财富网':
+                    if site == "东方财富网":
                         url = f"https://so.eastmoney.com/web?q={query}"
-                    elif site == '同花顺财经':
+                    elif site == "同花顺财经":
                         url = f"https://www.10jqka.com.cn/search.php?q={query}"
-                    elif site == '雪球网':
+                    elif site == "雪球网":
                         url = f"https://xueqiu.com/k?q={query}"
-                    elif site == '新浪财经':
-                        url = f"https://finance.sina.com.cn/search/index.d.html?q={query}"
-                    elif site == '腾讯财经':
+                    elif site == "新浪财经":
+                        url = (
+                            f"https://finance.sina.com.cn/search/index.d.html?q={query}"
+                        )
+                    elif site == "腾讯财经":
                         url = f"https://finance.qq.com/search.htm?q={query}"
                     else:
                         continue
 
-                    urls_to_crawl.append({
-                        'url': url,
-                        'site': site,
-                        'query': query
-                    })
+                    urls_to_crawl.append({"url": url, "site": site, "query": query})
 
             self.log_info(f"准备爬取 {len(urls_to_crawl)} 个URL")
 
-            # 这里应该调用真实的FireCrawl API
-            # 由于没有FireCrawl客户端，暂时返回模拟的真实网站数据
+            # 实际调用FireCrawl API爬取数据
+            for url_info in urls_to_crawl:
+                url = url_info["url"]
+                site = url_info["site"]
+                query = url_info["query"]
 
-            # 模拟从真实网站爬取的数据
-            real_site_data = [
-                {
-                    "url": f"https://so.eastmoney.com/web?q={stock_name}%20{stock_code}%20最新消息",
-                    "title": f"{stock_name}({stock_code})最新股价走势分析 - 东方财富网",
-                    "content": f"{stock_name}近期股价表现分析，包括技术指标和基本面评估。",
-                    "publishedAt": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    "source": "东方财富网"
-                },
-                {
-                    "url": f"https://www.10jqka.com.cn/search.php?q={stock_name}%20股票分析",
-                    "title": f"{stock_name}投资价值深度分析 - 同花顺财经",
-                    "content": f"{stock_name}当前估值水平、成长潜力和风险因素详细分析。",
-                    "publishedAt": (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d %H:%M:%S"),
-                    "source": "同花顺财经"
-                },
-                {
-                    "url": f"https://xueqiu.com/k?q={stock_name}%20业绩报告",
-                    "title": f"{stock_name}最新业绩报告解读 - 雪球网",
-                    "content": f"{stock_name}最新财务数据分析和业绩展望。",
-                    "publishedAt": (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S"),
-                    "source": "雪球网"
-                }
-            ]
+                self.log_info(f"使用FireCrawl爬取: {site} - {query}")
 
-            firecrawl_data.extend(real_site_data)
+                # 使用FireCrawl爬取数据
+                scraped_data = self._scrape_with_firecrawl(url, f"{site}数据")
+
+                if scraped_data:
+                    # 为每条数据添加来源信息
+                    for item in scraped_data:
+                        item["source"] = site
+                        item["query"] = query
+
+                    firecrawl_data.extend(scraped_data)
+                    self.log_info(f"成功从 {site} 爬取 {len(scraped_data)} 条数据")
+                else:
+                    self.log_warning(f"从 {site} 爬取数据失败")
+
+            # 如果没有爬取到任何数据，返回空列表
+            if not firecrawl_data:
+                self.log_warning("FireCrawl爬取数据为空，返回空列表")
 
             self.log_info(f"成功获取 {len(firecrawl_data)} 条FireCrawl数据")
             return firecrawl_data
