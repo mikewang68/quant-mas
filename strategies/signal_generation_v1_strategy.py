@@ -199,6 +199,10 @@ class SignalGenerationV1Strategy(BaseStrategy):
             self.log_info(f"[{code}] Calculated score: {score_calc:.4f}, signal: {signal_calc}")
 
             # Use AI to analyze strategy data
+            self.log_info(f"[{code}] Strategy data collected: {len(strategy_data)} strategies")
+            if strategy_data:
+                self.log_info(f"[{code}] First strategy data sample: {strategy_data[0]}")
+
             ai_result = self._analyze_with_ai(strategy_data)
             score_ai = ai_result.get('score_ai', 0.0)
             signal_ai = ai_result.get('signal_ai', '持有')
@@ -307,31 +311,14 @@ class SignalGenerationV1Strategy(BaseStrategy):
                     # For Google Gemini, API key is in query parameter
                     pass
 
-            # Format strategy data for LLM analysis
-            formatted_data = self._format_strategy_data_for_llm(strategy_data)
+            # Load system prompt from config file
+            system_prompt = self._load_system_prompt()
 
-            # Create analysis prompt
-            prompt = f"""
-            请分析以下股票策略数据, 并给出0-1分的综合评分和相应的交易信号:
+            # Format strategy data as JSON string for user prompt
+            user_prompt = self._format_stock_data_for_llm(strategy_data)
 
-            策略数据:
-            {formatted_data}
-
-            分析要求:
-            1. 综合评估所有策略的评分和分析内容
-            2. 考虑不同策略的重要性和可靠性
-            3. 给出详细的分析理由
-
-            请严格按照以下JSON格式输出结果:
-            {{
-                "score_ai": 0.75,
-                "signal_ai": "买入",
-                "reasoning": "详细的分析理由..."
-            }}
-
-            其中score_ai是0-1之间的数值, 0表示强烈卖出, 1表示强烈买入;
-            signal_ai是交易信号: "买入", "持有", 或"卖出"。
-            """
+            # Log user prompt to console
+            self.log_info(f"User prompt for LLM analysis:\n{user_prompt}")
 
             # Prepare payload based on provider
             if provider == "google":  # Gemini API
@@ -341,9 +328,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
                             "role": "user",
                             "parts": [
                                 {
-                                    "text": '你是一位专业的股票分析师，请根据提供的策略数据进行综合分析。你需要严格按照以下JSON格式输出结果：{"score_ai": 0.75, "signal_ai": "买入", "reasoning": "详细的分析理由..."}。其中score_ai是0-1之间的数值，表示综合评分，0为最低（强烈卖出），1为最高（强烈买入）；signal_ai是交易信号："买入", "持有", 或"卖出"；reasoning是详细的分析理由。'
-                                    + "\n\n"
-                                    + prompt
+                                    "text": system_prompt + "\n\n" + user_prompt
                                 }
                             ],
                         }
@@ -360,9 +345,9 @@ class SignalGenerationV1Strategy(BaseStrategy):
                     "messages": [
                         {
                             "role": "system",
-                            "content": '你是一位专业的股票分析师，请根据提供的策略数据进行综合分析。你需要严格按照以下JSON格式输出结果：{"score_ai": 0.75, "signal_ai": "买入", "reasoning": "详细的分析理由..."}。其中score_ai是0-1之间的数值，表示综合评分，0为最低（强烈卖出），1为最高（强烈买入）；signal_ai是交易信号："买入", "持有", 或"卖出"；reasoning是详细的分析理由。',
+                            "content": system_prompt,
                         },
-                        {"role": "user", "content": prompt},
+                        {"role": "user", "content": user_prompt},
                     ],
                     "temperature": 0.7,
                     "max_tokens": 1500,
@@ -375,9 +360,9 @@ class SignalGenerationV1Strategy(BaseStrategy):
                     "messages": [
                         {
                             "role": "system",
-                            "content": '你是一位专业的股票分析师，请根据提供的策略数据进行综合分析。你需要严格按照以下JSON格式输出结果：{"score_ai": 0.75, "signal_ai": "买入", "reasoning": "详细的分析理由..."}。其中score_ai是0-1之间的数值，表示综合评分，0为最低（强烈卖出），1为最高（强烈买入）；signal_ai是交易信号："买入", "持有", 或"卖出"；reasoning是详细的分析理由。',
+                            "content": system_prompt,
                         },
-                        {"role": "user", "content": prompt},
+                        {"role": "user", "content": user_prompt},
                     ],
                     "temperature": 0.7,
                     "max_tokens": 1500,
@@ -498,33 +483,30 @@ class SignalGenerationV1Strategy(BaseStrategy):
             )
             return {"score_ai": 0.0, "signal_ai": "持有", "reasoning": f"LLM分析失败: {str(e)}"}
 
-    def _format_strategy_data_for_llm(self, strategy_data: List[Dict]) -> str:
+    def _format_stock_data_for_llm(self, strategy_data: List[Dict]) -> str:
         """
         Format strategy data for LLM analysis
 
         Args:
-            strategy_data: List of strategy data with scores and values
+            strategy_data: List of strategy data dictionaries with scores and values
 
         Returns:
-            Formatted string for LLM analysis
+            JSON string for LLM analysis
         """
         try:
-            formatted_text = ""
+            # Format the strategy data for LLM analysis
+            formatted_data = {
+                "strategies": strategy_data
+            }
 
-            for i, data in enumerate(strategy_data, 1):
-                strategy_name = data.get('strategy', f'策略{i}')
-                score = data.get('score', 'N/A')
-                value = data.get('value', '')
+            # Convert to JSON string
+            json_string = json.dumps(formatted_data, ensure_ascii=False, indent=2)
 
-                formatted_text += f"策略{i} ({strategy_name}):\n"
-                formatted_text += f"  评分: {score}\n"
-                formatted_text += f"  分析: {value[:500]}{'...' if len(value) > 500 else ''}\n\n"
-
-            return formatted_text
+            return json_string
 
         except Exception as e:
             self.log_error(f"Error formatting strategy data for LLM: {e}")
-            return "策略数据格式化失败"
+            return "{}"
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -567,38 +549,46 @@ class SignalGenerationV1Strategy(BaseStrategy):
 
     def _get_global_strategy_count(self, db_manager) -> int:
         """
-        Get the global strategy count from the database.
-        This counts the unique strategies assigned to agents, excluding the signal generation strategy itself.
+        Get the global strategy count from the latest pool record.
+        This counts the actual strategies that have contributed data to the pool.
 
         Args:
             db_manager: Database manager instance
 
         Returns:
-            int: Count of unique strategies assigned to agents (excluding self)
+            int: Count of strategies that have contributed data to the pool
         """
         try:
-            # Get agents collection
-            agents_collection = db_manager.db['agents']
+            # Get the latest pool record
+            pool_collection = db_manager.db['pool']
+            latest_pool_record = pool_collection.find_one(sort=[("_id", -1)])
 
-            # Get all agents
-            agents = list(agents_collection.find({}))
+            if not latest_pool_record:
+                self.log_error("No records found in pool collection")
+                return 0
 
-            # Count unique strategies across all agents
-            unique_strategies = set()
-            for agent in agents:
-                strategy_ids = agent.get('strategies', [])
-                for strategy_id in strategy_ids:
-                    # Get the strategy to check its name
-                    strategy = db_manager.strategies_collection.find_one({'_id': ObjectId(strategy_id)})
-                    if strategy:
-                        strategy_name = strategy.get('name', '')
-                        # Exclude the signal generation strategy itself
-                        if strategy_name != self.name:
-                            unique_strategies.add(strategy_id)
+            # Get stocks from the latest pool record
+            pool_stocks = latest_pool_record.get("stocks", [])
 
-            total_unique_strategies = len(unique_strategies)
-            self.log_info(f"Found {total_unique_strategies} unique strategies assigned to agents (excluding self)")
-            return total_unique_strategies
+            if not pool_stocks:
+                self.log_error("No stocks found in latest pool record")
+                return 0
+
+            # Count strategies from the first stock (all stocks should have the same strategy structure)
+            first_stock = pool_stocks[0]
+            strategy_count = 0
+
+            # Process all fields except 'signal', 'code', and 'signals'
+            for field_name, field_value in first_stock.items():
+                # Skip non-dict fields and excluded fields
+                if field_name in ['signal', 'code', 'signals'] or not isinstance(field_value, dict):
+                    continue
+
+                # Count strategies in this field
+                strategy_count += len(field_value)
+
+            self.log_info(f"Found {strategy_count} strategies in latest pool record")
+            return strategy_count
 
         except Exception as e:
             self.log_error(f"Error getting global strategy count: {e}")
@@ -794,6 +784,24 @@ class SignalGenerationV1Strategy(BaseStrategy):
             self.log_error(f"Error loading LLM configuration from database: {e}")
             # Fallback to default configuration
             return self._get_default_llm_config()
+
+    def _load_system_prompt(self) -> str:
+        """
+        Load system prompt from config/signal_sys_prompt.md file.
+
+        Returns:
+            System prompt string
+        """
+        try:
+            prompt_file_path = "config/signal_sys_prompt.md"
+            with open(prompt_file_path, 'r', encoding='utf-8') as f:
+                system_prompt = f.read().strip()
+            self.log_info("Successfully loaded system prompt from config/signal_sys_prompt.md")
+            return system_prompt
+        except Exception as e:
+            self.log_error(f"Error loading system prompt from config/signal_sys_prompt.md: {e}")
+            # Fallback to default system prompt
+            return "你是一个专业的股票信号生成分析师，请根据提供的多策略数据进行综合分析。请严格按照以下JSON格式输出你的分析结果：{\"score_ai\": 0.75, \"signal_ai\": \"买入\", \"reasoning\": \"详细的分析理由...\"}"
 
     def _get_default_llm_config(self) -> Dict[str, any]:
         """

@@ -280,6 +280,10 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **UPDATED**: Synchronized documentation to reflect the correct output data structure
 - **MODIFIED**: Updated signal action calculation logic to output only "买入" or "卖出" when both signal_calc and signal_ai agree on buy/sell, or empty string otherwise
 - **FIXED**: Corrected database signal data storage to properly include signals from strategy execution
+- **FIXED**: Resolved strategy data collection issue where LLM was receiving empty data - now properly collects data from all pool fields (trend, tech, fund, pub)
+- **ENHANCED**: Improved global strategy count calculation to count actual strategies from pool data instead of database configuration
+- **FIXED**: Corrected LLM prompt loading to use system prompt from `config/signal_sys_prompt.md` file instead of hardcoded prompts
+- **ENHANCED**: User prompt now uses JSON string format with all strategy data combined for LLM analysis
 
 ### Web Interface Enhancement for Signal Display
 - **MODIFIED**: Updated stock K-line v2 HTML template to display signal generation agent content first in the right-side information table
