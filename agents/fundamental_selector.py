@@ -536,29 +536,61 @@ class FundamentalStockSelector(BaseAgent, DataProviderInterface):
                 strategy_name = fund_stock.get('strategy_name', 'unknown_strategy')
 
                 if code in existing_stock_map:
-                    # Use score directly since LLM strategies already return scores in 0-1 range
-                    # Round to 2 decimal places for consistency
-                    score = fund_stock.get('score', 0.0)
-                    if score is not None:
-                        score_float = float(score)
-                        # Ensure score is within valid range [0, 1]
-                        validated_score = max(0.0, min(1.0, score_float))
-                        rounded_score = round(validated_score, 2)
+                    # Get the value (should be a JSON string from strategy execution)
+                    value_str = fund_stock.get('value', '')
+
+                    # Extract score from the JSON string if possible
+                    score_value = 0.0
+                    if value_str:
+                        try:
+                            import json
+                            # Parse the JSON string to extract the score
+                            value_json = json.loads(value_str)
+                            # Get the score field from the JSON
+                            if isinstance(value_json, dict) and 'score' in value_json:
+                                score_value = float(value_json['score'])
+                            else:
+                                # If score is not in the JSON, use the score from fund_stock
+                                score_value = float(fund_stock.get('score', 0.0))
+                        except (json.JSONDecodeError, ValueError, TypeError):
+                            # If JSON parsing fails, use the score from fund_stock
+                            score_value = float(fund_stock.get('score', 0.0))
                     else:
-                        rounded_score = 0.0
+                        # If no value string, use the score from fund_stock
+                        score_value = float(fund_stock.get('score', 0.0))
+
+                    # Normalize score to 0-1 range and round to 2 decimal places
+                    # Handle different score ranges:
+                    # - Some strategies return scores in 0-1 range
+                    # - Some strategies return scores in 0-100 range
+                    if score_value is not None:
+                        score_float = float(score_value)
+                        # If score is greater than 1, assume it's in 0-100 range and normalize it
+                        if score_float > 1.0:
+                            normalized_score = max(0.0, min(1.0, score_float / 100.0))
+                        else:
+                            # Score is already in 0-1 range
+                            normalized_score = max(0.0, min(1.0, score_float))
+                    else:
+                        normalized_score = 0.0
+
+                    rounded_score = round(normalized_score, 2)
 
                     # Update the fund field for the existing stock
+                    # According to the task: value is the JSON string returned by the strategy execution
+                    # score is the first score value in the JSON string
                     if 'fund' not in existing_stock_map[code]:
                         existing_stock_map[code]['fund'] = {}
                     existing_stock_map[code]['fund'][strategy_name] = {
                         'score': rounded_score,
-                        'value': fund_stock.get('value', fund_stock.get('selection_reason', '')),
+                        'value': value_str,  # Keep the original JSON string as value
                     }
 
             # Prepare cleaned stocks for database update
+            # Preserve all existing fields and only update the fund field
             cleaned_stocks = []
             for stock in existing_stocks:
-                # Preserve all existing fields and only update the fund field
+                # Copy all existing fields to preserve data integrity
                 clean_stock = stock.copy()
 
                 # Convert numpy types to native Python types for MongoDB compatibility

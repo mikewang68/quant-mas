@@ -552,6 +552,46 @@ python -m backtesting.backtester
 - **CONFIRMED**: Strategy now returns analysis data for all stocks processed, ensuring comprehensive coverage in the pub field
 - **VERIFIED**: Implementation properly handles both qualifying and non-qualifying stocks with appropriate reason messages
 
+### LLM Fundamental Strategy Enhancement
+- **ENHANCED**: Improved LLM Fundamental Strategy with better JSON format handling and API compatibility
+- **ADDED**: Support for multiple LLM providers (Google Gemini, DeepSeek, Qwen, OpenAI, Ollama) with proper payload formatting
+- **ENHANCED**: Added system prompt loading from config file with fallback mechanism
+- **OPTIMIZED**: Simplified financial data structure to reduce token usage
+- **IMPROVED**: Enhanced financial ratio calculations with better field mapping
+- **ADDED**: Fallback analysis mechanism when LLM fails to return proper JSON
+- **FIXED**: API payload format issues for different LLM providers
+- **VERIFIED**: Strategy now works correctly with qwen3-4B and other OpenAI-compatible models
+
+### Fundamental Selector Score Extraction Enhancement
+- **ENHANCED**: Improved score extraction logic in Fundamental Selector to handle JSON string values from strategy execution
+- **ADDED**: Support for extracting scores from JSON strings returned by LLM strategies
+- **OPTIMIZED**: Score normalization logic to handle both 0-1 and 0-100 score ranges
+- **IMPROVED**: Data preservation by keeping original JSON strings in value field
+- **VERIFIED**: Proper handling of complex JSON structures from enhanced public opinion analysis strategies
+
+### Web Interface Signal Display Enhancement
+- **MODIFIED**: Updated stock_kline_v2.html to directly display database signal content in JSON format
+- **ENHANCED**: Improved JSON formatting and display for better readability
+- **REMOVED**: Special handling for "信号生成V1" strategy, now all signal strategies use unified display logic
+- **ADDED**: Comprehensive JSON detection and formatting for complex nested objects
+- **VERIFIED**: Signal generation data now displays complete JSON content from database
+
+### Strategy File Cleanup
+- **REMOVED**: Deleted unused strategy files:
+  - `strategies/趋势-回踩低吸型策略（抄底型）_strategy.py`
+  - `strategies/趋势-放量突破策略（强势股捕捉）_strategy.py`
+- **OPTIMIZED**: Reduced codebase clutter by removing auto-generated strategy templates
+
+### Test Script Updates
+- **UPDATED**: Modified test scripts to reflect current system architecture
+- **ENHANCED**: Improved test coverage for FireCrawl integration and LLM strategy execution
+- **FIXED**: Test script initialization issues with strategy parameter requirements
+
+### Akshare Client Enhancement
+- **ADDED**: New methods for stock news, industry info, and qian gu qian ping data collection
+- **ENHANCED**: Improved financial data extraction with better field mapping
+- **OPTIMIZED**: Data formatting and conversion for better LLM compatibility
+
 ---
 *This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-06*
 

@@ -651,63 +651,33 @@
             return;
         }
 
-        // Special handling for signals section to display "信号生成V1" data first
+        // Special handling for signals section to display signal data directly
         if (agentKey === 'signals') {
-            // First display "信号生成V1" if it exists
-            if (strategies['信号生成V1']) {
-                const signalData = strategies['信号生成V1'];
+            // Display all signal strategies with their direct content
+            for (const [strategyName, strategyData] of Object.entries(strategies)) {
                 const row = document.createElement('tr');
 
-                // Format the signal data for display
+                // For signal strategies, display the strategy data directly as JSON
                 let signalContent = '';
-                if (typeof signalData === 'object' && signalData !== null) {
-                    signalContent = `
-                        <div>
-                            <div><strong>满足策略数:</strong> ${signalData.counts || 0}</div>
-                            <div><strong>计算信号:</strong> ${signalData.signal_calc || ''}</div>
-                            <div><strong>AI信号:</strong> ${signalData.signal_ai || ''}</div>
-                            <div><strong>计算分数:</strong> ${signalData.score_calc !== undefined ? signalData.score_calc.toFixed(4) : ''}</div>
-                            <div><strong>AI分数:</strong> ${signalData.score_ai !== undefined ? signalData.score_ai.toFixed(4) : ''}</div>
-                            <div><strong>AI分析:</strong> ${signalData.reason_ai || ''}</div>
-                        </div>
-                    `;
+                if (typeof strategyData === 'object' && strategyData !== null) {
+                    // Format the entire signal data as JSON for direct display
+                    signalContent = '<div class="json-display">' + JSON.stringify(strategyData, null, 2) + '</div>';
                 } else {
-                    signalContent = formatValueForTable(signalData);
+                    signalContent = formatValueForTable(strategyData);
                 }
 
-                // Use action field for score column in signals section
-                const action = signalData.action !== undefined ? signalData.action : '';
-
-                row.innerHTML = `
-                    <td>${agentName}</td>
-                    <td>信号生成V1</td>
-                    <td>${action}</td>
-                    <td>${signalContent}</td>
-                `;
-
-                tbody.appendChild(row);
-            }
-
-            // Then display other signals
-            for (const [strategyName, strategyData] of Object.entries(strategies)) {
-                if (strategyName === '信号生成V1') continue; // Skip as it's already displayed
-
-                const row = document.createElement('tr');
-
-                // Get score and value
-                const score = strategyData.score !== undefined ?
-                    (typeof strategyData.score === 'number' ? strategyData.score.toFixed(2) : strategyData.score) :
-                    '';
-
-                const value = strategyData.value !== undefined ?
-                    formatValueForTable(strategyData.value) :
-                    '';
+                // Use action field for score column if available, otherwise use score
+                const score = strategyData.action !== undefined ?
+                    strategyData.action :
+                    (strategyData.score !== undefined ?
+                        (typeof strategyData.score === 'number' ? strategyData.score.toFixed(2) : strategyData.score) :
+                        '');
 
                 row.innerHTML = `
                     <td>${agentName}</td>
                     <td>${strategyName}</td>
                     <td>${score}</td>
-                    <td>${value}</td>
+                    <td>${signalContent}</td>
                 `;
 
                 tbody.appendChild(row);
@@ -740,37 +710,92 @@
 
     // Helper function to format values for table display
     function formatValueForTable(value) {
+        // Handle null or undefined values
+        if (value === null || value === undefined) {
+            return '';
+        }
+
         // If value is a string that looks like JSON, try to parse and format it
-        if (typeof value === 'string' && value.trim().startsWith('{') && value.trim().endsWith('}')) {
-            try {
-                const parsedValue = JSON.parse(value);
-                // Format the JSON with proper indentation
-                return '<div class="json-display">' + JSON.stringify(parsedValue, null, 2) + '</div>';
-            } catch (e) {
-                // If parsing fails, return the original string
-                return String(value);
+        if (typeof value === 'string') {
+            const trimmedValue = value.trim();
+
+            // Check if it's a JSON object
+            if (trimmedValue.startsWith('{') && trimmedValue.endsWith('}')) {
+                try {
+                    const parsedValue = JSON.parse(value);
+                    // Format the JSON with proper indentation
+                    return '<div class="json-display">' + JSON.stringify(parsedValue, null, 2) + '</div>';
+                } catch (e) {
+                    // If parsing fails, check if it's a JSON array
+                    if (trimmedValue.startsWith('[') && trimmedValue.endsWith(']')) {
+                        try {
+                            const parsedArray = JSON.parse(value);
+                            return '<div class="json-display">' + JSON.stringify(parsedArray, null, 2) + '</div>';
+                        } catch (e2) {
+                            // If both fail, return the original string
+                            return String(value);
+                        }
+                    }
+                    return String(value);
+                }
+            }
+
+            // Check if it's a JSON array
+            if (trimmedValue.startsWith('[') && trimmedValue.endsWith(']')) {
+                try {
+                    const parsedArray = JSON.parse(value);
+                    return '<div class="json-display">' + JSON.stringify(parsedArray, null, 2) + '</div>';
+                } catch (e) {
+                    return String(value);
+                }
+            }
+
+            // For regular strings, return as is
+            return String(value);
+        }
+
+        // If value is an object (but not an array), format it as JSON
+        if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            // For complex objects with nested structures, always display as JSON
+            if (Object.keys(value).length > 0) {
+                // Check if this is a complex object that should be displayed as JSON
+                const shouldDisplayAsJSON = Object.values(value).some(val =>
+                    typeof val === 'object' ||
+                    typeof val === 'string' && (val.trim().startsWith('{') || val.trim().startsWith('['))
+                );
+
+                if (shouldDisplayAsJSON) {
+                    return '<div class="json-display">' + JSON.stringify(value, null, 2) + '</div>';
+                } else {
+                    // For simple objects, display as key-value pairs
+                    let result = '<div>';
+                    for (const [key, val] of Object.entries(value)) {
+                        result += `<div><strong>${key}:</strong> ${val}</div>`;
+                    }
+                    result += '</div>';
+                    return result;
+                }
+            }
+            // For empty objects
+            return '<div class="json-display">{}</div>';
+        }
+
+        // If value is an array, format it as JSON array
+        if (Array.isArray(value)) {
+            // Check if array contains complex objects
+            const hasComplexItems = value.some(item =>
+                typeof item === 'object' ||
+                (typeof item === 'string' && (item.trim().startsWith('{') || item.trim().startsWith('[')))
+            );
+
+            if (hasComplexItems || value.length > 5) {
+                return '<div class="json-display">' + JSON.stringify(value, null, 2) + '</div>';
+            } else {
+                return value.join(', ');
             }
         }
 
-        // If value is an object, format it nicely
-        if (typeof value === 'object' && value !== null) {
-            // For objects with multiple properties, display each property
-            if (Object.keys(value).length > 0) {
-                let result = '<div>';
-                for (const [key, val] of Object.entries(value)) {
-                    result += `<div><strong>${key}:</strong> ${val}</div>`;
-                }
-                result += '</div>';
-                return result;
-            }
-            // For empty objects
-            return JSON.stringify(value);
-        }
-        // For arrays, join elements
-        if (Array.isArray(value)) {
-            return value.join(', ');
-        }
-        // For other types, convert to string
+        // For numbers, booleans, and other types
         return String(value);
     }
 
