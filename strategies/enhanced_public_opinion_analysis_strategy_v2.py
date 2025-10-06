@@ -135,6 +135,72 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             self.log_warning(f"从缓存获取千股千评数据失败: {e}")
             return {}
 
+    def _update_pool_immediately(self, stock_result: Dict):
+        """
+        立即更新pool数据库中的pub字段
+
+        Args:
+            stock_result: 股票分析结果
+        """
+        try:
+            if not self.db_manager:
+                self.log_warning("没有数据库管理器，无法更新pool")
+                return
+
+            # 获取pool集合
+            pool_collection = self.db_manager.db["pool"]
+
+            # 找到最新的pool记录
+            latest_pool_record = pool_collection.find_one(sort=[("_id", -1)])
+            if not latest_pool_record:
+                self.log_warning("没有找到pool记录，无法更新")
+                return
+
+            # 获取股票代码和策略名称
+            stock_code = stock_result.get("code")
+            strategy_name = stock_result.get("strategy_name", self.name)
+
+            # 查找该股票在pool中的位置
+            stocks = latest_pool_record.get("stocks", [])
+            stock_index = -1
+            for i, stock in enumerate(stocks):
+                if stock.get("code") == stock_code:
+                    stock_index = i
+                    break
+
+            if stock_index == -1:
+                self.log_warning(f"股票 {stock_code} 不在pool中，无法更新")
+                return
+
+            # 提取score和value
+            score = stock_result.get("score", 0.0)
+            value = stock_result.get("value", "")
+
+            # 构建更新操作
+            update_field = f"stocks.{stock_index}.pub.{strategy_name}"
+
+            # 更新数据库
+            result = pool_collection.update_one(
+                {"_id": latest_pool_record["_id"]},
+                {
+                    "$set": {
+                        update_field: {
+                            "score": score,
+                            "value": value
+                        },
+                        "pub_at": datetime.now()
+                    }
+                }
+            )
+
+            if result.modified_count > 0:
+                self.log_info(f"成功更新股票 {stock_code} 的pub字段")
+            else:
+                self.log_info(f"股票 {stock_code} 的pub字段未更新（可能已存在相同数据）")
+
+        except Exception as e:
+            self.log_error(f"更新pool数据库时出错: {e}")
+
     def execute(
         self,
         stock_data: Dict[str, pd.DataFrame],
@@ -190,27 +256,30 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                     + len(all_data.get("firecrawl_data", []))
                 )
 
+                # 创建详细原因
                 if (
                     sentiment_score >= sentiment_threshold
                     and total_info_count >= news_count_threshold
                 ):
-                    # 创建详细原因
                     basic_reason = f"符合条件: 舆情 sentiment 分数({sentiment_score:.2f}) >= 阈值({sentiment_threshold}), 相关信息{total_info_count}条"
-                    detailed_value = self._create_detailed_value(
-                        basic_reason, all_data, analysis_result
-                    )
+                else:
+                    basic_reason = f"不符合条件: 舆情 sentiment 分数({sentiment_score:.2f}) < 阈值({sentiment_threshold}) 或 相关信息{total_info_count}条 < 阈值({news_count_threshold}条)"
 
-                    selected_stocks.append(
-                        {
-                            "code": stock_code,
-                            "score": sentiment_score,
-                            "value": detailed_value,
-                        }
-                    )
+                detailed_value = self._create_detailed_value(
+                    basic_reason, all_data, analysis_result
+                )
 
-                    self.log_info(
-                        f"股票 {stock_code} 符合条件，评分: {sentiment_score:.4f}"
-                    )
+                selected_stocks.append(
+                    {
+                        "code": stock_code,
+                        "score": sentiment_score,
+                        "value": detailed_value,
+                    }
+                )
+
+                self.log_info(
+                    f"股票 {stock_code} 分析完成，评分: {sentiment_score:.4f}"
+                )
 
             return selected_stocks
 

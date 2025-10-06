@@ -426,13 +426,35 @@ class PublicOpinionStockSelector(BaseAgent, DataProviderInterface):
                 strategy_name = pub_stock.get('strategy_name', 'unknown_strategy')
 
                 if code in existing_stock_map:
+                    # Get the value (should be a JSON string from strategy execution)
+                    value_str = pub_stock.get('value', '')
+
+                    # Extract score from the JSON string if possible
+                    score_value = 0.0
+                    if value_str:
+                        try:
+                            import json
+                            # Parse the JSON string to extract the score
+                            value_json = json.loads(value_str)
+                            # Get the score field from the JSON
+                            if isinstance(value_json, dict) and 'score' in value_json:
+                                score_value = float(value_json['score'])
+                            else:
+                                # If score is not in the JSON, use the score from pub_stock
+                                score_value = float(pub_stock.get('score', 0.0))
+                        except (json.JSONDecodeError, ValueError, TypeError):
+                            # If JSON parsing fails, use the score from pub_stock
+                            score_value = float(pub_stock.get('score', 0.0))
+                    else:
+                        # If no value string, use the score from pub_stock
+                        score_value = float(pub_stock.get('score', 0.0))
+
                     # Normalize score to 0-1 range and round to 2 decimal places
                     # Handle different score ranges:
                     # - Some strategies return scores in 0-1 range
                     # - Some strategies return scores in 0-100 range
-                    score = pub_stock.get('score', 0.0)
-                    if score is not None:
-                        score_float = float(score)
+                    if score_value is not None:
+                        score_float = float(score_value)
                         # If score is greater than 1, assume it's in 0-100 range and normalize it
                         if score_float > 1.0:
                             normalized_score = max(0.0, min(1.0, score_float / 100.0))
@@ -445,11 +467,13 @@ class PublicOpinionStockSelector(BaseAgent, DataProviderInterface):
                     rounded_score = round(normalized_score, 2)
 
                     # Update the pub field for the existing stock
+                    # According to the task: value is the JSON string returned by the strategy execution
+                    # score is the first score value in the JSON string
                     if 'pub' not in existing_stock_map[code]:
                         existing_stock_map[code]['pub'] = {}
                     existing_stock_map[code]['pub'][strategy_name] = {
                         'score': rounded_score,
-                        'value': pub_stock.get('value', ''),
+                        'value': value_str,  # Keep the original JSON string as value
                     }
 
             # Prepare cleaned stocks for database update
