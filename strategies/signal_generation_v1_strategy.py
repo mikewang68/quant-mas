@@ -196,7 +196,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
             else:
                 signal_calc = "买入"
 
-            self.log_info(f"[{code}] Calculated score: {score_calc:.4f}, signal: {signal_calc}")
+            self.log_info(f"[{code}] Calculated score: {score_calc:.2f}, signal: {signal_calc}")
 
             # Use AI to analyze strategy data
             self.log_info(f"[{code}] Strategy data collected: {len(strategy_data)} strategies")
@@ -207,7 +207,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
             score_ai = ai_result.get('score_ai', 0.0)
             signal_ai = ai_result.get('signal_ai', '持有')
 
-            self.log_info(f"[{code}] AI analysis - score: {score_ai:.4f}, signal: {signal_ai}")
+            self.log_info(f"[{code}] AI analysis - score: {score_ai:.2f}, signal: {signal_ai}")
 
             # Determine action based on new rules:
             # - If both signal_calc and signal_ai are "买入", output "买入"
@@ -224,9 +224,9 @@ class SignalGenerationV1Strategy(BaseStrategy):
             signal_data = {
                 'counts': non_zero_strategy_count,
                 'action': action,
-                'score_calc': round(score_calc, 4),
+                'score_calc': round(score_calc, 2),
                 'signal_calc': signal_calc,
-                'score_ai': round(score_ai, 4),
+                'score_ai': round(score_ai, 2),
                 'signal_ai': signal_ai,
                 'reason_ai': ai_result.get('reasoning', '')
             }
@@ -234,8 +234,8 @@ class SignalGenerationV1Strategy(BaseStrategy):
             result = {
                 'counts': non_zero_strategy_count,
                 'action': action,
-                'score_ai': round(score_ai, 4),
-                'score_calc': round(score_calc, 4),
+                'score_ai': round(score_ai, 2),
+                'score_calc': round(score_calc, 2),
                 'signal_calc': signal_calc,
                 'signal_ai': signal_ai,
                 'reason_ai': ai_result.get('reasoning', ''),
@@ -429,7 +429,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
                         "Successfully received LLM AI analysis response"
                     )
                     return {
-                        'score_ai': max(0.0, min(1.0, score_ai)),  # Normalize to 0-1 range
+                        'score_ai': round(max(0.0, min(1.0, score_ai)), 2),  # Normalize to 0-1 range and round to 2 decimal places
                         'signal_ai': signal_ai,
                         'reasoning': reasoning
                     }
@@ -464,7 +464,7 @@ class SignalGenerationV1Strategy(BaseStrategy):
                             signal_ai = "持有"  # Default to hold if invalid
 
                     return {
-                        'score_ai': score_ai,
+                        'score_ai': round(score_ai, 2),
                         'signal_ai': signal_ai,
                         'reasoning': content,
                     }
@@ -637,9 +637,9 @@ class SignalGenerationV1Strategy(BaseStrategy):
                     signal_data = {
                         "counts": analyzed_stock.get("counts", 0),
                         "action": analyzed_stock.get("action", ""),
-                        "score_calc": analyzed_stock.get("score_calc", 0.0),
+                        "score_calc": round(analyzed_stock.get("score_calc", 0.0), 2),
                         "signal_calc": analyzed_stock.get("signal_calc", "持有"),
-                        "score_ai": analyzed_stock.get("score_ai", 0.0),
+                        "score_ai": round(analyzed_stock.get("score_ai", 0.0), 2),
                         "signal_ai": analyzed_stock.get("signal_ai", "持有"),
                         "reason_ai": analyzed_stock.get("reason_ai", "")
                     }

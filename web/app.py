@@ -119,8 +119,8 @@ def register_routes(app: Flask):
     @app.route("/stock-kline")
     def stock_kline_page():
         """Stock K-line chart page"""
-        code = request.args.get('code', '')
-        name = request.args.get('name', code)
+        code = request.args.get("code", "")
+        name = request.args.get("name", code)
         # Debug logging
         app.logger.info(f"Rendering stock_kline_v2.html with code={code}, name={name}")
         try:
@@ -206,19 +206,24 @@ def register_routes(app: Flask):
 
                     # Get recent daily K-line data (last 5 days to ensure we get data)
                     from datetime import datetime, timedelta
-                    end_date = datetime.now().strftime('%Y-%m-%d')
-                    start_date = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d')
+
+                    end_date = datetime.now().strftime("%Y-%m-%d")
+                    start_date = (datetime.now() - timedelta(days=5)).strftime(
+                        "%Y-%m-%d"
+                    )
 
                     k_data = akshare_client.get_daily_k_data(code, start_date, end_date)
 
                     if not k_data.empty and len(k_data) > 0:
                         # Get the latest closing price
-                        latest_close = k_data.iloc[-1]['close']
+                        latest_close = k_data.iloc[-1]["close"]
 
                         if latest_close is not None:
                             return jsonify({"code": code, "price": float(latest_close)})
                         else:
-                            return jsonify({"error": "Failed to get closing price"}), 404
+                            return jsonify(
+                                {"error": "Failed to get closing price"}
+                            ), 404
                     else:
                         return jsonify({"error": "No K-line data found for stock"}), 404
 
@@ -236,12 +241,16 @@ def register_routes(app: Flask):
 
                         if not realtime_data.empty and len(realtime_data) > 0:
                             # Extract the current price (latest price)
-                            current_price = realtime_data.iloc[0]['price']
+                            current_price = realtime_data.iloc[0]["price"]
 
                             if current_price is not None:
-                                return jsonify({"code": code, "price": float(current_price)})
+                                return jsonify(
+                                    {"code": code, "price": float(current_price)}
+                                )
                             else:
-                                return jsonify({"error": "Failed to get current price"}), 404
+                                return jsonify(
+                                    {"error": "Failed to get current price"}
+                                ), 404
                         else:
                             return jsonify({"error": "No data found for stock"}), 404
                     except Exception as fallback_error:
@@ -254,14 +263,22 @@ def register_routes(app: Flask):
                             current_price = stock_data.iloc[20]["value"]
 
                             if current_price is not None:
-                                return jsonify({"code": code, "price": float(current_price)})
+                                return jsonify(
+                                    {"code": code, "price": float(current_price)}
+                                )
                             else:
-                                return jsonify({"error": "Failed to get current price"}), 404
+                                return jsonify(
+                                    {"error": "Failed to get current price"}
+                                ), 404
                         except Exception as last_fallback_error:
                             logger.error(
                                 f"Last fallback method also failed for {code}: {last_fallback_error}"
                             )
-                            return jsonify({"error": f"Failed to get stock price: {str(last_fallback_error)}"}), 500
+                            return jsonify(
+                                {
+                                    "error": f"Failed to get stock price: {str(last_fallback_error)}"
+                                }
+                            ), 500
 
         except Exception as e:
             logger.error(f"Error getting stock price for {code}: {e}")
@@ -1321,7 +1338,9 @@ def register_routes(app: Flask):
             if stock_codes:
                 try:
                     # Get database configuration
-                    db_config = app.config["MONGO_MANAGER"].config_loader.get_collections_config()
+                    db_config = app.config[
+                        "MONGO_MANAGER"
+                    ].config_loader.get_collections_config()
                     code_collection_name = db_config.get("stock_codes", "code")
                     code_collection = app.config["MONGO_DB"][code_collection_name]
 
@@ -1345,27 +1364,40 @@ def register_routes(app: Flask):
                     # For each stock, get the latest record from k_data
                     for code in stock_codes:
                         latest_k_record = k_data_collection.find_one(
-                            {"代码": code},
-                            sort=[("日期", -1)]
+                            {"代码": code}, sort=[("日期", -1)]
                         )
 
                         if latest_k_record:
                             # Get adjustment setting to determine which fields to use
-                            adjust_type = app.config["MONGO_MANAGER"].get_adjustment_setting()
+                            adjust_type = app.config[
+                                "MONGO_MANAGER"
+                            ].get_adjustment_setting()
 
                             # Use appropriate fields based on adjustment setting
-                            if adjust_type == 'qfq':  # 前复权 (qfq)
+                            if adjust_type == "qfq":  # 前复权 (qfq)
                                 price = float(latest_k_record.get("收盘q", 0.0))
-                                change_percent = float(latest_k_record.get("涨跌幅q", 0.0))
-                                turnover_rate = float(latest_k_record.get("换手率q", 0.0))
-                            elif adjust_type == 'hfq':  # 后复权 (hfq)
+                                change_percent = float(
+                                    latest_k_record.get("涨跌幅q", 0.0)
+                                )
+                                turnover_rate = float(
+                                    latest_k_record.get("换手率q", 0.0)
+                                )
+                            elif adjust_type == "hfq":  # 后复权 (hfq)
                                 price = float(latest_k_record.get("收盘h", 0.0))
-                                change_percent = float(latest_k_record.get("涨跌幅h", 0.0))
-                                turnover_rate = float(latest_k_record.get("换手率h", 0.0))
+                                change_percent = float(
+                                    latest_k_record.get("涨跌幅h", 0.0)
+                                )
+                                turnover_rate = float(
+                                    latest_k_record.get("换手率h", 0.0)
+                                )
                             else:  # No adjustment
                                 price = float(latest_k_record.get("收盘", 0.0))
-                                change_percent = float(latest_k_record.get("涨跌幅", 0.0))
-                                turnover_rate = float(latest_k_record.get("换手率", 0.0))
+                                change_percent = float(
+                                    latest_k_record.get("涨跌幅", 0.0)
+                                )
+                                turnover_rate = float(
+                                    latest_k_record.get("换手率", 0.0)
+                                )
 
                             k_data_latest[code] = {
                                 "price": price,
@@ -1373,7 +1405,9 @@ def register_routes(app: Flask):
                                 "turnover_rate": turnover_rate,
                             }
 
-                    logger.info(f"Found k_data for {len(k_data_latest)} stocks from pool")
+                    logger.info(
+                        f"Found k_data for {len(k_data_latest)} stocks from pool"
+                    )
                 except Exception as e:
                     logger.error(f"Error getting k_data: {e}")
 
@@ -1424,9 +1458,9 @@ def register_routes(app: Flask):
             buf_data_collection = app.config["MONGO_DB"]["buf_data"]
 
             # Get all data for the stock, sorted by date ascending
-            kline_records = list(buf_data_collection.find(
-                {"code": code}
-            ).sort("date", 1))
+            kline_records = list(
+                buf_data_collection.find({"code": code}).sort("date", 1)
+            )
 
             if not kline_records:
                 logger.warning(f"No K-line data found for stock {code}")
@@ -1435,32 +1469,41 @@ def register_routes(app: Flask):
             # Process the data for charting
             kline_data = []
             for record in kline_records:
-                kline_data.append({
-                    "date": record.get("date"),
-                    "open": float(record.get("open", 0.0)),
-                    "high": float(record.get("high", 0.0)),
-                    "low": float(record.get("low", 0.0)),
-                    "close": float(record.get("close", 0.0)),
-                    "volume": float(record.get("volume", 0.0)),
-                    "amount": float(record.get("amount", 0.0)) if "amount" in record else 0.0,
-                    "turnover_rate": float(record.get("turnover_rate", 0.0)) if "turnover_rate" in record else 0.0,
-                })
+                kline_data.append(
+                    {
+                        "date": record.get("date"),
+                        "open": float(record.get("open", 0.0)),
+                        "high": float(record.get("high", 0.0)),
+                        "low": float(record.get("low", 0.0)),
+                        "close": float(record.get("close", 0.0)),
+                        "volume": float(record.get("volume", 0.0)),
+                        "amount": float(record.get("amount", 0.0))
+                        if "amount" in record
+                        else 0.0,
+                        "turnover_rate": float(record.get("turnover_rate", 0.0))
+                        if "turnover_rate" in record
+                        else 0.0,
+                    }
+                )
 
             return jsonify(kline_data), 200
 
         except Exception as e:
             logger.error(f"Error getting K-line data for stock {code}: {e}")
             return jsonify({"error": f"Failed to get K-line data: {str(e)}"}), 500
+
     @app.route("/api/stock-kline-realtime/<code>")
     def get_stock_kline_realtime_data(code):
         """Get real-time K-line data for a specific stock from Akshare (last 1 year)"""
         try:
             # Initialize AkshareClient
             from utils.akshare_client import AkshareClient
+
             akshare_client = AkshareClient()
 
             # Calculate date range (last 1 year)
             import datetime
+
             end_date = datetime.date.today()
             start_date = end_date - datetime.timedelta(days=365)
 
@@ -1469,7 +1512,9 @@ def register_routes(app: Flask):
             end_date_str = end_date.strftime("%Y-%m-%d")
 
             # Get daily K-line data from Akshare (with explicit pre-adjusted data)
-            kline_df = akshare_client.get_daily_k_data(code, start_date_str, end_date_str, "q")
+            kline_df = akshare_client.get_daily_k_data(
+                code, start_date_str, end_date_str, "q"
+            )
 
             if kline_df.empty:
                 logger.warning(f"No real-time K-line data found for stock {code}")
@@ -1478,22 +1523,30 @@ def register_routes(app: Flask):
             # Process the data for charting
             kline_data = []
             for _, row in kline_df.iterrows():
-                kline_data.append({
-                    "date": row.get("date").strftime("%Y-%m-%d") if hasattr(row.get("date"), 'strftime') else str(row.get("date")),
-                    "open": float(row.get("open", 0.0)),
-                    "high": float(row.get("high", 0.0)),
-                    "low": float(row.get("low", 0.0)),
-                    "close": float(row.get("close", 0.0)),
-                    "volume": float(row.get("volume", 0.0)),
-                    "amount": float(row.get("amount", 0.0)),
-                    "turnover_rate": float(row.get("turnover_rate", 0.0)) if "turnover_rate" in row else 0.0,
-                })
+                kline_data.append(
+                    {
+                        "date": row.get("date").strftime("%Y-%m-%d")
+                        if hasattr(row.get("date"), "strftime")
+                        else str(row.get("date")),
+                        "open": float(row.get("open", 0.0)),
+                        "high": float(row.get("high", 0.0)),
+                        "low": float(row.get("low", 0.0)),
+                        "close": float(row.get("close", 0.0)),
+                        "volume": float(row.get("volume", 0.0)),
+                        "amount": float(row.get("amount", 0.0)),
+                        "turnover_rate": float(row.get("turnover_rate", 0.0))
+                        if "turnover_rate" in row
+                        else 0.0,
+                    }
+                )
 
             return jsonify(kline_data), 200
 
         except Exception as e:
             logger.error(f"Error getting real-time K-line data for stock {code}: {e}")
-            return jsonify({"error": f"Failed to get real-time K-line data: {str(e)}"}), 500
+            return jsonify(
+                {"error": f"Failed to get real-time K-line data: {str(e)}"}
+            ), 500
 
     @app.route("/api/strategy-by-name/<string:strategy_name>", methods=["GET"])
     def get_strategy_by_name(strategy_name):
@@ -1515,6 +1568,132 @@ def register_routes(app: Flask):
             logger.error(f"Error getting strategy {strategy_name}: {e}")
             return jsonify({"error": f"Failed to get strategy: {str(e)}"}), 500
 
+    @app.route("/api/agent-last-execution-time/<agent_id>")
+    def get_agent_last_execution_time(agent_id):
+        """Get last execution time for a specific agent from pool data"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({"last_execution_time": None}), 200
+
+            # Get the agent to determine its type
+            agent = app.config["MONGO_MANAGER"].get_agent(agent_id)
+            if not agent:
+                logger.error(f"Agent {agent_id} not found")
+                return jsonify({"last_execution_time": None}), 200
+
+            # Determine the time field based on agent type
+            agent_name = agent.get("name", "")
+            time_field = None
+
+            if "趋势选股" in agent_name:
+                time_field = "updated_at"
+            elif "技术分析" in agent_name:
+                time_field = "tech_at"
+            elif "基本面分析" in agent_name:
+                time_field = "fund_at"
+            elif "舆情分析" in agent_name:
+                time_field = "pub_at"
+            elif "信号生成" in agent_name:
+                time_field = "signals_at"
+            else:
+                # Default to using the record's timestamp
+                time_field = None
+
+            # Get the pool collection
+            pool_collection = app.config["MONGO_DB"]["pool"]
+
+            # Find the latest pool record
+            latest_record = pool_collection.find_one(sort=[("_id", -1)])
+
+            if not latest_record:
+                return jsonify({"last_execution_time": None}), 200
+
+            # Get the appropriate time field or default to record timestamp
+            if time_field and time_field in latest_record:
+                # Use the specific time field
+                last_execution_time = latest_record[time_field]
+                # If it's a datetime object, format it as string
+                if hasattr(last_execution_time, "strftime"):
+                    last_execution_time = last_execution_time.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+            else:
+                # Fall back to using the record's _id timestamp
+                from datetime import datetime
+
+                timestamp = latest_record["_id"].generation_time
+                last_execution_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+
+            return jsonify({"last_execution_time": last_execution_time}), 200
+        except Exception as e:
+            logger.error(f"Error getting last execution time for agent {agent_id}: {e}")
+            return jsonify({"last_execution_time": None}), 200
+
+    @app.route("/api/strategy-last-execution-time/<strategy_id>")
+    def get_strategy_last_execution_time(strategy_id):
+        """Get last execution time for a specific strategy from pool data"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({"last_execution_time": None}), 200
+
+            # Get the strategy to determine its type
+            strategy = app.config["MONGO_MANAGER"].get_strategy(strategy_id)
+            if not strategy:
+                logger.error(f"Strategy {strategy_id} not found")
+                return jsonify({"last_execution_time": None}), 200
+
+            # Determine the time field based on strategy type
+            strategy_type = strategy.get("type", "")
+            time_field = None
+
+            if strategy_type == "technical":
+                time_field = "tech_at"
+            elif strategy_type == "fundamental":
+                time_field = "fund_at"
+            elif strategy_type == "sentiment":
+                time_field = "pub_at"
+            elif strategy_type == "multi_agent":
+                time_field = "updated_at"
+            else:
+                # Default to using the record's timestamp
+                time_field = None
+
+            # Get the pool collection
+            pool_collection = app.config["MONGO_DB"]["pool"]
+
+            # Find the latest pool record
+            latest_record = pool_collection.find_one(sort=[("_id", -1)])
+
+            if not latest_record:
+                return jsonify({"last_execution_time": None}), 200
+
+            # Get the appropriate time field or default to record timestamp
+            if time_field and time_field in latest_record:
+                # Use the specific time field
+                last_execution_time = latest_record[time_field]
+                # If it's a datetime object, format it as string
+                if hasattr(last_execution_time, "strftime"):
+                    last_execution_time = last_execution_time.strftime(
+                        "%Y-%m-%d %H:%M:%S"
+                    )
+            else:
+                # Fall back to using the record's _id timestamp
+                from datetime import datetime
+
+                timestamp = latest_record["_id"].generation_time
+                last_execution_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+
+            return jsonify({"last_execution_time": last_execution_time}), 200
+        except Exception as e:
+            logger.error(
+                f"Error getting last execution time for strategy {strategy_id}: {e}"
+            )
+            return jsonify({"last_execution_time": None}), 200
+
     @app.route("/api/pool-data/<code>")
     def get_pool_data_by_code(code):
         """Get pool data for a specific stock code"""
@@ -1523,7 +1702,7 @@ def register_routes(app: Flask):
             db_manager = app.config["MONGO_MANAGER"]
 
             # Access the pool collection
-            pool_collection = db_manager.get_collection('pool')
+            pool_collection = db_manager.get_collection("pool")
 
             # Find the latest pool record (sorted by _id descending)
             latest_record = pool_collection.find_one(
@@ -1551,7 +1730,7 @@ def register_routes(app: Flask):
 
             # Try to get stock name from code collection
             try:
-                code_collection = db_manager.get_collection('code')
+                code_collection = db_manager.get_collection("code")
                 code_record = code_collection.find_one({"code": code})
                 if code_record and "name" in code_record:
                     target_stock["name"] = code_record["name"]
@@ -1563,7 +1742,6 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error getting pool data for stock {code}: {e}")
             return jsonify({"error": f"Failed to get pool data: {str(e)}"}), 500
-
 
     @app.route("/api/akshare/index-data", methods=["POST"])
     def get_akshare_index_data():
@@ -1583,10 +1761,7 @@ def register_routes(app: Flask):
 
             # Get index data using Akshare
             index_data = ak.index_zh_a_hist(
-                symbol=symbol,
-                period=period,
-                start_date=start_date,
-                end_date=end_date
+                symbol=symbol, period=period, start_date=start_date, end_date=end_date
             )
 
             if index_data.empty:
@@ -1595,15 +1770,19 @@ def register_routes(app: Flask):
             # Format the data
             formatted_data = []
             for _, row in index_data.iterrows():
-                formatted_data.append({
-                    "date": row["日期"].strftime("%Y-%m-%d") if hasattr(row["日期"], 'strftime') else str(row["日期"]),
-                    "open": float(row["开盘"]),
-                    "high": float(row["最高"]),
-                    "low": float(row["最低"]),
-                    "close": float(row["收盘"]),
-                    "volume": float(row["成交量"]),
-                    "amount": float(row["成交额"])
-                })
+                formatted_data.append(
+                    {
+                        "date": row["日期"].strftime("%Y-%m-%d")
+                        if hasattr(row["日期"], "strftime")
+                        else str(row["日期"]),
+                        "open": float(row["开盘"]),
+                        "high": float(row["最高"]),
+                        "low": float(row["最低"]),
+                        "close": float(row["收盘"]),
+                        "volume": float(row["成交量"]),
+                        "amount": float(row["成交额"]),
+                    }
+                )
 
             return jsonify({"data": formatted_data}), 200
 
@@ -1637,7 +1816,7 @@ def register_routes(app: Flask):
                 period=period,
                 start_date=start_date,
                 end_date=end_date,
-                adjust=adjust
+                adjust=adjust,
             )
 
             if stock_data.empty:
@@ -1646,15 +1825,19 @@ def register_routes(app: Flask):
             # Format the data
             formatted_data = []
             for _, row in stock_data.iterrows():
-                formatted_data.append({
-                    "date": row["日期"].strftime("%Y-%m-%d") if hasattr(row["日期"], 'strftime') else str(row["日期"]),
-                    "open": float(row["开盘"]),
-                    "high": float(row["最高"]),
-                    "low": float(row["最低"]),
-                    "close": float(row["收盘"]),
-                    "volume": float(row["成交量"]),
-                    "amount": float(row["成交额"])
-                })
+                formatted_data.append(
+                    {
+                        "date": row["日期"].strftime("%Y-%m-%d")
+                        if hasattr(row["日期"], "strftime")
+                        else str(row["日期"]),
+                        "open": float(row["开盘"]),
+                        "high": float(row["最高"]),
+                        "low": float(row["最低"]),
+                        "close": float(row["收盘"]),
+                        "volume": float(row["成交量"]),
+                        "amount": float(row["成交额"]),
+                    }
+                )
 
             return jsonify({"data": formatted_data}), 200
 
@@ -1682,7 +1865,7 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error fetching orders: {e}")
             return jsonify([]), 500
-    
+
     @app.route("/api/orders", methods=["POST"])
     def create_order():
         """Create a new order"""
@@ -1697,11 +1880,21 @@ def register_routes(app: Flask):
             data = request.get_json()
 
             # Validate required fields
-            required_fields = ["date", "account_id", "code", "name", "price", "quantity"]
+            required_fields = [
+                "date",
+                "account_id",
+                "code",
+                "name",
+                "price",
+                "quantity",
+            ]
             for field in required_fields:
                 if field not in data or not data[field]:
                     return jsonify(
-                        {"status": "error", "message": f"Missing required field: {field}"}
+                        {
+                            "status": "error",
+                            "message": f"Missing required field: {field}",
+                        }
                     ), 400
 
             # Determine action based on quantity (positive = buy, negative = sell)
@@ -1718,7 +1911,7 @@ def register_routes(app: Flask):
                 "price": float(data["price"]),
                 "quantity": quantity,
                 "action": action,  # Add action field
-                "created_at": datetime.now()
+                "created_at": datetime.now(),
             }
 
             # Add commission if provided
@@ -1755,8 +1948,14 @@ def register_routes(app: Flask):
             result = app.config["MONGO_DB"].orders.insert_one(order)
 
             # Update account cash and stock holdings
-            update_account_holdings(data["account_id"], data["code"], data["name"],
-                                  float(data["price"]), quantity, order.get("commission", 0))
+            update_account_holdings(
+                data["account_id"],
+                data["code"],
+                data["name"],
+                float(data["price"]),
+                quantity,
+                order.get("commission", 0),
+            )
 
             if result.inserted_id:
                 # Add the inserted ID to the response
@@ -1778,24 +1977,34 @@ def register_routes(app: Flask):
                 {"status": "error", "message": f"Failed to create order: {str(e)}"}
             ), 500
 
-    def update_account_holdings(account_id, stock_code, stock_name, price, quantity, commission=0):
+    def update_account_holdings(
+        account_id, stock_code, stock_name, price, quantity, commission=0
+    ):
         """Update account cash and stock holdings after an order"""
         try:
             # Get account information
-            account = app.config["MONGO_DB"].accounts.find_one({"_id": ObjectId(account_id)})
+            account = app.config["MONGO_DB"].accounts.find_one(
+                {"_id": ObjectId(account_id)}
+            )
             if not account:
                 logger.error(f"Account {account_id} not found")
                 return False
 
             # Calculate order value (positive for selling, negative for buying)
-            order_value = price * quantity  # For selling, quantity is negative, so order_value is positive
+            order_value = (
+                price * quantity
+            )  # For selling, quantity is negative, so order_value is positive
 
             # Update cash
             # For buying: subtract (order_value + commission)
             # For selling: add (order_value - commission)
-            cash_change = -order_value  # Base change (negative for buying, positive for selling)
+            cash_change = (
+                -order_value
+            )  # Base change (negative for buying, positive for selling)
             if commission > 0:
-                cash_change -= commission  # Deduct commission for both buying and selling
+                cash_change -= (
+                    commission  # Deduct commission for both buying and selling
+                )
 
             new_cash = account.get("cash", 0) + cash_change
 
@@ -1808,7 +2017,9 @@ def register_routes(app: Flask):
                 for stock in stocks:
                     if stock["code"] == stock_code:
                         stock_found = True
-                        new_quantity = stock["quantity"] + quantity  # quantity is negative
+                        new_quantity = (
+                            stock["quantity"] + quantity
+                        )  # quantity is negative
                         if new_quantity <= 0:
                             # Remove stock if quantity is zero or negative
                             stocks.remove(stock)
@@ -1823,29 +2034,31 @@ def register_routes(app: Flask):
                         stock_found = True
                         # Update quantity and cost (weighted average)
                         total_quantity = stock["quantity"] + quantity
-                        total_value = (stock["quantity"] * stock["cost"]) + (quantity * price)
+                        total_value = (stock["quantity"] * stock["cost"]) + (
+                            quantity * price
+                        )
                         stock["quantity"] = total_quantity
-                        stock["cost"] = total_value / total_quantity if total_quantity > 0 else 0
+                        stock["cost"] = (
+                            total_value / total_quantity if total_quantity > 0 else 0
+                        )
                         break
 
                 # If stock not found, add it to holdings
                 if not stock_found:
-                    stocks.append({
-                        "code": stock_code,
-                        "name": stock_name,
-                        "quantity": quantity,
-                        "cost": price
-                    })
+                    stocks.append(
+                        {
+                            "code": stock_code,
+                            "name": stock_name,
+                            "quantity": quantity,
+                            "cost": price,
+                        }
+                    )
 
             # Update account in database
-            update_data = {
-                "cash": new_cash,
-                "stocks": stocks
-            }
+            update_data = {"cash": new_cash, "stocks": stocks}
 
             result = app.config["MONGO_DB"].accounts.update_one(
-                {"_id": ObjectId(account_id)},
-                {"$set": update_data}
+                {"_id": ObjectId(account_id)}, {"$set": update_data}
             )
 
             if result.modified_count > 0:
@@ -1859,82 +2072,9 @@ def register_routes(app: Flask):
             logger.error(f"Error updating account holdings: {e}")
             return False
 
-
     @app.route("/api/account-performance/<string:account_id>", methods=["GET"])
     def get_account_performance(account_id):
         """Get account performance data for charting (last 2 years)"""
-
-    @app.route("/api/update-market-data", methods=["POST"])
-    def update_market_data():
-        """Update market data by calling down2mongo script"""
-        try:
-            # Import and run the down2mongo script
-            import subprocess
-            import sys
-            from pathlib import Path
-
-            # Get the path to down2mongo.py
-            down2mongo_path = Path(__file__).parent.parent / "utils" / "down2mongo.py"
-
-            # Run the script as a subprocess with real-time output
-            process = subprocess.Popen(
-                [sys.executable, str(down2mongo_path)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
-                universal_newlines=True
-            )
-
-            # Capture output in real-time and log it
-            stdout_lines = []
-            stderr_lines = []
-
-            # Read stdout and stderr in real-time
-            while True:
-                output = process.stdout.readline()
-                error = process.stderr.readline()
-
-                if output:
-                    print(f"[DOWN2MONGO STDOUT] {output.strip()}")
-                    stdout_lines.append(output)
-                    sys.stdout.flush()  # Force flush to console
-
-                if error:
-                    print(f"[DOWN2MONGO STDERR] {error.strip()}", file=sys.stderr)
-                    stderr_lines.append(error)
-                    sys.stderr.flush()  # Force flush to console
-
-                if output == '' and error == '' and process.poll() is not None:
-                    break
-
-            # Wait for the process to complete
-            returncode = process.poll()
-
-            if returncode == 0:
-                return jsonify({
-                    "status": "success",
-                    "message": "Market data updated successfully",
-                    "output": ''.join(stdout_lines)
-                })
-            else:
-                return jsonify({
-                    "status": "error",
-                    "message": "Failed to update market data",
-                    "error": ''.join(stderr_lines)
-                }), 500
-
-        except subprocess.TimeoutExpired:
-            return jsonify({
-                "status": "error",
-                "message": "Market data update timed out"
-            }), 500
-        except Exception as e:
-            logger.error(f"Error updating market data: {e}")
-            return jsonify({
-                "status": "error",
-                "message": f"Failed to update market data: {str(e)}"
-            }), 500
         try:
             # Check if MongoDB connection is available
             if app.config["MONGO_DB"] is None:
@@ -1943,20 +2083,30 @@ def register_routes(app: Flask):
 
             # Get account information
             from bson import ObjectId
-            account = app.config["MONGO_DB"].accounts.find_one({"_id": ObjectId(account_id)})
+
+            account = app.config["MONGO_DB"].accounts.find_one(
+                {"_id": ObjectId(account_id)}
+            )
             if not account:
                 return jsonify({"error": "Account not found"}), 404
 
             # Calculate date range (last 2 years)
             from datetime import datetime, timedelta
+
             end_date = datetime.now()
             start_date = end_date - timedelta(days=730)  # 2 years = 365*2 = 730 days
 
             # Get orders for this account within the last 2 years, sorted by date
-            orders_cursor = app.config["MONGO_DB"].orders.find({
-                "account_id": account_id,
-                "date": {"$gte": start_date.strftime("%Y-%m-%d")}
-            }).sort("date", 1)
+            orders_cursor = (
+                app.config["MONGO_DB"]
+                .orders.find(
+                    {
+                        "account_id": account_id,
+                        "date": {"$gte": start_date.strftime("%Y-%m-%d")},
+                    }
+                )
+                .sort("date", 1)
+            )
             orders = list(orders_cursor)
 
             # Get all unique stock codes from orders
@@ -1967,6 +2117,7 @@ def register_routes(app: Flask):
             # Get historical data for all stocks
             stock_historical_data = {}
             from utils.akshare_client import AkshareClient
+
             akshare_client = AkshareClient()
 
             for stock_code in all_stock_codes:
@@ -1974,17 +2125,21 @@ def register_routes(app: Flask):
                     # Get historical data for the last 2 years
                     hist_data = akshare_client.get_daily_k_data(
                         stock_code,
-                        start_date.strftime('%Y-%m-%d'),
-                        end_date.strftime('%Y-%m-%d')
+                        start_date.strftime("%Y-%m-%d"),
+                        end_date.strftime("%Y-%m-%d"),
                     )
 
                     if not hist_data.empty:
                         # Convert to dictionary with date as key
                         stock_historical_data[stock_code] = {}
                         for _, row in hist_data.iterrows():
-                            stock_historical_data[stock_code][row['date'].strftime('%Y-%m-%d')] = float(row['close'])
+                            stock_historical_data[stock_code][
+                                row["date"].strftime("%Y-%m-%d")
+                            ] = float(row["close"])
                 except Exception as e:
-                    logger.warning(f"Error getting historical data for {stock_code}: {e}")
+                    logger.warning(
+                        f"Error getting historical data for {stock_code}: {e}"
+                    )
                     stock_historical_data[stock_code] = {}
 
             # Sort orders by date
@@ -2022,14 +2177,23 @@ def register_routes(app: Flask):
                         else:  # Buying
                             if code in current_holdings:
                                 # Update with weighted average cost
-                                total_quantity = current_holdings[code]["quantity"] + quantity
-                                total_value = (current_holdings[code]["quantity"] * current_holdings[code]["cost"]) + (quantity * price)
+                                total_quantity = (
+                                    current_holdings[code]["quantity"] + quantity
+                                )
+                                total_value = (
+                                    current_holdings[code]["quantity"]
+                                    * current_holdings[code]["cost"]
+                                ) + (quantity * price)
                                 current_holdings[code]["quantity"] = total_quantity
-                                current_holdings[code]["cost"] = total_value / total_quantity if total_quantity > 0 else 0
+                                current_holdings[code]["cost"] = (
+                                    total_value / total_quantity
+                                    if total_quantity > 0
+                                    else 0
+                                )
                             else:
                                 current_holdings[code] = {
                                     "quantity": quantity,
-                                    "cost": price
+                                    "cost": price,
                                 }
 
                 # Calculate portfolio value for this date
@@ -2038,7 +2202,10 @@ def register_routes(app: Flask):
                 for stock_code, stock_info in current_holdings.items():
                     # Get historical price for this date
                     stock_price = None
-                    if stock_code in stock_historical_data and date_str in stock_historical_data[stock_code]:
+                    if (
+                        stock_code in stock_historical_data
+                        and date_str in stock_historical_data[stock_code]
+                    ):
                         stock_price = stock_historical_data[stock_code][date_str]
                     elif stock_code in stock_historical_data:
                         # Find the closest available price
@@ -2046,16 +2213,28 @@ def register_routes(app: Flask):
                         if available_dates:
                             # Find closest date
                             from datetime import datetime
-                            closest_date = min(available_dates, key=lambda x: abs(datetime.strptime(x, "%Y-%m-%d") - current_date))
-                            stock_price = stock_historical_data[stock_code][closest_date]
+
+                            closest_date = min(
+                                available_dates,
+                                key=lambda x: abs(
+                                    datetime.strptime(x, "%Y-%m-%d") - current_date
+                                ),
+                            )
+                            stock_price = stock_historical_data[stock_code][
+                                closest_date
+                            ]
 
                     if stock_price is not None:
-                        stock_value_for_this_stock = stock_info["quantity"] * stock_price
+                        stock_value_for_this_stock = (
+                            stock_info["quantity"] * stock_price
+                        )
                         portfolio_value += stock_value_for_this_stock
                         stock_value += stock_value_for_this_stock
                     else:
                         # Fallback to cost price if no historical data
-                        stock_value_for_this_stock = stock_info["quantity"] * stock_info["cost"]
+                        stock_value_for_this_stock = (
+                            stock_info["quantity"] * stock_info["cost"]
+                        )
                         portfolio_value += stock_value_for_this_stock
                         stock_value += stock_value_for_this_stock
 
@@ -2064,7 +2243,10 @@ def register_routes(app: Flask):
                 for code, info in current_holdings.items():
                     # Get historical price for this date
                     stock_price = None
-                    if code in stock_historical_data and date_str in stock_historical_data[code]:
+                    if (
+                        code in stock_historical_data
+                        and date_str in stock_historical_data[code]
+                    ):
                         stock_price = stock_historical_data[code][date_str]
                     elif code in stock_historical_data:
                         # Find the closest available price
@@ -2072,13 +2254,21 @@ def register_routes(app: Flask):
                         if available_dates:
                             # Find closest date
                             from datetime import datetime
-                            closest_date = min(available_dates, key=lambda x: abs(datetime.strptime(x, "%Y-%m-%d") - current_date))
+
+                            closest_date = min(
+                                available_dates,
+                                key=lambda x: abs(
+                                    datetime.strptime(x, "%Y-%m-%d") - current_date
+                                ),
+                            )
                             stock_price = stock_historical_data[code][closest_date]
 
                     # Get stock name from code collection
                     stock_name = code
                     try:
-                        code_record = app.config["MONGO_DB"].code.find_one({"code": code})
+                        code_record = app.config["MONGO_DB"].code.find_one(
+                            {"code": code}
+                        )
                         if code_record and "name" in code_record:
                             stock_name = code_record["name"]
                     except Exception as e:
@@ -2089,30 +2279,115 @@ def register_routes(app: Flask):
                         "name": stock_name,
                         "quantity": info["quantity"],
                         "cost": info["cost"],
-                        "market_price": stock_price if stock_price is not None else info["cost"]  # Use cost price as fallback
+                        "market_price": stock_price
+                        if stock_price is not None
+                        else info["cost"],  # Use cost price as fallback
                     }
 
-                performance_data.append({
-                    "date": date_str,
-                    "portfolio_value": portfolio_value,
-                    "cash": current_cash,
-                    "stock_value": stock_value,
-                    "holdings": holdings_with_prices  # Add holdings information with market prices
-                })
+                performance_data.append(
+                    {
+                        "date": date_str,
+                        "portfolio_value": portfolio_value,
+                        "cash": current_cash,
+                        "stock_value": stock_value,
+                        "holdings": holdings_with_prices,  # Add holdings information with market prices
+                    }
+                )
 
                 # Move to next day
                 current_date += timedelta(days=1)
 
-            return jsonify({
-                "account_id": account_id,
-                "account_name": account.get("name", ""),
-                "initial_capital": account.get("initial_capital", 0),
-                "performance_data": performance_data
-            }), 200
+            return jsonify(
+                {
+                    "account_id": account_id,
+                    "account_name": account.get("name", ""),
+                    "initial_capital": account.get("initial_capital", 0),
+                    "performance_data": performance_data,
+                }
+            ), 200
 
         except Exception as e:
             logger.error(f"Error fetching account performance data: {e}")
-            return jsonify({"error": f"Failed to fetch account performance data: {str(e)}"}), 500
+            return jsonify(
+                {"error": f"Failed to fetch account performance data: {str(e)}"}
+            ), 500
+
+    @app.route("/api/update-market-data", methods=["POST"])
+    def update_market_data():
+        """Update market data by calling down2mongo script"""
+        try:
+            # Import and run the down2mongo script
+            import subprocess
+            import sys
+            from pathlib import Path
+
+            # Get the path to down2mongo.py
+            down2mongo_path = Path(__file__).parent.parent / "utils" / "down2mongo.py"
+
+            # Run the script as a subprocess with real-time output
+            process = subprocess.Popen(
+                [sys.executable, str(down2mongo_path)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+                universal_newlines=True,
+            )
+
+            # Capture output in real-time and log it
+            stdout_lines = []
+            stderr_lines = []
+
+            # Read stdout and stderr in real-time
+            while True:
+                output = process.stdout.readline()
+                error = process.stderr.readline()
+
+                if output:
+                    print(f"[DOWN2MONGO STDOUT] {output.strip()}")
+                    stdout_lines.append(output)
+                    sys.stdout.flush()  # Force flush to console
+
+                if error:
+                    print(f"[DOWN2MONGO STDERR] {error.strip()}", file=sys.stderr)
+                    stderr_lines.append(error)
+                    sys.stderr.flush()  # Force flush to console
+
+                if output == "" and error == "" and process.poll() is not None:
+                    break
+
+            # Wait for the process to complete
+            returncode = process.poll()
+
+            if returncode == 0:
+                return jsonify(
+                    {
+                        "status": "success",
+                        "message": "Market data updated successfully",
+                        "output": "".join(stdout_lines),
+                    }
+                )
+            else:
+                return jsonify(
+                    {
+                        "status": "error",
+                        "message": "Failed to update market data",
+                        "error": "".join(stderr_lines),
+                    }
+                ), 500
+
+        except subprocess.TimeoutExpired:
+            return jsonify(
+                {"status": "error", "message": "Market data update timed out"}
+            ), 500
+        except Exception as e:
+            logger.error(f"Error updating market data: {e}")
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": f"Failed to update market data: {str(e)}",
+                }
+            ), 500
 
 
 # Example usage

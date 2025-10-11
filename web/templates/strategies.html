@@ -94,6 +94,7 @@
                                     <th>策略名称</th>
                                     <th>类型</th>
                                     <th>描述</th>
+                                    <th>上次运行</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
@@ -495,6 +496,7 @@
                 <td>${strategy.name}</td>
                 <td>${getStrategyTypeText(strategy.type)}</td>
                 <td>${strategy.description || ''}</td>
+                <td><span id="strategy-last-execution-${strategy._id}">加载中...</span></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary edit-strategy-btn me-1" data-id="${strategy._id}">
                         <i class="fas fa-edit"></i> 编辑
@@ -521,6 +523,34 @@
                 deleteStrategy(strategyId);
             });
         });
+
+        // Load last execution time for each strategy
+        strategies.forEach(strategy => {
+            loadStrategyLastExecutionTime(strategy._id);
+        });
+    }
+
+    // Load last execution time for a specific strategy
+    function loadStrategyLastExecutionTime(strategyId) {
+        fetch(`/api/strategy-last-execution-time/${strategyId}`)
+            .then(response => response.json())
+            .then(data => {
+                const lastExecutionElement = document.getElementById(`strategy-last-execution-${strategyId}`);
+                if (lastExecutionElement) {
+                    if (data.last_execution_time) {
+                        lastExecutionElement.textContent = data.last_execution_time;
+                    } else {
+                        lastExecutionElement.textContent = '无记录';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error(`Error loading last execution time for strategy ${strategyId}:`, error);
+                const lastExecutionElement = document.getElementById(`strategy-last-execution-${strategyId}`);
+                if (lastExecutionElement) {
+                    lastExecutionElement.textContent = '加载失败';
+                }
+            });
     }
 
     // Get strategy type text
