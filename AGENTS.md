@@ -596,6 +596,17 @@ python -m backtesting.backtester
 - **ENHANCED**: Improved financial data extraction with better field mapping
 - **OPTIMIZED**: Data formatting and conversion for better LLM compatibility
 
+### Web Interface Stock Search Functionality Enhancement
+- **FIXED**: Resolved stock search functionality issues where "润和软件" (300339) and "中科曙光" (603019) were not being found
+- **IDENTIFIED**: Root cause was 1000-stock limit in search logic - now loads all 5680 stocks from database
+- **IMPLEMENTED**: Correct search logic with intelligent input type detection:
+  - Numbers → Stock code search (e.g., "300339" → 润和软件)
+  - Chinese characters → Stock name search (e.g., "润和软件" → 300339)
+  - English letters → Pinyin abbreviation search (e.g., "rhrj" → 润和软件)
+- **ADDED**: Pinyin conversion functionality using `pypinyin` library for automatic Chinese-to-pinyin abbreviation generation
+- **ENHANCED**: Case-insensitive search for all input types
+- **VERIFIED**: Comprehensive testing confirms all search scenarios work correctly
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-06*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-11*
 

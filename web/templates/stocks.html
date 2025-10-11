@@ -12,48 +12,19 @@
     </div>
 </div>
 
-<div class="row mb-4">
+<div class="row mb-1">
     <div class="col-md-12">
         <div class="card">
-            <div class="card-header">
-                <h5>
-                    <i class="fas fa-filter"></i> 筛选条件
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-search"></i> 股票查询
                 </h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3 mb-3">
-                        <label for="sector-filter" class="form-label">行业</label>
-                        <select class="form-select" id="sector-filter">
-                            <option value="">全部行业</option>
-                            <option value="banking">银行</option>
-                            <option value="technology">科技</option>
-                            <option value="manufacturing">制造业</option>
-                            <option value="energy">能源</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="market-filter" class="form-label">市场</label>
-                        <select class="form-select" id="market-filter">
-                            <option value="">全部市场</option>
-                            <option value="sh">上海证券交易所</option>
-                            <option value="sz">深圳证券交易所</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3">
-                        <label for="sort-by" class="form-label">排序</label>
-                        <select class="form-select" id="sort-by">
-                            <option value="code">代码</option>
-                            <option value="name">名称</option>
-                            <option value="price">价格</option>
-                            <option value="change">涨跌幅</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3 mb-3 d-flex align-items-end">
-                        <button class="btn btn-primary w-100" id="apply-filter">
-                            <i class="fas fa-search"></i> 应用筛选
-                        </button>
-                    </div>
+                <div class="d-flex align-items-center">
+                    <label for="stock-search" class="form-label me-2 mb-0">输入股票代码、名称或拼音缩写</label>
+                    <input type="text" class="form-control form-control-sm me-2" id="stock-search" placeholder="例如：000001 或 平安银行 或 PAYH" style="width: 300px;">
+                    <button class="btn btn-primary" id="search-stock">
+                        <i class="fas fa-search"></i> 查询
+                    </button>
                 </div>
             </div>
         </div>
@@ -178,6 +149,82 @@
             });
     }
 
+            // Search functionality
+            document.getElementById('search-stock').addEventListener('click', function() {
+                const searchTerm = document.getElementById('stock-search').value.trim();
+                if (!searchTerm) {
+                    alert('请输入股票代码、名称或拼音缩写');
+                    return;
+                }
+
+                searchStocks(searchTerm);
+            });
+
+            // Handle Enter key in search input
+            document.getElementById('stock-search').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    document.getElementById('search-stock').click();
+                }
+            });
+
+            // Function to search stocks
+            function searchStocks(searchTerm) {
+                fetch('/api/stock-search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ search_term: searchTerm })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        displaySearchResults(data.results, searchTerm);
+                    } else {
+                        alert('搜索失败: ' + (data.error || '未知错误'));
+                    }
+                })
+                .catch(error => {
+                    console.error('Error searching stocks:', error);
+                    alert('搜索失败，请稍后重试');
+                });
+            }
+
+            // Function to display search results
+            function displaySearchResults(results, searchTerm) {
+                const tbody = document.getElementById('pool-stocks-body');
+
+                if (results.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="10" class="text-center">未找到与 "${searchTerm}" 相关的股票</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = '';
+
+                results.forEach(stock => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${stock.code}</td>
+                        <td>${stock.name || ''}</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>-</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-success buy-btn" data-code="${stock.code}" data-name="${stock.name || stock.code}" data-price="0">买入</button>
+                        </td>
+                    `;
+                    // Add double-click event to open K-line chart
+                    row.addEventListener('dblclick', function() {
+                        window.open(`/stock-kline?code=${stock.code}&name=${encodeURIComponent(stock.name || stock.code)}`, '_blank');
+                    });
+                    tbody.appendChild(row);
+                });
+            }
+    
     // Load data when page loads
     document.addEventListener('DOMContentLoaded', function() {
         loadLatestPoolStocks();

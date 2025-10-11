@@ -28,8 +28,35 @@ from agents.weekly_selector import WeeklyStockSelector
 
 from data.mongodb_manager import MongoDBManager
 
+# Import pinyin conversion library
+import pypinyin
+
 # Configure logger
 logger = logging.getLogger(__name__)
+
+
+def get_pinyin_abbreviation(chinese_text: str) -> str:
+    """
+    Convert Chinese text to pinyin abbreviation.
+
+    Args:
+        chinese_text: Chinese text to convert
+
+    Returns:
+        Pinyin abbreviation (e.g., "平安银行" -> "PAYH")
+    """
+    if not chinese_text or not isinstance(chinese_text, str):
+        return ""
+
+    try:
+        # Get pinyin for each character, take first letter of each pinyin
+        pinyin_list = pypinyin.lazy_pinyin(chinese_text, style=pypinyin.Style.FIRST_LETTER)
+        # Convert to uppercase and join
+        abbreviation = ''.join(pinyin_list).upper()
+        return abbreviation
+    except Exception as e:
+        logger.warning(f"Error converting {chinese_text} to pinyin: {e}")
+        return ""
 
 
 def create_app():
@@ -170,6 +197,74 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error getting stock name for {code}: {e}")
             return jsonify({"error": f"Failed to get stock name: {str(e)}"}), 500
+
+    @app.route("/api/stock-search", methods=["POST"])
+    def search_stocks():
+        """Search stocks by code, name, or pinyin abbreviation"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({"error": "Database connection not available"}), 500
+
+            data = request.get_json()
+            search_term = data.get("search_term", "").strip()
+
+            if not search_term:
+                return jsonify({"error": "Search term is required"}), 400
+
+            # Get all stocks from code collection
+            stocks_cursor = app.config["MONGO_DB"].code.find()
+            all_stocks = []
+            for stock in stocks_cursor:
+                all_stocks.append({
+                    "code": stock.get("code", ""),
+                    "name": stock.get("name", ""),
+                    "pinyin": stock.get("pinyin", "")
+                })
+
+            # Filter stocks based on search term with correct logic
+            search_term_lower = search_term.lower()
+            matched_stocks = []
+
+            # Determine search type based on input
+            is_numeric = search_term.isdigit()
+            is_chinese = any('一' <= char <= '鿿' for char in search_term)
+            is_english = search_term.isalpha()
+
+            for stock in all_stocks:
+                # If input is numbers, search by stock code
+                if is_numeric:
+                    if stock["code"].startswith(search_term):
+                        matched_stocks.append(stock)
+                        continue
+
+                # If input is Chinese characters, search by stock name
+                elif is_chinese:
+                    if stock["name"] and search_term in stock["name"]:
+                        matched_stocks.append(stock)
+                        continue
+
+                # If input is English letters, search by pinyin abbreviation
+                elif is_english:
+                    # Generate pinyin abbreviation if not already in database
+                    pinyin_abbr = stock.get("pinyin", "")
+                    if not pinyin_abbr and stock["name"]:
+                        pinyin_abbr = get_pinyin_abbreviation(stock["name"])
+
+                    if pinyin_abbr and search_term_lower in pinyin_abbr.lower():
+                        matched_stocks.append(stock)
+                        continue
+
+            return jsonify({
+                "status": "success",
+                "search_term": search_term,
+                "results": matched_stocks[:50]  # Limit to 50 results
+            }), 200
+
+        except Exception as e:
+            logger.error(f"Error searching stocks: {e}")
+            return jsonify({"error": f"Failed to search stocks: {str(e)}"}), 500
 
     @app.route("/api/stock-price/<code>")
     def get_stock_price(code):
