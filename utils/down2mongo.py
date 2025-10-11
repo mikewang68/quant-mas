@@ -251,7 +251,7 @@ def write_k_daily(db):
             current_index += 1
 
             # Add a small delay after processing each stock to avoid overwhelming the server
-            time.sleep(0.5)
+            # time.sleep(0.5)
 
         except Exception as e:
             error_count += 1

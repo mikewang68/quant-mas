@@ -48,7 +48,11 @@ def test_specific_firecrawl_requirements():
     print("=" * 60)
 
     # Initialize strategy to get FireCrawl configuration
-    strategy = EnhancedPublicOpinionAnalysisStrategyV2()
+    # EnhancedPublicOpinionAnalysisStrategyV2 requires name and params arguments
+    strategy = EnhancedPublicOpinionAnalysisStrategyV2(
+        name="test_enhanced_public_opinion_analysis_strategy_v2",
+        params={}
+    )
 
     # Get FireCrawl configuration
     api_url = strategy.firecrawl_config.get("api_url")
@@ -226,7 +230,10 @@ def test_strategy_methods_with_custom_filtering():
 
     try:
         # Initialize strategy
-        strategy = EnhancedPublicOpinionAnalysisStrategyV2()
+        strategy = EnhancedPublicOpinionAnalysisStrategyV2(
+            name="test_enhanced_public_opinion_analysis_strategy_v2",
+            params={}
+        )
 
         # Test detailed Guba data collection for stock 300339
         stock_code = "300339"

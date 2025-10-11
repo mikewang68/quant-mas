@@ -114,41 +114,48 @@ class LLMFundamentalStrategy(BaseStrategy):
         """
         try:
             import os
+
             # Try multiple possible paths
             possible_paths = [
                 "config/fund_sys_prompt.md",
                 "../config/fund_sys_prompt.md",
                 os.path.join(os.path.dirname(__file__), "../config/fund_sys_prompt.md"),
-                os.path.join(os.path.dirname(os.path.dirname(__file__)), "config/fund_sys_prompt.md")
+                os.path.join(
+                    os.path.dirname(os.path.dirname(__file__)),
+                    "config/fund_sys_prompt.md",
+                ),
             ]
 
             system_prompt_content = None
             for prompt_file_path in possible_paths:
                 try:
-                    with open(prompt_file_path, 'r', encoding='utf-8') as f:
+                    with open(prompt_file_path, "r", encoding="utf-8") as f:
                         system_prompt_content = f.read()
-                        self.log_info(f"Successfully loaded system prompt from: {prompt_file_path}")
+                        self.log_info(
+                            f"Successfully loaded system prompt from: {prompt_file_path}"
+                        )
                         break
                 except FileNotFoundError:
                     continue
 
             if system_prompt_content is None:
-                raise FileNotFoundError("Could not find fund_sys_prompt.md in any of the expected locations")
+                raise FileNotFoundError(
+                    "Could not find fund_sys_prompt.md in any of the expected locations"
+                )
 
             # Convert to JSON format for LLM
-            system_prompt = {
-                "role": "system",
-                "content": system_prompt_content
-            }
+            system_prompt = {"role": "system", "content": system_prompt_content}
 
-            self.log_info("Successfully loaded system prompt from config file and converted to JSON format")
+            self.log_info(
+                "Successfully loaded system prompt from config file and converted to JSON format"
+            )
             return system_prompt
         except Exception as e:
             self.log_error(f"Error loading system prompt from config file: {e}")
             # Fallback to default system prompt in JSON format
             return {
                 "role": "system",
-                "content": "你是一个专业的股票基本面分析师，请根据提供的财务数据进行详细分析。"
+                "content": "你是一个专业的股票基本面分析师，请根据提供的财务数据进行详细分析。",
             }
 
     def _load_llm_config_from_db(
@@ -185,19 +192,25 @@ class LLMFundamentalStrategy(BaseStrategy):
 
             if config_record and "llm_configs" in config_record:
                 llm_configs = config_record["llm_configs"]
+                self.log_info(
+                    f"Found {len(llm_configs)} LLM configurations in database"
+                )
 
                 # If a specific config name is provided, find it
                 if config_name:
                     for config_item in llm_configs:
                         if config_item.get("name") == config_name:
+                            self.log_info(f"Using LLM configuration: {config_name}")
                             return self._build_llm_config(config_item)
 
                 # If no specific config name or not found, use the first one
                 if llm_configs:
+                    first_config = llm_configs[0]
+                    config_name_used = first_config.get("name", "unknown")
                     self.log_warning(
-                        f"LLM configuration '{config_name}' not found, using first available configuration"
+                        f"LLM configuration '{config_name}' not found, using first available configuration: {config_name_used}"
                     )
-                    return self._build_llm_config(llm_configs[0])
+                    return self._build_llm_config(first_config)
 
             # Fallback to default configuration
             self.log_warning(
@@ -306,7 +319,9 @@ class LLMFundamentalStrategy(BaseStrategy):
                         f"All {max_retries} attempts failed for stock {stock_code}: {e}"
                     )
                     # Return a fallback analysis result instead of just error message
-                    return self._create_fallback_analysis(stock_code, financial_ratios, industry_info)
+                    return self._create_fallback_analysis(
+                        stock_code, financial_ratios, industry_info
+                    )
 
     def get_stock_info(self, stock_code: str) -> Dict[str, Any]:
         """
@@ -333,13 +348,13 @@ class LLMFundamentalStrategy(BaseStrategy):
 
     def get_financial_data(self, stock_code: str) -> Dict[str, Any]:
         """
-        Get financial data using akshare.
+        Get financial data using akshare, only getting the latest date's first record.
 
         Args:
             stock_code: Stock code
 
         Returns:
-            Dictionary with financial data
+            Dictionary with financial data (only latest period)
         """
         try:
             # Get key financial indicators
@@ -347,28 +362,33 @@ class LLMFundamentalStrategy(BaseStrategy):
                 financial_indicators = ak.stock_financial_abstract_ths(
                     symbol=stock_code
                 )
-                # Convert to the expected format
+                # Convert to the expected format - only get latest period
                 if not financial_indicators.empty:
-                    # Transpose the data to get items as keys
+                    # Get the latest record (first row)
+                    latest_record = financial_indicators.iloc[-1]
                     financial_indicators_dict = {}
                     for col in financial_indicators.columns:
                         if col != "报告期":
-                            financial_indicators_dict[col] = financial_indicators[col].to_dict()
+                            financial_indicators_dict[col] = latest_record[col]
                 else:
                     financial_indicators_dict = {}
             except Exception as e:
-                self.log_warning(f"Error getting financial indicators for {stock_code}: {e}")
+                self.log_warning(
+                    f"Error getting financial indicators for {stock_code}: {e}"
+                )
                 financial_indicators_dict = {}
 
             # Get balance sheet data
             try:
                 balance_sheet = ak.stock_financial_debt_ths(symbol=stock_code)
-                # Convert to the expected format
+                # Convert to the expected format - only get latest period
                 if not balance_sheet.empty:
+                    # Get the latest record (first row)
+                    latest_record = balance_sheet.iloc[0]
                     balance_sheet_dict = {}
                     for col in balance_sheet.columns:
                         if col != "报告期":
-                            balance_sheet_dict[col] = balance_sheet[col].to_dict()
+                            balance_sheet_dict[col] = latest_record[col]
                 else:
                     balance_sheet_dict = {}
             except Exception as e:
@@ -378,27 +398,33 @@ class LLMFundamentalStrategy(BaseStrategy):
             # Get income statement data
             try:
                 income_statement = ak.stock_financial_benefit_ths(symbol=stock_code)
-                # Convert to the expected format
+                # Convert to the expected format - only get latest period
                 if not income_statement.empty:
+                    # Get the latest record (first row)
+                    latest_record = income_statement.iloc[0]
                     income_statement_dict = {}
                     for col in income_statement.columns:
                         if col != "报告期":
-                            income_statement_dict[col] = income_statement[col].to_dict()
+                            income_statement_dict[col] = latest_record[col]
                 else:
                     income_statement_dict = {}
             except Exception as e:
-                self.log_warning(f"Error getting income statement for {stock_code}: {e}")
+                self.log_warning(
+                    f"Error getting income statement for {stock_code}: {e}"
+                )
                 income_statement_dict = {}
 
             # Get cash flow statement data
             try:
                 cash_flow = ak.stock_financial_cash_ths(symbol=stock_code)
-                # Convert to the expected format
+                # Convert to the expected format - only get latest period
                 if not cash_flow.empty:
+                    # Get the latest record (first row)
+                    latest_record = cash_flow.iloc[0]
                     cash_flow_dict = {}
                     for col in cash_flow.columns:
                         if col != "报告期":
-                            cash_flow_dict[col] = cash_flow[col].to_dict()
+                            cash_flow_dict[col] = latest_record[col]
                 else:
                     cash_flow_dict = {}
             except Exception as e:
@@ -479,7 +505,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             current_assets = self.get_latest_value(balance_sheet, "流动资产合计")
             current_liabilities = self.get_latest_value(balance_sheet, "流动负债合计")
             if current_liabilities and current_liabilities != 0:
-                return current_assets / current_liabilities
+                return round(current_assets / current_liabilities, 2)
         except Exception:
             pass
         return 0.0
@@ -491,7 +517,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             inventory = self.get_latest_value(balance_sheet, "存货")
             current_liabilities = self.get_latest_value(balance_sheet, "流动负债合计")
             if current_liabilities and current_liabilities != 0:
-                return (current_assets - inventory) / current_liabilities
+                return round((current_assets - inventory) / current_liabilities, 2)
         except Exception:
             pass
         return 0.0
@@ -500,9 +526,11 @@ class LLMFundamentalStrategy(BaseStrategy):
         """Calculate Return on Equity"""
         try:
             net_income = self.get_latest_value(income_statement, "*净利润")
-            total_equity = self.get_latest_value(balance_sheet, "*所有者权益（或股东权益）合计")
+            total_equity = self.get_latest_value(
+                balance_sheet, "*所有者权益（或股东权益）合计"
+            )
             if total_equity and total_equity != 0:
-                return net_income / total_equity
+                return round(net_income / total_equity, 2)
         except Exception:
             pass
         return 0.0
@@ -513,7 +541,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             net_income = self.get_latest_value(income_statement, "*净利润")
             total_assets = self.get_latest_value(balance_sheet, "*资产合计")
             if total_assets and total_assets != 0:
-                return net_income / total_assets
+                return round(net_income / total_assets, 2)
         except Exception:
             pass
         return 0.0
@@ -524,7 +552,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             revenue = self.get_latest_value(income_statement, "其中：营业收入")
             cogs = self.get_latest_value(income_statement, "其中：营业成本")
             if revenue and revenue != 0:
-                return (revenue - cogs) / revenue
+                return round((revenue - cogs) / revenue, 2)
         except Exception:
             pass
         return 0.0
@@ -535,7 +563,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             net_income = self.get_latest_value(income_statement, "*净利润")
             revenue = self.get_latest_value(income_statement, "其中：营业收入")
             if revenue and revenue != 0:
-                return net_income / revenue
+                return round(net_income / revenue, 2)
         except Exception:
             pass
         return 0.0
@@ -544,9 +572,11 @@ class LLMFundamentalStrategy(BaseStrategy):
         """Calculate debt to equity ratio"""
         try:
             total_liabilities = self.get_latest_value(balance_sheet, "*负债合计")
-            total_equity = self.get_latest_value(balance_sheet, "*所有者权益（或股东权益）合计")
+            total_equity = self.get_latest_value(
+                balance_sheet, "*所有者权益（或股东权益）合计"
+            )
             if total_equity and total_equity != 0:
-                return total_liabilities / total_equity
+                return round(total_liabilities / total_equity, 2)
         except Exception:
             pass
         return 0.0
@@ -575,7 +605,7 @@ class LLMFundamentalStrategy(BaseStrategy):
                 and (total_assets_begin + total_assets_end) != 0
             ):
                 avg_assets = (total_assets_begin + total_assets_end) / 2
-                return revenue / avg_assets
+                return round(revenue / avg_assets, 2)
         except Exception:
             pass
         return 0.0
@@ -604,7 +634,9 @@ class LLMFundamentalStrategy(BaseStrategy):
         """Calculate revenue growth rate"""
         try:
             revenue_latest = self.get_latest_value(income_statement, "其中：营业收入")
-            revenue_previous = self.get_earlier_value(income_statement, "其中：营业收入")
+            revenue_previous = self.get_earlier_value(
+                income_statement, "其中：营业收入"
+            )
             if revenue_previous and revenue_previous != 0:
                 return (revenue_latest - revenue_previous) / revenue_previous
         except Exception:
@@ -625,68 +657,34 @@ class LLMFundamentalStrategy(BaseStrategy):
     def get_latest_value(self, data_dict: Dict, key: str) -> float:
         """Get the latest available value for a key in the data dictionary"""
         if key in data_dict:
-            values = list(data_dict[key].values())
-            if values:
-                # Get the most recent non-zero value
-                for value in reversed(values):
-                    try:
-                        # Handle string values with units like "万" or "亿"
-                        if isinstance(value, str):
-                            # Remove units and convert to float
-                            if "万" in value:
-                                val = float(value.replace("万", "")) * 10000
-                            elif "亿" in value:
-                                val = float(value.replace("亿", "")) * 100000000
-                            elif "%" in value:
-                                val = float(value.replace("%", "")) / 100
-                            else:
-                                val = float(value)
-                        else:
-                            val = float(value)
-
-                        if val != 0:
-                            return val
-                    except (ValueError, TypeError):
-                        continue
-                # If no non-zero value, return the last value
-                try:
-                    last_value = values[-1]
-                    if isinstance(last_value, str):
-                        if "万" in last_value:
-                            return float(last_value.replace("万", "")) * 10000
-                        elif "亿" in last_value:
-                            return float(last_value.replace("亿", "")) * 100000000
-                        elif "%" in last_value:
-                            return float(last_value.replace("%", "")) / 100
-                        else:
-                            return float(last_value)
+            value = data_dict[key]
+            try:
+                # Handle string values with units like "万" or "亿"
+                if isinstance(value, str):
+                    # Remove units and convert to float
+                    if "万" in value:
+                        val = float(value.replace("万", "")) * 10000
+                    elif "亿" in value:
+                        val = float(value.replace("亿", "")) * 100000000
+                    elif "%" in value:
+                        val = float(value.replace("%", "")) / 100
                     else:
-                        return float(last_value)
-                except (ValueError, TypeError):
+                        val = float(value)
+                else:
+                    val = float(value)
+
+                if val != 0:
+                    return round(val, 2)
+                else:
                     return 0.0
+            except (ValueError, TypeError):
+                return 0.0
         return 0.0
 
     def get_earlier_value(self, data_dict: Dict, key: str) -> float:
         """Get the earlier available value for a key in the data dictionary"""
-        if key in data_dict:
-            values = list(data_dict[key].values())
-            if len(values) > 1:
-                # Get the second to last value
-                try:
-                    earlier_value = values[-2]
-                    if isinstance(earlier_value, str):
-                        if "万" in earlier_value:
-                            return float(earlier_value.replace("万", "")) * 10000
-                        elif "亿" in earlier_value:
-                            return float(earlier_value.replace("亿", "")) * 100000000
-                        elif "%" in earlier_value:
-                            return float(earlier_value.replace("%", "")) / 100
-                        else:
-                            return float(earlier_value)
-                    else:
-                        return float(earlier_value)
-                except (ValueError, TypeError):
-                    return 0.0
+        # Since we're now only getting the latest data, we can't get earlier values
+        # Return 0.0 as we don't have historical data for comparison
         return 0.0
 
     def get_industry_info(self, stock_code: str) -> Dict[str, Any]:
@@ -741,9 +739,6 @@ class LLMFundamentalStrategy(BaseStrategy):
         Returns:
             Analysis prompt in JSON format for LLM
         """
-        # Extract only the most recent financial data to reduce token usage
-        simplified_financial_data = self._simplify_financial_data(financial_data)
-
         # Simplify financial ratios to only show key metrics
         simplified_ratios = self._simplify_financial_ratios(financial_ratios)
 
@@ -762,17 +757,14 @@ class LLMFundamentalStrategy(BaseStrategy):
 行业对比:
 {json.dumps(simplified_industry, ensure_ascii=False, indent=2)}
 
-最近财务数据:
-{json.dumps(simplified_financial_data, ensure_ascii=False, indent=2)}
+完整财务数据:
+{json.dumps(financial_data, ensure_ascii=False, indent=2)}
 """
 
         # Convert to JSON format for LLM
-        user_prompt = {
-            "role": "user",
-            "content": user_prompt_content
-        }
+        user_prompt = {"role": "user", "content": user_prompt_content}
 
-        self.log_info("Successfully created user prompt in JSON format")
+        self.log_info("Successfully created user prompt with complete financial data")
         return user_prompt
 
     def _simplify_financial_data(self, financial_data: Dict) -> Dict:
@@ -801,9 +793,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             latest_values = {}
             for indicator in key_indicators:
                 if indicator in financial_indicators:
-                    values = list(financial_indicators[indicator].values())
-                    if values:
-                        latest_values[indicator] = values[-1]  # Most recent value
+                    latest_values[indicator] = financial_indicators[indicator]
             simplified["关键财务指标"] = latest_values
 
         # Simplify balance sheet - only show key items
@@ -819,9 +809,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             latest_balance = {}
             for item in key_balance_items:
                 if item in balance_sheet:
-                    values = list(balance_sheet[item].values())
-                    if values:
-                        latest_balance[item] = values[-1]
+                    latest_balance[item] = balance_sheet[item]
             simplified["资产负债表关键项目"] = latest_balance
 
         # Simplify income statement - only show key items
@@ -831,9 +819,7 @@ class LLMFundamentalStrategy(BaseStrategy):
             latest_income = {}
             for item in key_income_items:
                 if item in income_statement:
-                    values = list(income_statement[item].values())
-                    if values:
-                        latest_income[item] = values[-1]
+                    latest_income[item] = income_statement[item]
             simplified["利润表关键项目"] = latest_income
 
         return simplified
@@ -932,16 +918,14 @@ class LLMFundamentalStrategy(BaseStrategy):
 
             if provider == "google":  # Gemini API
                 # For Gemini, we need to combine system and user prompts
-                combined_content = f"{system_prompt['content']}\n\n{user_prompt['content']}"
+                combined_content = (
+                    f"{system_prompt['content']}\n\n{user_prompt['content']}"
+                )
                 payload = {
                     "contents": [
                         {
                             "role": "user",
-                            "parts": [
-                                {
-                                    "text": combined_content
-                                }
-                            ],
+                            "parts": [{"text": combined_content}],
                         }
                     ],
                     "generationConfig": {
@@ -959,10 +943,7 @@ class LLMFundamentalStrategy(BaseStrategy):
                 # For OpenAI-compatible APIs, we can use separate system and user messages
                 payload = {
                     "model": self.llm_config.get("model", "deepseek-chat"),
-                    "messages": [
-                        system_prompt,
-                        user_prompt
-                    ],
+                    "messages": [system_prompt, user_prompt],
                     "temperature": 0.7,
                     "max_tokens": 2000,
                 }
@@ -973,10 +954,7 @@ class LLMFundamentalStrategy(BaseStrategy):
                 # Default to OpenAI-compatible format for most LLM APIs
                 payload = {
                     "model": self.llm_config.get("model", "default"),
-                    "messages": [
-                        system_prompt,
-                        user_prompt
-                    ],
+                    "messages": [system_prompt, user_prompt],
                     "temperature": 0.7,
                     "max_tokens": 2000,
                 }
@@ -985,13 +963,15 @@ class LLMFundamentalStrategy(BaseStrategy):
                 api_url_with_key = api_url
 
             # Log the payload being sent
-            self.log_info(f"Sending payload to LLM API with {len(payload.get('messages', []))} messages")
+            self.log_info(
+                f"Sending payload to LLM API with {len(payload.get('messages', []))} messages"
+            )
 
             # 输出用户提示词到控制台，参考增强舆情分析策略v2的实现方式
             user_prompt_content = ""
             for msg in payload.get("messages", []):
-                if msg.get('role') == 'user':
-                    user_prompt_content = msg.get('content', '')
+                if msg.get("role") == "user":
+                    user_prompt_content = msg.get("content", "")
                     break
 
             if user_prompt_content:
@@ -1038,19 +1018,19 @@ class LLMFundamentalStrategy(BaseStrategy):
                 # More comprehensive think content filtering
                 # First try to remove the entire think block
                 think_patterns = [
-                    r'<think>.*?</think>',  # Standard think tags
-                    r'首先，我需要.*?\n\n',  # Chinese think patterns
-                    r'首先.*?\n\n',
-                    r'<think>.*?(?=\n\n|$)',  # Think content until double newline or end
-                    r'首先.*?(?=\n\n|$)'  # Chinese think until double newline or end
+                    r"<think>.*?</think>",  # Standard think tags
+                    r"首先，我需要.*?\n\n",  # Chinese think patterns
+                    r"首先.*?\n\n",
+                    r"<think>.*?(?=\n\n|$)",  # Think content until double newline or end
+                    r"首先.*?(?=\n\n|$)",  # Chinese think until double newline or end
                 ]
 
                 for pattern in think_patterns:
-                    content = re.sub(pattern, '', content, flags=re.DOTALL)
+                    content = re.sub(pattern, "", content, flags=re.DOTALL)
 
                 # Also remove any remaining think-related text
-                content = re.sub(r'^\s*<think>\s*', '', content)
-                content = re.sub(r'\s*</think>\s*$', '', content)
+                content = re.sub(r"^\s*<think>\s*", "", content)
+                content = re.sub(r"\s*</think>\s*$", "", content)
 
                 # Remove any leading/trailing whitespace
                 content = content.strip()
@@ -1076,7 +1056,7 @@ class LLMFundamentalStrategy(BaseStrategy):
                     self.log_info("Successfully parsed LLM JSON response")
 
                     # Extract score and value from LLM response
-                    llm_score = float(analysis_result.get("score", 0))
+                    llm_score = round(float(analysis_result.get("score", 0)), 2)
                     llm_value = analysis_result.get(
                         "value", analysis_result.get("analysis", content)
                     )
@@ -1100,7 +1080,9 @@ class LLMFundamentalStrategy(BaseStrategy):
                                     try:
                                         nested_score = float(nested_result["score"])
                                         # Ensure score is in valid range [0, 1]
-                                        llm_score = max(0.0, min(1.0, nested_score))
+                                        llm_score = round(
+                                            max(0.0, min(1.0, nested_score)), 2
+                                        )
                                     except (ValueError, TypeError):
                                         pass  # Keep original score if parsing fails
                         except json.JSONDecodeError:
@@ -1123,8 +1105,8 @@ class LLMFundamentalStrategy(BaseStrategy):
                                                     nested_result["score"]
                                                 )
                                                 # Ensure score is in valid range [0, 1]
-                                                llm_score = max(
-                                                    0.0, min(1.0, nested_score)
+                                                llm_score = round(
+                                                    max(0.0, min(1.0, nested_score)), 2
                                                 )
                                             except (ValueError, TypeError):
                                                 pass  # Keep original score if parsing fails
@@ -1195,9 +1177,11 @@ class LLMFundamentalStrategy(BaseStrategy):
                             extracted_score = float(score_matches[0])
                             # If score is in 0-100 range, normalize to 0-1 range
                             if 0 <= extracted_score <= 100:
-                                llm_score = max(0.0, min(1.0, extracted_score / 100.0))
+                                llm_score = round(
+                                    max(0.0, min(1.0, extracted_score / 100.0)), 2
+                                )
                             elif 0 <= extracted_score <= 1:
-                                llm_score = extracted_score
+                                llm_score = round(extracted_score, 2)
                         except ValueError:
                             pass  # If we can't parse the extracted score, keep default
 
@@ -1299,7 +1283,9 @@ class LLMFundamentalStrategy(BaseStrategy):
             self.log_error(f"Error getting LLM analysis: {e}")
             return {"score": 0.0, "value": f"LLM分析失败: {str(e)}"}
 
-    def _create_fallback_analysis(self, stock_code: str, financial_ratios: Dict, industry_info: Dict) -> Dict[str, Any]:
+    def _create_fallback_analysis(
+        self, stock_code: str, financial_ratios: Dict, industry_info: Dict
+    ) -> Dict[str, Any]:
         """
         Create a fallback analysis when LLM fails to return proper JSON.
 
@@ -1376,33 +1362,27 @@ class LLMFundamentalStrategy(BaseStrategy):
 
         # Create fallback JSON structure
         fallback_json = {
-            "score": score,
+            "score": round(score, 2),
             "reason": "，".join(reasons),
             "details": {
                 "profitability": {
-                    "score": max(0.0, min(1.0, roe * 5)),
-                    "reason": f"ROE: {roe:.2%}"
+                    "score": round(max(0.0, min(1.0, roe * 5)), 2),
+                    "reason": f"ROE: {roe:.2%}",
                 },
                 "solvency": {
-                    "score": max(0.0, min(1.0, 1 - debt_to_equity / 2)),
-                    "reason": f"负债权益比: {debt_to_equity:.2f}"
+                    "score": round(max(0.0, min(1.0, 1 - debt_to_equity / 2)), 2),
+                    "reason": f"负债权益比: {debt_to_equity:.2f}",
                 },
                 "efficiency": {
-                    "score": max(0.0, min(1.0, asset_turnover * 2)),
-                    "reason": f"资产周转率: {asset_turnover:.2f}"
+                    "score": round(max(0.0, min(1.0, asset_turnover * 2)), 2),
+                    "reason": f"资产周转率: {asset_turnover:.2f}",
                 },
                 "growth": {
-                    "score": max(0.0, min(1.0, 0.5 + revenue_growth / 2)),
-                    "reason": f"收入增长率: {revenue_growth:.2%}"
+                    "score": round(max(0.0, min(1.0, 0.5 + revenue_growth / 2)), 2),
+                    "reason": f"收入增长率: {revenue_growth:.2%}",
                 },
-                "industry_comparison": {
-                    "score": 0.5,
-                    "reason": "行业对比数据不足"
-                },
-                "risk": {
-                    "score": 0.5,
-                    "reason": "风险因素分析数据不足"
-                }
+                "industry_comparison": {"score": 0.5, "reason": "行业对比数据不足"},
+                "risk": {"score": 0.5, "reason": "风险因素分析数据不足"},
             },
             "weights": {
                 "profitability": 0.25,
@@ -1410,18 +1390,22 @@ class LLMFundamentalStrategy(BaseStrategy):
                 "efficiency": 0.15,
                 "growth": 0.2,
                 "industry_comparison": 0.15,
-                "risk": 0.1
+                "risk": 0.1,
             },
             "confidence_level": 0.6,
             "analysis_summary": f"基于财务比率的自动分析，{reasons[-1] if reasons else '数据不足'}",
-            "recommendation": "买入" if score > 0.7 else "卖出" if score < 0.3 else "观望",
+            "recommendation": "买入"
+            if score > 0.7
+            else "卖出"
+            if score < 0.3
+            else "观望",
             "risk_factors": ["LLM分析失败", "使用自动分析"],
-            "key_strengths": ["财务数据可用", "自动评分"]
+            "key_strengths": ["财务数据可用", "自动评分"],
         }
 
         return {
-            "score": score,
-            "value": json.dumps(fallback_json, ensure_ascii=False)
+            "score": round(score, 2),
+            "value": json.dumps(fallback_json, ensure_ascii=False),
         }
 
     def _fix_json_string(self, json_string: str) -> str:
