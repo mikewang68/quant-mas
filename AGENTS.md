@@ -117,6 +117,14 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **VERIFICATION**: Created and ran comprehensive test scripts to verify all functionality works correctly
 - **FORMAL PROGRAM INTEGRATION**: Confirmed that formal running program (`utils.run_public_opinion_selector`) now uses the fixed code
 
+### Finance Data Update Enhancement with Duplicate Key Handling
+- **COMPLETED**: Enhanced `update_finance_data` function in down2mongo.py with robust duplicate key handling
+- **DUPLICATE DETECTION**: Identified that AkShare profit forecast data contains 180 duplicate stock codes (3,005 total records, 2,825 unique codes)
+- **DATA DEDUPLICATION**: Implemented automatic deduplication logic using `drop_duplicates(subset=['代码'], keep='first')`
+- **PRIORITIZATION**: Added sorting by '序号' in descending order to keep the latest records for each stock
+- **VERIFICATION**: Successfully tested and confirmed that function now correctly handles duplicate keys and writes 2,825 unique records
+- **DATABASE INTEGRITY**: Ensured each stock code is written only once to maintain database integrity
+
 ### Enhanced Public Opinion Analysis Strategy V2 Implementation
 - Successfully implemented new Enhanced Public Opinion Analysis Strategy V2 with expanded data sources
 - Added support for Eastmoney Guba (股吧) data collection including user focus index, institutional ratings, and participation data
@@ -195,6 +203,24 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Implemented exponential backoff (1s, 2s, 4s delays) to prevent overwhelming LLM services
 - When all retries fail, return default score of 0.0 to ensure continuity
 - Updated documentation to reflect the new retry logic and error handling
+
+### LLM Fundamental Strategy Financial Ratio Calculation Enhancement
+- **COMPREHENSIVE FIX**: Fixed multiple issues in LLM Fundamental Strategy financial ratio calculations
+- **FIELD NAME CORRECTION**: Corrected field name mismatches between calculation methods and actual database fields
+- **GROWTH RATE CALCULATION**: Fixed revenue and earnings growth calculations to use performance report YoY data instead of missing historical data
+- **LIQUIDITY RATIOS**: Fixed current ratio and quick ratio calculations using available balance sheet fields (cash + receivables + inventory / payables + advance receipts)
+- **ADDITIONAL METRICS**: Added 8 new important financial metrics:
+  - Operating Margin (营业利润率)
+  - Cash Ratio (现金比率)
+  - Cash Flow Ratio (现金流量比率)
+  - Interest Coverage (利息保障倍数)
+  - Receivables Turnover (应收账款周转率)
+  - Inventory Turnover (存货周转率)
+  - EPS (每股收益)
+  - Book Value per Share (每股净资产)
+- **CHINESE DISPLAY**: All financial ratios now display in Chinese for better readability
+- **DATA SOURCE VERIFICATION**: Confirmed all calculations use correct fields from fin_yjbb, fin_zcfz, fin_lrb, and fin_xjll datasets
+- **COMPLETE COVERAGE**: Now provides 18 core financial ratios covering profitability, liquidity, leverage, efficiency, growth, and per-share metrics
 
 ### Volume Breakout Strategy Implementation
 - Successfully implemented new Volume Breakout strategy following established patterns

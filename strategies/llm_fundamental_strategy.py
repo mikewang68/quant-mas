@@ -294,9 +294,16 @@ class LLMFundamentalStrategy(BaseStrategy):
                 # Get industry information for comparison
                 industry_info = self.get_industry_info(stock_code)
 
+                # Get profit forecast data
+                profit_forecast = self.get_profit_forecast(stock_code)
+
                 # Combine all data for LLM analysis
                 analysis_prompt = self.create_analysis_prompt(
-                    stock_info, financial_data, financial_ratios, industry_info
+                    stock_info,
+                    financial_data,
+                    financial_ratios,
+                    industry_info,
+                    profit_forecast,
                 )
 
                 # Get LLM analysis with increased timeout
@@ -325,30 +332,59 @@ class LLMFundamentalStrategy(BaseStrategy):
 
     def get_stock_info(self, stock_code: str) -> Dict[str, Any]:
         """
-        Get basic stock information using akshare.
+        Get basic stock information from code collection in MongoDB.
 
         Args:
             stock_code: Stock code
 
         Returns:
-            Dictionary with stock information
+            Dictionary with stock information including industry, PE, PB
         """
         try:
-            # Get stock name and basic info
-            stock_info = ak.stock_individual_info_em(symbol=stock_code)
-            info_dict = {}
-            if not stock_info.empty:
-                for _, row in stock_info.iterrows():
-                    info_dict[row["item"]] = row["value"]
+            # Load MongoDB configuration
+            mongodb_config = MongoDBConfig()
+            config = mongodb_config.get_mongodb_config()
 
-            return info_dict
+            # Connect to MongoDB
+            if config.get("username") and config.get("password"):
+                # With authentication
+                uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={config.get('auth_database', 'admin')}"
+            else:
+                # Without authentication
+                uri = f"mongodb://{config['host']}:{config['port']}/"
+
+            client = MongoClient(uri)
+            db = client["stock"]  # Use stock database
+            code_collection = db["code"]
+
+            # Find stock by code
+            stock_record = code_collection.find_one({"code": stock_code})
+
+            if stock_record:
+                info_dict = {
+                    "代码": stock_record.get("code", ""),
+                    "名称": stock_record.get("name", ""),
+                    "行业": stock_record.get("industry", ""),
+                    "市盈率": stock_record.get("PE", 0.0),
+                    "市净率": stock_record.get("PB", 0.0),
+                }
+                self.log_info(
+                    f"Successfully retrieved stock info for {stock_code} from code collection"
+                )
+                return info_dict
+            else:
+                self.log_warning(f"Stock {stock_code} not found in code collection")
+                return {}
+
         except Exception as e:
-            self.log_warning(f"Error getting stock info for {stock_code}: {e}")
+            self.log_warning(
+                f"Error getting stock info for {stock_code} from code collection: {e}"
+            )
             return {}
 
     def get_financial_data(self, stock_code: str) -> Dict[str, Any]:
         """
-        Get financial data using akshare, only getting the latest date's first record.
+        Get financial data using akshare batch data fetching.
 
         Args:
             stock_code: Stock code
@@ -357,37 +393,82 @@ class LLMFundamentalStrategy(BaseStrategy):
             Dictionary with financial data (only latest period)
         """
         try:
-            # Get key financial indicators
+            # Initialize batch datasets (will be populated on first call)
+            if not hasattr(self, "_balance_sheet_data"):
+                self._balance_sheet_data = None
+                self._income_statement_data = None
+                self._cash_flow_data = None
+                self._performance_report_data = None
+
+            # Get performance report data from batch dataset
             try:
-                financial_indicators = ak.stock_financial_abstract_ths(
-                    symbol=stock_code
-                )
+                if self._performance_report_data is None:
+                    self.log_info(
+                        "Fetching batch performance report data from MongoDB fin_yjbb collection"
+                    )
+                    # Get data from MongoDB fin_yjbb collection
+                    mongodb_config = MongoDBConfig()
+                    config = mongodb_config.get_mongodb_config()
+                    if config.get("username") and config.get("password"):
+                        uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={config.get('auth_database', 'admin')}"
+                    else:
+                        uri = f"mongodb://{config['host']}:{config['port']}/"
+                    client = MongoClient(uri)
+                    db = client["stock"]
+                    cursor = db["fin_yjbb"].find({})
+                    self._performance_report_data = pd.DataFrame(list(cursor))
+
+                # Extract specific stock data from batch dataset
+                stock_performance_report = self._performance_report_data[
+                    self._performance_report_data["股票代码"] == stock_code
+                ]
+
                 # Convert to the expected format - only get latest period
-                if not financial_indicators.empty:
+                if not stock_performance_report.empty:
                     # Get the latest record (first row)
-                    latest_record = financial_indicators.iloc[-1]
-                    financial_indicators_dict = {}
-                    for col in financial_indicators.columns:
-                        if col != "报告期":
-                            financial_indicators_dict[col] = latest_record[col]
+                    latest_record = stock_performance_report.iloc[0]
+                    performance_report_dict = {}
+                    for col in stock_performance_report.columns:
+                        if col != "股票代码":
+                            performance_report_dict[col] = latest_record[col]
                 else:
-                    financial_indicators_dict = {}
+                    performance_report_dict = {}
             except Exception as e:
                 self.log_warning(
-                    f"Error getting financial indicators for {stock_code}: {e}"
+                    f"Error getting performance report for {stock_code}: {e}"
                 )
-                financial_indicators_dict = {}
+                performance_report_dict = {}
 
-            # Get balance sheet data
+            # Get balance sheet data from batch dataset
             try:
-                balance_sheet = ak.stock_financial_debt_ths(symbol=stock_code)
+                if self._balance_sheet_data is None:
+                    self.log_info(
+                        "Fetching batch balance sheet data from MongoDB fin_zcfz collection"
+                    )
+                    # Get data from MongoDB fin_zcfz collection
+                    mongodb_config = MongoDBConfig()
+                    config = mongodb_config.get_mongodb_config()
+                    if config.get("username") and config.get("password"):
+                        uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={config.get('auth_database', 'admin')}"
+                    else:
+                        uri = f"mongodb://{config['host']}:{config['port']}/"
+                    client = MongoClient(uri)
+                    db = client["stock"]
+                    cursor = db["fin_zcfz"].find({})
+                    self._balance_sheet_data = pd.DataFrame(list(cursor))
+
+                # Extract specific stock data from batch dataset
+                stock_balance_sheet = self._balance_sheet_data[
+                    self._balance_sheet_data["股票代码"] == stock_code
+                ]
+
                 # Convert to the expected format - only get latest period
-                if not balance_sheet.empty:
+                if not stock_balance_sheet.empty:
                     # Get the latest record (first row)
-                    latest_record = balance_sheet.iloc[0]
+                    latest_record = stock_balance_sheet.iloc[0]
                     balance_sheet_dict = {}
-                    for col in balance_sheet.columns:
-                        if col != "报告期":
+                    for col in stock_balance_sheet.columns:
+                        if col != "股票代码":
                             balance_sheet_dict[col] = latest_record[col]
                 else:
                     balance_sheet_dict = {}
@@ -395,16 +476,36 @@ class LLMFundamentalStrategy(BaseStrategy):
                 self.log_warning(f"Error getting balance sheet for {stock_code}: {e}")
                 balance_sheet_dict = {}
 
-            # Get income statement data
+            # Get income statement data from batch dataset
             try:
-                income_statement = ak.stock_financial_benefit_ths(symbol=stock_code)
+                if self._income_statement_data is None:
+                    self.log_info(
+                        "Fetching batch income statement data from MongoDB fin_lrb collection"
+                    )
+                    # Get data from MongoDB fin_lrb collection
+                    mongodb_config = MongoDBConfig()
+                    config = mongodb_config.get_mongodb_config()
+                    if config.get("username") and config.get("password"):
+                        uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={config.get('auth_database', 'admin')}"
+                    else:
+                        uri = f"mongodb://{config['host']}:{config['port']}/"
+                    client = MongoClient(uri)
+                    db = client["stock"]
+                    cursor = db["fin_lrb"].find({})
+                    self._income_statement_data = pd.DataFrame(list(cursor))
+
+                # Extract specific stock data from batch dataset
+                stock_income_statement = self._income_statement_data[
+                    self._income_statement_data["股票代码"] == stock_code
+                ]
+
                 # Convert to the expected format - only get latest period
-                if not income_statement.empty:
+                if not stock_income_statement.empty:
                     # Get the latest record (first row)
-                    latest_record = income_statement.iloc[0]
+                    latest_record = stock_income_statement.iloc[0]
                     income_statement_dict = {}
-                    for col in income_statement.columns:
-                        if col != "报告期":
+                    for col in stock_income_statement.columns:
+                        if col != "股票代码":
                             income_statement_dict[col] = latest_record[col]
                 else:
                     income_statement_dict = {}
@@ -414,16 +515,36 @@ class LLMFundamentalStrategy(BaseStrategy):
                 )
                 income_statement_dict = {}
 
-            # Get cash flow statement data
+            # Get cash flow statement data from batch dataset
             try:
-                cash_flow = ak.stock_financial_cash_ths(symbol=stock_code)
+                if self._cash_flow_data is None:
+                    self.log_info(
+                        "Fetching batch cash flow data from MongoDB fin_xjll collection"
+                    )
+                    # Get data from MongoDB fin_xjll collection
+                    mongodb_config = MongoDBConfig()
+                    config = mongodb_config.get_mongodb_config()
+                    if config.get("username") and config.get("password"):
+                        uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={config.get('auth_database', 'admin')}"
+                    else:
+                        uri = f"mongodb://{config['host']}:{config['port']}/"
+                    client = MongoClient(uri)
+                    db = client["stock"]
+                    cursor = db["fin_xjll"].find({})
+                    self._cash_flow_data = pd.DataFrame(list(cursor))
+
+                # Extract specific stock data from batch dataset
+                stock_cash_flow = self._cash_flow_data[
+                    self._cash_flow_data["股票代码"] == stock_code
+                ]
+
                 # Convert to the expected format - only get latest period
-                if not cash_flow.empty:
+                if not stock_cash_flow.empty:
                     # Get the latest record (first row)
-                    latest_record = cash_flow.iloc[0]
+                    latest_record = stock_cash_flow.iloc[0]
                     cash_flow_dict = {}
-                    for col in cash_flow.columns:
-                        if col != "报告期":
+                    for col in stock_cash_flow.columns:
+                        if col != "股票代码":
                             cash_flow_dict[col] = latest_record[col]
                 else:
                     cash_flow_dict = {}
@@ -432,7 +553,7 @@ class LLMFundamentalStrategy(BaseStrategy):
                 cash_flow_dict = {}
 
             return {
-                "financial_indicators": financial_indicators_dict,
+                "performance_report": performance_report_dict,
                 "balance_sheet": balance_sheet_dict,
                 "income_statement": income_statement_dict,
                 "cash_flow": cash_flow_dict,
@@ -462,17 +583,21 @@ class LLMFundamentalStrategy(BaseStrategy):
             # Extract key data from financial statements
             balance_sheet = financial_data.get("balance_sheet", {})
             income_statement = financial_data.get("income_statement", {})
-            financial_indicators = financial_data.get("financial_indicators", {})
+            performance_report = financial_data.get("performance_report", {})
+            cash_flow = financial_data.get("cash_flow", {})
 
             # Liquidity ratios
             ratios["current_ratio"] = self.calculate_current_ratio(balance_sheet)
             ratios["quick_ratio"] = self.calculate_quick_ratio(balance_sheet)
+            ratios["cash_ratio"] = self.calculate_cash_ratio(balance_sheet)
+            ratios["cash_flow_ratio"] = self.calculate_cash_flow_ratio(balance_sheet, cash_flow)
 
             # Profitability ratios
             ratios["roe"] = self.calculate_roe(balance_sheet, income_statement)
             ratios["roa"] = self.calculate_roa(balance_sheet, income_statement)
             ratios["gross_margin"] = self.calculate_gross_margin(income_statement)
             ratios["net_margin"] = self.calculate_net_margin(income_statement)
+            ratios["operating_margin"] = self.calculate_operating_margin(income_statement)
 
             # Leverage ratios
             ratios["debt_to_equity"] = self.calculate_debt_to_equity(balance_sheet)
@@ -484,14 +609,20 @@ class LLMFundamentalStrategy(BaseStrategy):
             ratios["asset_turnover"] = self.calculate_asset_turnover(
                 balance_sheet, income_statement
             )
+            ratios["receivables_turnover"] = self.calculate_receivables_turnover(balance_sheet, income_statement)
+            ratios["inventory_turnover"] = self.calculate_inventory_turnover(balance_sheet, income_statement)
 
-            # Valuation ratios (using financial indicators)
-            ratios["pe_ratio"] = self.calculate_pe_ratio(financial_indicators)
-            ratios["pb_ratio"] = self.calculate_pb_ratio(financial_indicators)
+            # Growth ratios - 使用业绩报告中的同比增长数据
+            revenue_growth_yoy = self.get_latest_value(performance_report, "营业总收入-同比增长")
+            earnings_growth_yoy = self.get_latest_value(performance_report, "净利润-同比增长")
 
-            # Growth ratios
-            ratios["revenue_growth"] = self.calculate_revenue_growth(income_statement)
-            ratios["earnings_growth"] = self.calculate_earnings_growth(income_statement)
+            # 将百分比转换为小数（例如57.73% → 0.5773）
+            ratios["revenue_growth"] = round(revenue_growth_yoy / 100, 2) if revenue_growth_yoy != 0 else 0.0
+            ratios["earnings_growth"] = round(earnings_growth_yoy / 100, 2) if earnings_growth_yoy != 0 else 0.0
+
+            # Per share metrics
+            ratios["eps"] = self.get_latest_value(performance_report, "每股收益")
+            ratios["book_value_per_share"] = self.get_latest_value(performance_report, "每股净资产")
 
             return ratios
         except Exception as e:
@@ -501,9 +632,18 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_current_ratio(self, balance_sheet: Dict) -> float:
         """Calculate current ratio"""
         try:
-            # Use actual field names from balance sheet
-            current_assets = self.get_latest_value(balance_sheet, "流动资产合计")
-            current_liabilities = self.get_latest_value(balance_sheet, "流动负债合计")
+            # 使用可用的字段计算流动比率
+            # 流动资产 = 货币资金 + 应收账款 + 存货
+            cash = self.get_latest_value(balance_sheet, "资产-货币资金")
+            receivables = self.get_latest_value(balance_sheet, "资产-应收账款")
+            inventory = self.get_latest_value(balance_sheet, "资产-存货")
+            current_assets = cash + receivables + inventory
+
+            # 流动负债 = 应付账款 + 预收账款
+            payables = self.get_latest_value(balance_sheet, "负债-应付账款")
+            advance_receipts = self.get_latest_value(balance_sheet, "负债-预收账款")
+            current_liabilities = payables + advance_receipts
+
             if current_liabilities and current_liabilities != 0:
                 return round(current_assets / current_liabilities, 2)
         except Exception:
@@ -513,9 +653,18 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_quick_ratio(self, balance_sheet: Dict) -> float:
         """Calculate quick ratio"""
         try:
-            current_assets = self.get_latest_value(balance_sheet, "流动资产合计")
-            inventory = self.get_latest_value(balance_sheet, "存货")
-            current_liabilities = self.get_latest_value(balance_sheet, "流动负债合计")
+            # 使用可用的字段计算速动比率
+            # 流动资产 = 货币资金 + 应收账款 + 存货
+            cash = self.get_latest_value(balance_sheet, "资产-货币资金")
+            receivables = self.get_latest_value(balance_sheet, "资产-应收账款")
+            inventory = self.get_latest_value(balance_sheet, "资产-存货")
+            current_assets = cash + receivables + inventory
+
+            # 流动负债 = 应付账款 + 预收账款
+            payables = self.get_latest_value(balance_sheet, "负债-应付账款")
+            advance_receipts = self.get_latest_value(balance_sheet, "负债-预收账款")
+            current_liabilities = payables + advance_receipts
+
             if current_liabilities and current_liabilities != 0:
                 return round((current_assets - inventory) / current_liabilities, 2)
         except Exception:
@@ -525,10 +674,8 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_roe(self, balance_sheet: Dict, income_statement: Dict) -> float:
         """Calculate Return on Equity"""
         try:
-            net_income = self.get_latest_value(income_statement, "*净利润")
-            total_equity = self.get_latest_value(
-                balance_sheet, "*所有者权益（或股东权益）合计"
-            )
+            net_income = self.get_latest_value(income_statement, "净利润")
+            total_equity = self.get_latest_value(balance_sheet, "股东权益合计")
             if total_equity and total_equity != 0:
                 return round(net_income / total_equity, 2)
         except Exception:
@@ -538,8 +685,8 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_roa(self, balance_sheet: Dict, income_statement: Dict) -> float:
         """Calculate Return on Assets"""
         try:
-            net_income = self.get_latest_value(income_statement, "*净利润")
-            total_assets = self.get_latest_value(balance_sheet, "*资产合计")
+            net_income = self.get_latest_value(income_statement, "净利润")
+            total_assets = self.get_latest_value(balance_sheet, "资产-总资产")
             if total_assets and total_assets != 0:
                 return round(net_income / total_assets, 2)
         except Exception:
@@ -549,8 +696,8 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_gross_margin(self, income_statement: Dict) -> float:
         """Calculate gross margin"""
         try:
-            revenue = self.get_latest_value(income_statement, "其中：营业收入")
-            cogs = self.get_latest_value(income_statement, "其中：营业成本")
+            revenue = self.get_latest_value(income_statement, "营业总收入")
+            cogs = self.get_latest_value(income_statement, "营业总支出-营业支出")
             if revenue and revenue != 0:
                 return round((revenue - cogs) / revenue, 2)
         except Exception:
@@ -560,8 +707,8 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_net_margin(self, income_statement: Dict) -> float:
         """Calculate net profit margin"""
         try:
-            net_income = self.get_latest_value(income_statement, "*净利润")
-            revenue = self.get_latest_value(income_statement, "其中：营业收入")
+            net_income = self.get_latest_value(income_statement, "净利润")
+            revenue = self.get_latest_value(income_statement, "营业总收入")
             if revenue and revenue != 0:
                 return round(net_income / revenue, 2)
         except Exception:
@@ -571,10 +718,8 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_debt_to_equity(self, balance_sheet: Dict) -> float:
         """Calculate debt to equity ratio"""
         try:
-            total_liabilities = self.get_latest_value(balance_sheet, "*负债合计")
-            total_equity = self.get_latest_value(
-                balance_sheet, "*所有者权益（或股东权益）合计"
-            )
+            total_liabilities = self.get_latest_value(balance_sheet, "负债-总负债")
+            total_equity = self.get_latest_value(balance_sheet, "股东权益合计")
             if total_equity and total_equity != 0:
                 return round(total_liabilities / total_equity, 2)
         except Exception:
@@ -584,9 +729,71 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_interest_coverage(self, income_statement: Dict) -> float:
         """Calculate interest coverage ratio"""
         try:
-            # For now, return a placeholder as interest expense data might not be available
-            # In a real implementation, you would need to get interest expense from income statement
-            return 0.0
+            operating_profit = self.get_latest_value(income_statement, "营业利润")
+            interest_expense = self.get_latest_value(income_statement, "营业总支出-财务费用")
+            if interest_expense and interest_expense != 0:
+                return round(operating_profit / interest_expense, 2)
+        except Exception:
+            pass
+        return 0.0
+
+    def calculate_cash_ratio(self, balance_sheet: Dict) -> float:
+        """Calculate cash ratio"""
+        try:
+            cash = self.get_latest_value(balance_sheet, "资产-货币资金")
+            # 流动负债 = 应付账款 + 预收账款
+            payables = self.get_latest_value(balance_sheet, "负债-应付账款")
+            advance_receipts = self.get_latest_value(balance_sheet, "负债-预收账款")
+            current_liabilities = payables + advance_receipts
+            if current_liabilities and current_liabilities != 0:
+                return round(cash / current_liabilities, 2)
+        except Exception:
+            pass
+        return 0.0
+
+    def calculate_cash_flow_ratio(self, balance_sheet: Dict, cash_flow: Dict) -> float:
+        """Calculate cash flow ratio"""
+        try:
+            operating_cash_flow = self.get_latest_value(cash_flow, "经营性现金流-现金流量净额")
+            # 流动负债 = 应付账款 + 预收账款
+            payables = self.get_latest_value(balance_sheet, "负债-应付账款")
+            advance_receipts = self.get_latest_value(balance_sheet, "负债-预收账款")
+            current_liabilities = payables + advance_receipts
+            if current_liabilities and current_liabilities != 0:
+                return round(operating_cash_flow / current_liabilities, 2)
+        except Exception:
+            pass
+        return 0.0
+
+    def calculate_operating_margin(self, income_statement: Dict) -> float:
+        """Calculate operating margin"""
+        try:
+            operating_profit = self.get_latest_value(income_statement, "营业利润")
+            revenue = self.get_latest_value(income_statement, "营业总收入")
+            if revenue and revenue != 0:
+                return round(operating_profit / revenue, 2)
+        except Exception:
+            pass
+        return 0.0
+
+    def calculate_receivables_turnover(self, balance_sheet: Dict, income_statement: Dict) -> float:
+        """Calculate receivables turnover ratio"""
+        try:
+            revenue = self.get_latest_value(income_statement, "营业总收入")
+            receivables = self.get_latest_value(balance_sheet, "资产-应收账款")
+            if receivables and receivables != 0:
+                return round(revenue / receivables, 2)
+        except Exception:
+            pass
+        return 0.0
+
+    def calculate_inventory_turnover(self, balance_sheet: Dict, income_statement: Dict) -> float:
+        """Calculate inventory turnover ratio"""
+        try:
+            cogs = self.get_latest_value(income_statement, "营业总支出-营业支出")
+            inventory = self.get_latest_value(balance_sheet, "资产-存货")
+            if inventory and inventory != 0:
+                return round(cogs / inventory, 2)
         except Exception:
             pass
         return 0.0
@@ -596,16 +803,10 @@ class LLMFundamentalStrategy(BaseStrategy):
     ) -> float:
         """Calculate asset turnover ratio"""
         try:
-            revenue = self.get_latest_value(income_statement, "其中：营业收入")
-            total_assets_begin = self.get_earlier_value(balance_sheet, "*资产合计")
-            total_assets_end = self.get_latest_value(balance_sheet, "*资产合计")
-            if (
-                total_assets_begin
-                and total_assets_end
-                and (total_assets_begin + total_assets_end) != 0
-            ):
-                avg_assets = (total_assets_begin + total_assets_end) / 2
-                return round(revenue / avg_assets, 2)
+            revenue = self.get_latest_value(income_statement, "营业总收入")
+            total_assets = self.get_latest_value(balance_sheet, "资产-总资产")
+            if total_assets and total_assets != 0:
+                return round(revenue / total_assets, 2)
         except Exception:
             pass
         return 0.0
@@ -633,12 +834,11 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_revenue_growth(self, income_statement: Dict) -> float:
         """Calculate revenue growth rate"""
         try:
-            revenue_latest = self.get_latest_value(income_statement, "其中：营业收入")
-            revenue_previous = self.get_earlier_value(
-                income_statement, "其中：营业收入"
-            )
-            if revenue_previous and revenue_previous != 0:
-                return (revenue_latest - revenue_previous) / revenue_previous
+            # 使用业绩报告中的同比增长数据
+            # 注意：这里需要传入financial_data，但方法签名限制只能传入income_statement
+            # 在实际使用中，这个方法应该从financial_data中获取performance_report数据
+            # 暂时返回0.0，在calculate_financial_ratios方法中会处理
+            return 0.0
         except Exception:
             pass
         return 0.0
@@ -646,8 +846,8 @@ class LLMFundamentalStrategy(BaseStrategy):
     def calculate_earnings_growth(self, income_statement: Dict) -> float:
         """Calculate earnings growth rate"""
         try:
-            earnings_latest = self.get_latest_value(income_statement, "*净利润")
-            earnings_previous = self.get_earlier_value(income_statement, "*净利润")
+            earnings_latest = self.get_latest_value(income_statement, "净利润")
+            earnings_previous = self.get_earlier_value(income_statement, "净利润")
             if earnings_previous and earnings_previous != 0:
                 return (earnings_latest - earnings_previous) / earnings_previous
         except Exception:
@@ -687,6 +887,97 @@ class LLMFundamentalStrategy(BaseStrategy):
         # Return 0.0 as we don't have historical data for comparison
         return 0.0
 
+    def get_profit_forecast(self, stock_code: str) -> Dict[str, Any]:
+        """
+        Get profit forecast data using akshare batch data fetching.
+
+        Args:
+            stock_code: Stock code
+
+        Returns:
+            Dictionary with profit forecast data
+        """
+        try:
+            # Initialize batch dataset (will be populated on first call)
+            if not hasattr(self, "_profit_forecast_data"):
+                self._profit_forecast_data = None
+
+            # Get profit forecast data from batch dataset
+            try:
+                if self._profit_forecast_data is None:
+                    self.log_info(
+                        "Fetching batch profit forecast data from MongoDB fin_forecast collection"
+                    )
+                    # Get data from MongoDB fin_forecast collection
+                    mongodb_config = MongoDBConfig()
+                    config = mongodb_config.get_mongodb_config()
+                    if config.get("username") and config.get("password"):
+                        uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={config.get('auth_database', 'admin')}"
+                    else:
+                        uri = f"mongodb://{config['host']}:{config['port']}/"
+                    client = MongoClient(uri)
+                    db = client["stock"]
+                    cursor = db["fin_forecast"].find({})
+                    self._profit_forecast_data = pd.DataFrame(list(cursor))
+
+                # Check if the dataset has the expected column structure
+                if (
+                    self._profit_forecast_data is not None
+                    and not self._profit_forecast_data.empty
+                ):
+                    # Try different possible column names for stock code
+                    code_column = None
+                    possible_code_columns = ["股票代码", "代码", "symbol", "stock_code"]
+                    for col in possible_code_columns:
+                        if col in self._profit_forecast_data.columns:
+                            code_column = col
+                            break
+
+                    if code_column:
+                        # Extract specific stock data from batch dataset
+                        stock_profit_forecast = self._profit_forecast_data[
+                            self._profit_forecast_data[code_column] == stock_code
+                        ]
+
+                        # Convert to the expected format - get all available forecast data
+                        if not stock_profit_forecast.empty:
+                            profit_forecast_dict = {}
+                            for _, record in stock_profit_forecast.iterrows():
+                                # The data structure has forecast columns for different years
+                                # instead of a period column, so we need to handle this differently
+
+                                # Create a single period entry for the stock
+                                period_data = {}
+                                for col in stock_profit_forecast.columns:
+                                    if col != code_column:
+                                        # Convert numpy types to Python native types for JSON serialization
+                                        value = record[col]
+                                        if hasattr(value, "item"):  # Handle numpy types
+                                            value = value.item()
+                                        period_data[col] = value
+
+                                # Use a generic period name since the data doesn't have specific periods
+                                profit_forecast_dict["latest"] = period_data
+                        else:
+                            profit_forecast_dict = {}
+                    else:
+                        self.log_warning(
+                            f"No valid stock code column found in profit forecast data"
+                        )
+                        profit_forecast_dict = {}
+                else:
+                    profit_forecast_dict = {}
+            except Exception as e:
+                self.log_warning(f"Error getting profit forecast for {stock_code}: {e}")
+                profit_forecast_dict = {}
+
+            return profit_forecast_dict
+        except Exception as e:
+            self.log_warning(
+                f"Error getting profit forecast data for {stock_code}: {e}"
+            )
+            return {}
+
     def get_industry_info(self, stock_code: str) -> Dict[str, Any]:
         """
         Get industry information for comparison.
@@ -695,24 +986,82 @@ class LLMFundamentalStrategy(BaseStrategy):
             stock_code: Stock code
 
         Returns:
-            Dictionary with industry information
+            Dictionary with industry information including industry averages
         """
         try:
-            # Get industry information
-            industry_info = ak.stock_individual_info_em(symbol=stock_code)
-            info_dict = {}
-            if not industry_info.empty:
-                for _, row in industry_info.iterrows():
-                    if row["item"] == "行业":
-                        info_dict["industry"] = row["value"]
-                        break
+            # Load MongoDB configuration
+            mongodb_config = MongoDBConfig()
+            config = mongodb_config.get_mongodb_config()
 
-            # For now, we'll return a placeholder
-            # In a real implementation, you would get industry averages and benchmarks
+            # Connect to MongoDB
+            if config.get("username") and config.get("password"):
+                # With authentication
+                uri = f"mongodb://{config['username']}:{config['password']}@{config['host']}:{config['port']}/{config['database']}?authSource={config.get('auth_database', 'admin')}"
+            else:
+                # Without authentication
+                uri = f"mongodb://{config['host']}:{config['port']}/"
+
+            client = MongoClient(uri)
+            db = client["stock"]  # Use stock database
+            code_collection = db["code"]
+
+            # First, get the stock's industry
+            stock_record = code_collection.find_one({"code": stock_code})
+            if not stock_record:
+                self.log_warning(f"Stock {stock_code} not found in code collection")
+                return {}
+
+            industry = stock_record.get("industry", "")
+            if not industry:
+                self.log_warning(f"No industry found for stock {stock_code}")
+                return {}
+
+            info_dict = {"industry": industry}
+
+            # Get all stocks in the same industry
+            industry_stocks = code_collection.find({"industry": industry})
+
+            pe_values = []
+            pb_values = []
+            roe_values = []
+
+            # Calculate averages for PE, PB, and ROE
+            for stock in industry_stocks:
+                pe = stock.get("PE")
+                pb = stock.get("PB")
+
+                # Only include valid PE and PB values
+                if pe is not None and isinstance(pe, (int, float)) and pe > 0:
+                    pe_values.append(pe)
+                if pb is not None and isinstance(pb, (int, float)) and pb > 0:
+                    pb_values.append(pb)
+
+                # Calculate ROE = PB ÷ PE (only when both are valid)
+                if (
+                    pe is not None
+                    and isinstance(pe, (int, float))
+                    and pe > 0
+                    and pb is not None
+                    and isinstance(pb, (int, float))
+                    and pb > 0
+                ):
+                    roe = pb / pe
+                    roe_values.append(roe)
+
+            # Calculate averages (rounded to 2 decimal places)
+            avg_pe = round(sum(pe_values) / len(pe_values), 2) if pe_values else 0.0
+            avg_pb = round(sum(pb_values) / len(pb_values), 2) if pb_values else 0.0
+            avg_roe = round(sum(roe_values) / len(roe_values), 2) if roe_values else 0.0
+
+            self.log_info(
+                f"Industry {industry} averages - PE: {avg_pe}, PB: {avg_pb}, ROE: {avg_roe}"
+            )
+
+            # Return industry information with calculated averages
             info_dict["industry_averages"] = {
-                "roe": 0.08,  # 8% average ROE
-                "pe": 15.0,  # 15x average P/E
-                "debt_to_equity": 0.5,  # 0.5 average debt-to-equity
+                "pe": avg_pe,
+                "pb": avg_pb,
+                "roe": avg_roe,
             }
 
             return info_dict
@@ -726,6 +1075,7 @@ class LLMFundamentalStrategy(BaseStrategy):
         financial_data: Dict,
         financial_ratios: Dict,
         industry_info: Dict,
+        profit_forecast: Dict,
     ) -> Dict[str, Any]:
         """
         Create prompt for LLM analysis in JSON format.
@@ -746,10 +1096,18 @@ class LLMFundamentalStrategy(BaseStrategy):
         simplified_industry = self._simplify_industry_info(industry_info)
 
         # Create user prompt content
+        # Filter out stock code and stock name fields from financial data
+        filtered_financial_data = self._filter_financial_data_fields(financial_data)
+
+        # Filter out stock code and stock name fields from profit forecast data
+        filtered_profit_forecast = self._filter_profit_forecast_fields(profit_forecast)
+
         user_prompt_content = f"""
-股票代码: {stock_info.get("股票代码", "N/A")}
-股票名称: {stock_info.get("股票简称", "N/A")}
+代码: {stock_info.get("代码", "N/A")}
+名称: {stock_info.get("名称", "N/A")}
 行业: {stock_info.get("行业", "N/A")}
+市盈率(PE): {stock_info.get("市盈率", "N/A")}
+市净率(PB): {stock_info.get("市净率", "N/A")}
 
 关键财务比率:
 {json.dumps(simplified_ratios, ensure_ascii=False, indent=2)}
@@ -757,8 +1115,11 @@ class LLMFundamentalStrategy(BaseStrategy):
 行业对比:
 {json.dumps(simplified_industry, ensure_ascii=False, indent=2)}
 
+盈利预测:
+{json.dumps(filtered_profit_forecast, ensure_ascii=False, indent=2)}
+
 完整财务数据:
-{json.dumps(financial_data, ensure_ascii=False, indent=2)}
+{json.dumps(self._convert_numpy_types(filtered_financial_data), ensure_ascii=False, indent=2)}
 """
 
         # Convert to JSON format for LLM
@@ -766,6 +1127,62 @@ class LLMFundamentalStrategy(BaseStrategy):
 
         self.log_info("Successfully created user prompt with complete financial data")
         return user_prompt
+
+    def _filter_financial_data_fields(self, financial_data: Dict) -> Dict:
+        """
+        Filter out stock code and stock name fields from financial data.
+
+        Args:
+            financial_data: Original financial data
+
+        Returns:
+            Filtered financial data without stock code and stock name fields
+        """
+        filtered_data = {}
+
+        # Fields to exclude
+        exclude_fields = ["股票代码", "股票简称", "代码", "名称", "_id"]
+
+        # Filter each section of financial data
+        for section_name, section_data in financial_data.items():
+            if isinstance(section_data, dict):
+                filtered_section = {}
+                for key, value in section_data.items():
+                    if key not in exclude_fields:
+                        filtered_section[key] = value
+                filtered_data[section_name] = filtered_section
+            else:
+                filtered_data[section_name] = section_data
+
+        return filtered_data
+
+    def _filter_profit_forecast_fields(self, profit_forecast: Dict) -> Dict:
+        """
+        Filter out stock code and stock name fields from profit forecast data.
+
+        Args:
+            profit_forecast: Original profit forecast data
+
+        Returns:
+            Filtered profit forecast data without stock code and stock name fields
+        """
+        filtered_forecast = {}
+
+        # Fields to exclude
+        exclude_fields = ["股票代码", "股票简称", "代码", "名称", "_id"]
+
+        # Filter each period in profit forecast data
+        for period, period_data in profit_forecast.items():
+            if isinstance(period_data, dict):
+                filtered_period = {}
+                for key, value in period_data.items():
+                    if key not in exclude_fields:
+                        filtered_period[key] = value
+                filtered_forecast[period] = filtered_period
+            else:
+                filtered_forecast[period] = period_data
+
+        return filtered_forecast
 
     def _simplify_financial_data(self, financial_data: Dict) -> Dict:
         """
@@ -779,10 +1196,10 @@ class LLMFundamentalStrategy(BaseStrategy):
         """
         simplified = {}
 
-        # Extract only the most recent period from financial indicators
-        financial_indicators = financial_data.get("financial_indicators", {})
-        if financial_indicators:
-            # Get only the latest values for key indicators
+        # Extract key data from performance report
+        performance_report = financial_data.get("performance_report", {})
+        if performance_report:
+            # Get key performance indicators
             key_indicators = [
                 "每股收益",
                 "每股净资产",
@@ -792,8 +1209,8 @@ class LLMFundamentalStrategy(BaseStrategy):
             ]
             latest_values = {}
             for indicator in key_indicators:
-                if indicator in financial_indicators:
-                    latest_values[indicator] = financial_indicators[indicator]
+                if indicator in performance_report:
+                    latest_values[indicator] = performance_report[indicator]
             simplified["关键财务指标"] = latest_values
 
         # Simplify balance sheet - only show key items
@@ -840,20 +1257,83 @@ class LLMFundamentalStrategy(BaseStrategy):
             "roa",
             "gross_margin",
             "net_margin",
+            "operating_margin",
             "current_ratio",
             "quick_ratio",
+            "cash_ratio",
+            "cash_flow_ratio",
             "debt_to_equity",
+            "interest_coverage",
             "asset_turnover",
+            "receivables_turnover",
+            "inventory_turnover",
             "revenue_growth",
             "earnings_growth",
+            "eps",
+            "book_value_per_share",
         ]
+
+        # 中文比率名称映射
+        chinese_names = {
+            "roe": "净资产收益率",
+            "roa": "总资产收益率",
+            "gross_margin": "毛利率",
+            "net_margin": "净利率",
+            "operating_margin": "营业利润率",
+            "current_ratio": "流动比率",
+            "quick_ratio": "速动比率",
+            "cash_ratio": "现金比率",
+            "cash_flow_ratio": "现金流量比率",
+            "debt_to_equity": "资产负债率",
+            "interest_coverage": "利息保障倍数",
+            "asset_turnover": "资产周转率",
+            "receivables_turnover": "应收账款周转率",
+            "inventory_turnover": "存货周转率",
+            "revenue_growth": "收入增长率",
+            "earnings_growth": "利润增长率",
+            "eps": "每股收益",
+            "book_value_per_share": "每股净资产",
+        }
 
         simplified = {}
         for ratio in key_ratios:
             if ratio in financial_ratios:
-                simplified[ratio] = financial_ratios[ratio]
+                chinese_name = chinese_names.get(ratio, ratio)
+                simplified[chinese_name] = financial_ratios[ratio]
 
         return simplified
+
+    def _convert_numpy_types(self, obj):
+        """
+        Convert numpy types and date types to Python native types for JSON serialization.
+
+        Args:
+            obj: Object to convert
+
+        Returns:
+            Object with numpy and date types converted to Python native types
+        """
+        import numpy as np
+        import pandas as pd
+
+        if isinstance(obj, dict):
+            return {k: self._convert_numpy_types(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._convert_numpy_types(v) for v in obj]
+        elif isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        elif isinstance(obj, (pd.Timestamp, pd.DatetimeIndex)):
+            return obj.strftime("%Y-%m-%d")
+        elif hasattr(obj, "strftime"):  # Handle datetime objects
+            return obj.strftime("%Y-%m-%d")
+        elif hasattr(obj, "item"):
+            return obj.item()
+        else:
+            return obj
 
     def _simplify_industry_info(self, industry_info: Dict) -> Dict:
         """
@@ -873,7 +1353,7 @@ class LLMFundamentalStrategy(BaseStrategy):
 
         if "industry_averages" in industry_info:
             # Only keep key industry averages
-            key_averages = ["roe", "pe", "debt_to_equity"]
+            key_averages = ["roe", "pe", "pb"]
             industry_avgs = industry_info["industry_averages"]
             simplified_avgs = {}
             for avg in key_averages:
