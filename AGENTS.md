@@ -385,6 +385,14 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - **COMPATIBILITY**: Ensured backward compatibility with existing strategy implementations
 - **VERIFIED**: All modifications tested and confirmed working correctly
 
+### Industry Data Update Enhancement
+- **IMPLEMENTED**: Added `update_industry` function to down2mongo.py for updating industry, PE, and PB information
+- **CONDITIONAL EXECUTION**: Modified main function to execute industry updates only on the first trading day of each month
+- **DATA SOURCES**: Uses AkShare to get industry boards and constituent stock information
+- **FIELDS UPDATED**: Industry, PE (市盈率-动态), PB (市净率) fields in code dataset
+- **VERIFIED**: Successfully tested and confirmed 5437 stocks updated with industry data
+- **AUTOMATION**: Monthly execution ensures industry data stays current without unnecessary daily updates
+
 ### Web Interface Enhancement for Stock Display and K-line Charts
 - **MODIFIED**: Updated stock list page to fetch latest price, change percentage, and turnover rate from k_data collection instead of akshare real-time data
 - **ENHANCED**: Stock K-line v2 chart to fetch real-time data from Akshare with last 1 year of daily data

@@ -757,6 +757,77 @@ def get_k_data_by_code(db, code):
     return df
 
 
+def update_industry(db):
+    """
+    更新股票代码表中的行业、市盈率、市净率信息
+
+    :param db: MongoDB数据库连接
+    """
+    print("开始更新行业、市盈率、市净率信息...")
+
+    try:
+        # 获取所有行业板块
+        industry_boards = ak.stock_board_industry_name_em()
+
+        all_stocks = []
+        for industry in industry_boards["板块名称"]:
+            try:
+                stocks = ak.stock_board_industry_cons_em(symbol=industry)
+                stocks["industry"] = industry
+                all_stocks.append(stocks)
+            except Exception as e:
+                print(f"获取行业 {industry} 的成分股失败: {str(e)}")
+                continue
+
+        if not all_stocks:
+            print("未能获取任何行业数据")
+            return
+
+        result_df = pd.concat(all_stocks, ignore_index=True)
+
+        # 确保必要的字段存在
+        required_columns = ["代码", "industry", "市盈率-动态", "市净率"]
+        for col in required_columns:
+            if col not in result_df.columns:
+                print(f"警告: 结果数据中缺少字段 '{col}'")
+                return
+
+        # 更新code数据集
+        my_coll = db["code"]
+        updated_count = 0
+
+        for _, row in result_df.iterrows():
+            stock_code = row["代码"]
+            industry = row["industry"]
+            pe = row["市盈率-动态"]
+            pb = row["市净率"]
+
+            # 更新或插入行业、PE、PB信息
+            update_data = {
+                "industry": industry,
+                "PE": pe,
+                "PB": pb
+            }
+
+            # 移除空值
+            update_data = {k: v for k, v in update_data.items() if pd.notna(v)}
+
+            if update_data:
+                result = my_coll.update_one(
+                    {"_id": stock_code},
+                    {"$set": update_data},
+                    upsert=False  # 只更新已存在的文档，不创建新文档
+                )
+
+                if result.modified_count > 0:
+                    updated_count += 1
+
+        print(f"成功更新 {updated_count} 只股票的行业、市盈率、市净率信息")
+
+    except Exception as e:
+        print(f"更新行业信息时发生错误: {str(e)}")
+
+
 def should_update_data(db):
     """
     判断是否需要更新数据
@@ -796,9 +867,55 @@ def should_update_data(db):
         return True
 
 
+def is_first_trading_day_of_month():
+    """
+    判断今天是否是当月的第一个交易日
+    """
+    try:
+        # 获取当前日期
+        current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+        current_dt = pd.to_datetime(current_date)
+
+        # 获取交易日历
+        trade_dates_df = ak.tool_trade_date_hist_sina()
+        trade_dates_df['trade_date'] = pd.to_datetime(trade_dates_df['trade_date'])
+
+        # 获取当前年份和月份
+        current_year = current_dt.year
+        current_month = current_dt.month
+
+        # 筛选出当前月份的交易日
+        month_trade_dates = trade_dates_df[
+            (trade_dates_df['trade_date'].dt.year == current_year) &
+            (trade_dates_df['trade_date'].dt.month == current_month)
+        ]
+
+        # 如果当前月份没有交易日，返回False
+        if month_trade_dates.empty:
+            return False
+
+        # 获取当前月份的第一个交易日
+        first_trading_day = month_trade_dates['trade_date'].min()
+
+        # 判断今天是否是第一个交易日
+        return current_dt.date() == first_trading_day.date()
+
+    except Exception as e:
+        print(f"Error checking first trading day: {e}")
+        # 出错时默认返回False，不执行行业更新
+        return False
+
+
 def main():
     db = conn_mongo()
     update_code_name(db)
+
+    # 检查是否是当月第一个交易日，如果是则更新行业信息
+    if is_first_trading_day_of_month():
+        print("Today is the first trading day of the month. Updating industry, PE, and PB information...")
+        update_industry(db)
+    else:
+        print("Today is not the first trading day of the month. Skipping industry update.")
 
     # 检查是否需要更新数据
     if should_update_data(db):
