@@ -9,7 +9,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from datetime import datetime, timedelta
-from typing import List, Optional, Dict, Tuple
+from typing import List, Optional, Dict, Tuple, Union
 from utils.akshare_client import AkshareClient
 from data.mongodb_manager import MongoDBManager
 from utils.strategy_result_formatter import StrategyResultFormatter
@@ -32,32 +32,29 @@ class WeeklyStockSelector(DataProviderInterface):
     Dynamically loads strategies from database and executes them
     """
 
-    def __init__(self, db_manager: MongoDBManager, data_fetcher: AkshareClient, strategy_id: Optional[str] = None):
+    def __init__(self, db_manager: MongoDBManager, data_fetcher: AkshareClient, strategy_ids: Optional[List[str]] = None):
         """
         Initialize the weekly stock selector framework
 
         Args:
             db_manager: MongoDBManager instance for database operations
             data_fetcher: AkshareClient instance for data fetching
-            strategy_id: Optional strategy ID to load specific strategy instead of first one
+            strategy_ids: Optional list of strategy IDs to load specific strategies, if None loads all strategies
         """
         self.db_manager = db_manager
         self.data_fetcher = data_fetcher
-        self.strategy_id = strategy_id
+        self.strategy_ids = strategy_ids
         self.logger = logging.getLogger(__name__)
 
-        # Strategy components
-        self.strategy_name = None
-        self.strategy_file = None
-        self.strategy_class_name = None
-        self.strategy_params = {}
-        self.strategy_instance = None
+        # Strategy components - now supporting multiple strategies
+        self.strategies = []  # List of strategy instances
+        self.strategy_configs = []  # List of strategy configurations
 
-        # Load strategy from database
-        self._load_strategy_from_db()
+        # Load strategies from database
+        self._load_strategies_from_db()
 
-        # Load and initialize the dynamic strategy
-        self._load_dynamic_strategy()
+        # Load and initialize the dynamic strategies
+        self._load_dynamic_strategies()
 
     def get_standard_data(self, stock_codes: List[str]) -> Dict[str, pd.DataFrame]:
         """
@@ -122,116 +119,138 @@ class WeeklyStockSelector(DataProviderInterface):
         df = stock_data.get(stock_code, StandardDataFormat.create_empty_dataframe())
         return df if df is not None else StandardDataFormat.create_empty_dataframe()
 
-    def _load_strategy_from_db(self):
+    def _load_strategies_from_db(self):
         """
-        Load strategy configuration from database
+        Load strategy configurations from database
         """
         try:
             strategies = self.db_manager.get_strategies()
             if strategies and len(strategies) > 0:
-                # Use the specified strategy if strategy_id is provided, otherwise use the first strategy
-                if self.strategy_id:
-                    selected_strategy = None
+                # Filter strategies if specific strategy_ids are provided
+                if self.strategy_ids:
+                    selected_strategies = []
                     for strategy in strategies:
-                        if str(strategy.get('_id')) == self.strategy_id:
-                            selected_strategy = strategy
-                            break
+                        if str(strategy.get('_id')) in self.strategy_ids:
+                            selected_strategies.append(strategy)
 
-                    if not selected_strategy:
-                        self.logger.warning(f"Strategy with ID {self.strategy_id} not found, using first strategy")
-                        selected_strategy = strategies[0]
+                    if not selected_strategies:
+                        self.logger.warning(f"No strategies found with IDs {self.strategy_ids}, using all strategies")
+                        selected_strategies = strategies
                 else:
-                    # Use the first strategy for now (original behavior)
-                    selected_strategy = strategies[0]
+                    # Use all strategies if no specific IDs provided
+                    selected_strategies = strategies
 
-                self.strategy_params = selected_strategy.get('parameters', {})
-                self.strategy_name = selected_strategy.get('name', 'Unknown')
-
-                # Extract file and class from program field if it exists
-                if 'program' in selected_strategy and isinstance(selected_strategy['program'], dict):
-                    self.strategy_file = selected_strategy['program'].get('file', '')
-                    self.strategy_class_name = selected_strategy['program'].get('class', '')
-                    self.logger.info("Loaded strategy file and class from program field")
-                else:
-                    # Fallback to direct file and class_name fields
-                    self.strategy_file = selected_strategy.get('file', '')
-                    self.strategy_class_name = selected_strategy.get('class_name', '')
-
-                    self.logger.info("Loaded strategy from database: %s" % self.strategy_name)
+                # Store strategy configurations
+                self.strategy_configs = selected_strategies
+                self.logger.info(f"Loaded {len(self.strategy_configs)} strategies from database")
             else:
                 self.logger.warning("No strategies found in database")
         except Exception as e:
-            self.logger.error(f"Error loading strategy from database: {e}")
+            self.logger.error(f"Error loading strategies from database: {e}")
 
-    def _load_dynamic_strategy(self):
+    def _load_dynamic_strategies(self):
         """
-        Dynamically load strategy from file and instantiate the strategy class
+        Dynamically load all strategies from files and instantiate strategy classes
         """
         try:
-            if not self.strategy_file or not self.strategy_class_name:
-                self.logger.warning("Strategy file or class not specified")
+            if not self.strategy_configs:
+                self.logger.warning("No strategy configurations found")
                 return
 
-            # Dynamically import the strategy module
-            # Handle both direct file names and package.module format
-            module_name = self.strategy_file
+            for strategy_config in self.strategy_configs:
+                try:
+                    strategy_params = strategy_config.get('parameters', {})
+                    strategy_name = strategy_config.get('name', 'Unknown')
 
-            # Handle different formats of strategy file specification
-            if isinstance(self.strategy_file, dict):
-                # Handle the case where program is a dict with file and class fields
-                file_name = self.strategy_file.get('file', '')
-                if file_name:
-                    if not file_name.endswith('.py'):
-                        if '.' not in file_name and not file_name.startswith('strategies.'):
-                            module_name = f"strategies.{file_name}"
+                    # Extract file and class from program field if it exists
+                    strategy_file = None
+                    strategy_class_name = None
+
+                    if 'program' in strategy_config and isinstance(strategy_config['program'], dict):
+                        strategy_file = strategy_config['program'].get('file', '')
+                        strategy_class_name = strategy_config['program'].get('class', '')
                     else:
-                        module_name = file_name[:-3]
-                        if '.' not in module_name and not module_name.startswith('strategies.'):
-                            module_name = f"strategies.{module_name}"
-                else:
-                    self.logger.error("Invalid program field format")
-                    return
-            elif isinstance(self.strategy_file, str):
-                # If it's just a filename without .py extension and without package prefix, add the strategies prefix
-                if not self.strategy_file.endswith('.py'):
-                    if '.' not in self.strategy_file and not self.strategy_file.startswith('strategies.'):
-                        module_name = f"strategies.{self.strategy_file}"
-                else:
-                    # If it has .py extension, remove it for import
-                    module_name = self.strategy_file[:-3]
-                    # Add strategies prefix if needed
-                    if '.' not in module_name and not module_name.startswith('strategies.'):
-                        module_name = f"strategies.{module_name}"
+                        # Fallback to direct file and class_name fields
+                        strategy_file = strategy_config.get('file', '')
+                        strategy_class_name = strategy_config.get('class_name', '')
 
-            self.strategy_module = importlib.import_module(module_name)
+                    if not strategy_file or not strategy_class_name:
+                        self.logger.warning(f"Strategy file or class not specified for {strategy_name}")
+                        continue
 
-            # Get the strategy class
-            self.strategy_class = getattr(self.strategy_module, self.strategy_class_name)
+                    # Dynamically import the strategy module
+                    module_name = strategy_file
 
-            # Instantiate the strategy with parameters
-            self.strategy_instance = self.strategy_class(params=self.strategy_params)
+                    # Handle different formats of strategy file specification
+                    if isinstance(strategy_file, dict):
+                        # Handle the case where program is a dict with file and class fields
+                        file_name = strategy_file.get('file', '')
+                        if file_name:
+                            if not file_name.endswith('.py'):
+                                if '.' not in file_name and not file_name.startswith('strategies.'):
+                                    module_name = f"strategies.{file_name}"
+                            else:
+                                module_name = file_name[:-3]
+                                if '.' not in module_name and not module_name.startswith('strategies.'):
+                                    module_name = f"strategies.{module_name}"
+                        else:
+                            self.logger.error(f"Invalid program field format for strategy {strategy_name}")
+                            continue
+                    elif isinstance(strategy_file, str):
+                        # If it's just a filename without .py extension and without package prefix, add the strategies prefix
+                        if not strategy_file.endswith('.py'):
+                            if '.' not in strategy_file and not strategy_file.startswith('strategies.'):
+                                module_name = f"strategies.{strategy_file}"
+                        else:
+                            # If it has .py extension, remove it for import
+                            module_name = strategy_file[:-3]
+                            # Add strategies prefix if needed
+                            if '.' not in module_name and not module_name.startswith('strategies.'):
+                                module_name = f"strategies.{module_name}"
 
-            self.logger.info("Successfully loaded dynamic strategy: %s" % self.strategy_name)
+                    strategy_module = importlib.import_module(module_name)
+
+                    # Get the strategy class
+                    strategy_class = getattr(strategy_module, strategy_class_name)
+
+                    # Instantiate the strategy with parameters
+                    strategy_instance = strategy_class(params=strategy_params)
+
+                    # Store strategy instance with its configuration
+                    self.strategies.append({
+                        'instance': strategy_instance,
+                        'name': strategy_name,
+                        'config': strategy_config,
+                        'params': strategy_params
+                    })
+
+                    self.logger.info(f"Successfully loaded dynamic strategy: {strategy_name}")
+                except Exception as e:
+                    self.logger.error(f"Error loading strategy {strategy_name}: {e}")
+                    continue
+
+            self.logger.info(f"Successfully loaded {len(self.strategies)} strategies")
         except Exception as e:
-            self.logger.error(f"Error loading dynamic strategy: {e}")
+            self.logger.error(f"Error loading dynamic strategies: {e}")
             raise
 
-    def select_stocks(self, date: Optional[str] = None) -> Tuple[List[str], Optional[str], Dict[str, bool], Dict[str, float], Dict[str, Dict]]:
+    def select_stocks(self, date: Optional[str] = None) -> Union[Dict[str, Tuple[List[str], Optional[str], Dict[str, float], Dict[str, Dict]]], Tuple[List[str], Optional[str], Dict[str, bool], Dict[str, float], Dict[str, Dict], Dict]]:
         """
-        Select stocks using the dynamically loaded strategy
+        Select stocks using all dynamically loaded strategies
 
         Args:
             date: Selection date (YYYY-MM-DD), defaults to today
 
         Returns:
-            Tuple of (selected stock codes, last data date, golden cross flags, scores)
+            If multiple strategies: Dictionary mapping strategy names to tuples of (selected stock codes, last data date, scores, technical_analysis_data)
+            If single strategy: Tuple of (selected_stocks, last_data_date, golden_cross_flags, selected_scores, technical_analysis_data, strategy_results)
         """
         if date is None:
             date = datetime.now().strftime('%Y-%m-%d')
 
-            self.logger.info("Selecting stocks for week of %s using strategy: %s", date, self.strategy_name)
+        self.logger.info(f"Selecting stocks for week of {date} using {len(self.strategies)} strategies")
 
-        # Get all stock codes from database
+        # Get all stock codes from database - only once
         all_codes = self.db_manager.get_stock_codes()
         if not all_codes:
             # If no codes in DB, fetch from data source
@@ -239,143 +258,129 @@ class WeeklyStockSelector(DataProviderInterface):
             # Save to DB for future use
             self.db_manager.save_stock_codes(all_codes)
 
-        # Get standard format data using the new interface
+        # Get standard format data using the new interface - only once
         stock_data = self.get_standard_data(all_codes)
+        self.logger.info(f"Retrieved data for {len(stock_data)} stocks")
 
-        # Filter stocks based on criteria
-        selected_stocks = []
-        selected_scores = {}  # Store scores for each selected stock
-        golden_cross_flags = {}
-        technical_analysis_data = {}  # Store technical analysis data for each selected stock
-        last_data_date = None
+        # Dictionary to store results for each strategy
+        strategy_results = {}
 
-        # Process each stock's data
-        for code, k_data in stock_data.items():
-            try:
-                # Update last_data_date
-                if not k_data.empty and 'date' in k_data.columns:
-                    stock_last_date = k_data['date'].iloc[-1]
-                    if hasattr(stock_last_date, 'strftime'):
-                        stock_last_date = stock_last_date.strftime('%Y-%m-%d')
-                    else:
-                        stock_last_date = str(stock_last_date)
+        # Execute each strategy using the same stock data
+        for strategy_info in self.strategies:
+            strategy_name = strategy_info['name']
+            strategy_instance = strategy_info['instance']
 
-                    # Update last_data_date to the latest date among all selected stocks
-                    if stock_last_date and (not last_data_date or stock_last_date > last_data_date):
-                        last_data_date = stock_last_date
+            self.logger.info(f"Executing strategy: {strategy_name}")
 
-                # Execute strategy
-                if self.strategy_instance and not k_data.empty:
-                    result = self._execute_strategy(code, k_data)
-                    if result and len(result) >= 4:
-                        meets_criteria, score, golden_cross, technical_analysis = result
-                        if meets_criteria:
+            # Filter stocks based on criteria for this strategy
+            selected_stocks = []
+            selected_scores = {}  # Store scores for each selected stock
+            selection_reasons = {}  # Store selection reasons for each selected stock
+            technical_analysis_data = {}  # Store technical analysis data for each selected stock
+            golden_cross_flags = {}  # Store golden cross flags for each selected stock
+            last_data_date = None
+
+            # Process each stock's data for this strategy
+            for code, k_data in stock_data.items():
+                try:
+                    # Update last_data_date
+                    if not k_data.empty and 'date' in k_data.columns:
+                        stock_last_date = k_data['date'].iloc[-1]
+                        if hasattr(stock_last_date, 'strftime'):
+                            stock_last_date = stock_last_date.strftime('%Y-%m-%d')
+                        else:
+                            stock_last_date = str(stock_last_date)
+
+                        # Update last_data_date to the latest date among all selected stocks
+                        if stock_last_date and (not last_data_date or stock_last_date > last_data_date):
+                            last_data_date = stock_last_date
+
+                    # Execute strategy
+                    if strategy_instance and not k_data.empty:
+                        result = self._execute_strategy_for_instance(code, k_data, strategy_instance, strategy_name)
+                        if result and isinstance(result, dict):
+                            # Stock was selected, add to results
                             selected_stocks.append(code)
-                            selected_scores[code] = score if score is not None else 1.0
-                            # Check for golden cross from strategy result
-                            golden_cross_flags[code] = golden_cross
+                            selected_scores[code] = result.get('score', 0.0)
+                            # Store selection reason
+                            selection_reasons[code] = result.get('selection_reason', "")
                             # Store technical analysis data
-                            technical_analysis_data[code] = technical_analysis
-                    elif result and len(result) >= 3:
-                        meets_criteria = result[0]
-                        score = result[1]
-                        golden_cross = result[2]
-                        technical_analysis = {}
-                        if meets_criteria:
-                            selected_stocks.append(code)
-                            selected_scores[code] = score if score is not None else 1.0
-                            # Check for golden cross from strategy result
-                            golden_cross_flags[code] = golden_cross
-                            # Store empty technical analysis data
-                            technical_analysis_data[code] = technical_analysis
+                            technical_analysis_data[code] = result.get('technical_analysis', {})
+                            # Store golden cross flag (default to False if not present)
+                            golden_cross_flags[code] = result.get('golden_cross', False)
 
-            except Exception as e:
-                self.logger.warning(f"Error processing stock {code}: {e}")
-                continue
+                except Exception as e:
+                    self.logger.warning(f"Error processing stock {code} for strategy {strategy_name}: {e}")
+                    continue
 
-        self.logger.info(f"Selected {len(selected_stocks)} stocks for weekly trading")
-        if last_data_date:
-            self.logger.info(f"Last data date used for selection: {last_data_date}")
-        return selected_stocks, last_data_date, golden_cross_flags, selected_scores, technical_analysis_data
+            self.logger.info(f"Strategy {strategy_name} selected {len(selected_stocks)} stocks")
+            if last_data_date:
+                self.logger.info(f"Last data date used for selection: {last_data_date}")
 
-    def _execute_strategy(self, code: str, k_data):
+            # Store results for this strategy
+            strategy_results[strategy_name] = (selected_stocks, selection_reasons, selected_scores, technical_analysis_data)
+
+        # Return format based on number of strategies
+        if len(self.strategies) == 1:
+            # Single strategy mode - return the 6-value tuple for backward compatibility
+            strategy_name = self.strategies[0]['name']
+            if strategy_name in strategy_results:
+                selected_stocks, last_data_date, selected_scores, technical_analysis_data = strategy_results[strategy_name]
+                # Create golden_cross_flags (default all to False for now)
+                golden_cross_flags = {code: False for code in selected_stocks}
+                return (
+                    selected_stocks,
+                    last_data_date,
+                    golden_cross_flags,
+                    selected_scores,
+                    technical_analysis_data,
+                    strategy_results
+                )
+
+        # Multiple strategies mode - return the dictionary format
+        return strategy_results
+
+    def _execute_strategy_for_instance(self, code: str, k_data, strategy_instance, strategy_name):
         """
         Execute strategy by calling the dynamic strategy instance
 
         Args:
             code: Stock code
             k_data: K-line data
+            strategy_instance: The strategy instance to execute
+            strategy_name: Name of the strategy
 
         Returns:
-            Tuple of (meets_criteria, score, golden_cross, technical_analysis_data) where meets_criteria is True if stock meets strategy criteria, False otherwise,
-            score is the strategy score (or None if not applicable), golden_cross is the golden cross flag,
-            and technical_analysis_data contains moving average values
+            Complete strategy result structure including all fields from strategy execution
         """
         try:
-            if self.strategy_instance and k_data is not None and not k_data.empty:
-                # Call the strategy's analyze method for stock selection
-                result = self.strategy_instance.analyze(k_data)
+            if strategy_instance and k_data is not None and not k_data.empty:
+                # Call the strategy's analyze method for individual stock selection
+                meets_criteria, selection_reason, score, breakout_signal = strategy_instance.analyze(k_data)
 
-                # Log the result for debugging
-                # self.logger.info(f"Strategy {self.strategy_name} returned: {result}")
+                if meets_criteria:
+                    # Get technical analysis data
+                    technical_analysis = strategy_instance.get_technical_analysis_data(k_data)
 
-                # Extract technical analysis data
-                # Instead of hardcoding three MA values, use the technical analysis data returned by the strategy
-                technical_analysis_data = {}
-                # Check if the strategy's analyze method returns technical analysis data as part of the result
-                if isinstance(result, tuple) and len(result) > 4:
-                    # If the strategy returns technical analysis data as the 5th element, use it
-                    strategy_tech_data = result[4] if len(result) > 4 else {}
-                    if isinstance(strategy_tech_data, dict):
-                        technical_analysis_data = strategy_tech_data
+                    # Calculate position size based on score
+                    position_size = 0.0
+                    if hasattr(strategy_instance, '_calculate_position_from_score'):
+                        position_size = strategy_instance._calculate_position_from_score(score)
 
-                # If no technical analysis data from strategy result, try to get it from the strategy instance
-                if not technical_analysis_data and hasattr(self.strategy_instance, 'get_technical_analysis_data'):
-                    technical_analysis_data = self.strategy_instance.get_technical_analysis_data(k_data)
+                    # Return the complete strategy result structure
+                    return {
+                        "code": code,
+                        "score": score,
+                        "selection_reason": selection_reason,
+                        "technical_analysis": technical_analysis,
+                        "breakout_signal": breakout_signal,
+                        "position": position_size,
+                    }
 
-                # Fallback: if still no technical analysis data, calculate basic three MA values
-                if not technical_analysis_data:
-                    if hasattr(self.strategy_instance, 'params'):
-                        params = self.strategy_instance.params
-                        short_period = params.get('short', 5)
-                        mid_period = params.get('mid', 13)
-                        long_period = params.get('long', 34)
-
-                        # Calculate moving averages for technical analysis
-                        if len(k_data) >= max(short_period, mid_period, long_period):
-                            import numpy as np
-                            close_prices = np.array(k_data['close'].values, dtype=np.float64)
-
-                            # Calculate moving averages
-                            if len(close_prices) >= short_period:
-                                ma_short = np.mean(close_prices[-short_period:])
-                                technical_analysis_data['ma_short'] = float(ma_short)
-
-                            if len(close_prices) >= mid_period:
-                                ma_mid = np.mean(close_prices[-mid_period:])
-                                technical_analysis_data['ma_mid'] = float(ma_mid)
-
-                            if len(close_prices) >= long_period:
-                                ma_long = np.mean(close_prices[-long_period:])
-                                technical_analysis_data['ma_long'] = float(ma_long)
-
-                            # Add current price
-                            if len(close_prices) > 0:
-                                technical_analysis_data['price'] = float(close_prices[-1])
-
-                # The strategy returns (meets_criteria, reason, score, golden_cross)
-                # We need to unpack correctly and return (meets_criteria, score, golden_cross, technical_analysis_data)
-                if isinstance(result, tuple):
-                    meets_criteria = result[0] if len(result) > 0 else False
-                    reason = result[1] if len(result) > 1 else ""
-                    score = result[2] if len(result) > 2 else None
-                    golden_cross = result[3] if len(result) > 3 else False
-                    return meets_criteria, score, golden_cross, technical_analysis_data
-
-            return False, None, False, {}
+            return None
         except Exception as e:
-            self.logger.warning(f"Error executing strategy for stock {code}: {e}")
-            return False, None, False, {}
+            self.logger.warning(f"Error executing strategy {strategy_name} for stock {code}: {e}")
+            return None
 
     def _convert_daily_to_weekly(self, daily_data):
         """
@@ -416,19 +421,15 @@ class WeeklyStockSelector(DataProviderInterface):
             self.logger.error(f"Error converting daily to weekly data: {e}")
             return pd.DataFrame()
 
-    def save_selected_stocks(self, stocks: List[str], golden_cross_flags: Optional[Dict[str, bool]] = None,
-                           date: Optional[str] = None, last_data_date: Optional[str] = None,
-                           scores: Optional[Dict[str, float]] = None,
-                           technical_analysis_data: Optional[Dict[str, Dict]] = None) -> bool:
+    def save_selected_stocks(self, strategy_results: Dict[str, Tuple[List[str], Optional[str], Dict[str, float], Dict[str, Dict]]],
+                           date: Optional[str] = None) -> bool:
         """
-        Save selected stocks to database
+        Save selected stocks from multiple strategies to database
 
         Args:
-            stocks: List of selected stock codes
-            golden_cross_flags: Dictionary mapping stock codes to golden cross flags
+            strategy_results: Dictionary mapping strategy names to tuples of
+                            (selected stock codes, last data date, scores, technical_analysis_data)
             date: Selection date
-            last_data_date: Last date of stock data used for selection
-            technical_analysis_data: Technical analysis data for each stock
 
         Returns:
             True if saved successfully, False otherwise
@@ -440,110 +441,176 @@ class WeeklyStockSelector(DataProviderInterface):
             # Create database operations instance
             db_ops = DatabaseOperations(self.db_manager)
 
-            # Convert stocks list to the expected format (list of dicts)
-            stocks_data = []
-            for stock_code in stocks:
-                # Get score from scores dictionary
-                score = scores.get(stock_code, 0.0) if scores else 0.0
-                golden_cross = golden_cross_flags.get(stock_code, False) if golden_cross_flags else False
-
-                # Get technical analysis data from strategy results if available
-                value_text = ""
-                if technical_analysis_data and stock_code in technical_analysis_data:
-                    # Use the new unified formatter
-                    value_text = StrategyResultFormatter.format_value_field(
-                        stock_code=stock_code,
-                        technical_analysis_data=technical_analysis_data[stock_code],
-                        strategy_name=self.strategy_name
-                    )
-                elif scores and stock_code in scores:
-                    # Extract technical data from score reason text
-                    score_text = scores[stock_code]
-                    # Use the new unified formatter with reason text
-                    value_text = StrategyResultFormatter.format_value_field(
-                        stock_code=stock_code,
-                        strategy_name=self.strategy_name
-                    )
-                else:
-                    # Default fallback using the new formatter
-                    value_text = StrategyResultFormatter.format_value_field(
-                        stock_code=stock_code,
-                        strategy_name=self.strategy_name
-                    )
-
-                # Normalize score to 0-1 range and round to 2 decimal places
-                # Handle different score ranges:
-                # - Some strategies return scores in 0-1 range
-                # - Some strategies return scores in 0-100 range
-                if score is not None:
-                    score_float = float(score)
-                    # If score is greater than 1, assume it's in 0-100 range and normalize it
-                    if score_float > 1.0:
-                        normalized_score = max(0.0, min(1.0, score_float / 100.0))
-                    else:
-                        # Score is already in 0-1 range
-                        normalized_score = max(0.0, min(1.0, score_float))
-                else:
-                    normalized_score = 0.0
-
-                rounded_score = round(normalized_score, 2)
-
-                stock_info = {
-                    'code': stock_code,
-                    'trend': {
-                        self.strategy_name: {
-                            'score': rounded_score,
-                            'golden_cross': 1 if golden_cross else 0,
-                            'value': value_text
-                        }
-                    }
-                }
-                stocks_data.append(stock_info)
-
             # Ensure date is not None
             if date is None:
                 date = datetime.now().strftime('%Y-%m-%d')
 
-            # Get the actual strategy ID from database
-            strategy_id = None
-            strategy_name = self.strategy_name if self.strategy_name else "Unknown Strategy"  # Use the actual strategy name
-            strategies = self.db_manager.get_strategies()
+            # Process each strategy's results
+            for strategy_name, (selected_stocks, last_data_date, scores, technical_analysis_data) in strategy_results.items():
+                if not selected_stocks:
+                    self.logger.info(f"No stocks selected by strategy {strategy_name}, skipping save")
+                    continue
 
-            # Try to find the current strategy in the database
-            for strategy in strategies:
-                if strategy.get('name') == self.strategy_name:
-                    strategy_id = strategy.get('_id')
-                    break
+                # Convert stocks list to the expected format (list of dicts)
+                stocks_data = []
+                for stock_code in selected_stocks:
+                    # Get score from scores dictionary
+                    score = scores.get(stock_code, 0.0) if scores else 0.0
 
-            # If we couldn't find the strategy, use the strategy_id that was passed in or a default
-            if not strategy_id:
-                strategy_id = self.strategy_id if self.strategy_id else "unknown_strategy"
+                    # Get technical analysis data from strategy results if available
+                    value_text = ""
+                    if technical_analysis_data and stock_code in technical_analysis_data:
+                        # Use the new unified formatter
+                        value_text = StrategyResultFormatter.format_value_field(
+                            stock_code=stock_code,
+                            technical_analysis_data=technical_analysis_data[stock_code],
+                            strategy_name=strategy_name
+                        )
+                    elif scores and stock_code in scores:
+                        # Extract technical data from score reason text
+                        score_text = scores[stock_code]
+                        # Use the new unified formatter with reason text
+                        value_text = StrategyResultFormatter.format_value_field(
+                            stock_code=stock_code,
+                            technical_analysis_data=None,
+                            strategy_name=strategy_name
+                        )
+                    else:
+                        # Default fallback using the new formatter
+                        value_text = StrategyResultFormatter.format_value_field(
+                            stock_code=stock_code,
+                            technical_analysis_data=None,
+                            strategy_name=strategy_name
+                        )
 
-            # Use strategy_id as the strategy key
-            strategy_key = strategy_id
+                    # Normalize score to 0-1 range and round to 2 decimal places
+                    # Handle different score ranges:
+                    # - Some strategies return scores in 0-1 range
+                    # - Some strategies return scores in 0-100 range
+                    if score is not None:
+                        score_float = float(score)
+                        # If score is greater than 1, assume it's in 0-100 range and normalize it
+                        if score_float > 1.0:
+                            normalized_score = max(0.0, min(1.0, score_float / 100.0))
+                        else:
+                            # Score is already in 0-1 range
+                            normalized_score = max(0.0, min(1.0, score_float))
+                    else:
+                        normalized_score = 0.0
 
-            # Save the selected stocks to pool
-            save_result = db_ops.save_selected_stocks_to_pool(
-                strategy_key=strategy_key,
-                agent_name="WeeklySelector",
-                strategy_id=strategy_id,
-                strategy_name=strategy_name,
-                stocks=stocks_data,
-                date=date,
-                last_data_date=last_data_date,
-                strategy_params=self.strategy_params  # Pass actual strategy parameters
-            )
+                    rounded_score = round(normalized_score, 2)
 
-            # Clear buf_data after saving pool
-            if save_result:
-                try:
-                    buf_data_collection = self.db_manager.db['buf_data']
-                    deleted_count = buf_data_collection.delete_many({}).deleted_count
-                    self.logger.info(f"Cleared buf_data collection, removed {deleted_count} records")
-                except Exception as clear_error:
-                    self.logger.error(f"Error clearing buf_data: {clear_error}")
+                    # Get the strategy result for this stock
+                    strategy_result = None
+                    # Try to get the original strategy execution result with selection_reason
+                    if strategy_name in strategy_results:
+                        selected_stocks, selection_reasons, selected_scores, technical_analysis_data = strategy_results[strategy_name]
+                        if stock_code in selected_stocks:
+                            # Use the existing technical analysis data and scores
+                            # No need to re-execute strategy as we already have the results
+                            strategy_result = {
+                                'score': selected_scores.get(stock_code, 0.0),
+                                'analysis': technical_analysis_data.get(stock_code, {}),
+                                'selection_reason': selection_reasons.get(stock_code, "")  # Get selection_reason from selection_reasons dict
+                            }
 
-            return save_result
+                            # Try to extract selection_reason from technical analysis data if not already set
+                            if not strategy_result['selection_reason'] and stock_code in technical_analysis_data:
+                                tech_data = technical_analysis_data[stock_code]
+                                if 'selection_reason' in tech_data:
+                                    strategy_result['selection_reason'] = tech_data['selection_reason']
+                                elif 'reason' in tech_data:
+                                    strategy_result['selection_reason'] = tech_data['reason']
+
+                    # Create value data with required structure
+                    value_content = {
+                        "code": stock_code,
+                        "score": rounded_score,
+                        "selection_reason": "",  # Will be populated from strategy result
+                        "technical_analysis": {},
+                        "breakout_signal": False,
+                        "position": 0.0,
+                    }
+
+                    # Populate from strategy result if available
+                    if strategy_result:
+                        if 'analysis' in strategy_result:
+                            value_content['technical_analysis'] = strategy_result['analysis']
+                        # Extract selection reason from strategy result
+                        if 'selection_reason' in strategy_result:
+                            value_content['selection_reason'] = strategy_result['selection_reason']
+                        elif 'reason' in strategy_result:
+                            value_content['selection_reason'] = strategy_result['reason']
+                        # Also check in analysis if not found in strategy_result
+                        elif 'selection_reason' in strategy_result.get('analysis', {}):
+                            value_content['selection_reason'] = strategy_result['analysis']['selection_reason']
+                        elif 'reason' in strategy_result.get('analysis', {}):
+                            value_content['selection_reason'] = strategy_result['analysis']['reason']
+
+                        # Set breakout signal and position based on score
+                        value_content['breakout_signal'] = rounded_score > 0.5
+                        value_content['position'] = round(min(rounded_score * 0.1, 0.1), 2)  # Max 10% position, rounded to 2 decimals
+
+                    # Add signal field (based on breakout_signal)
+                    value_content['signal'] = "买入" if value_content['breakout_signal'] else "观望"
+
+                    # Convert to JSON string
+                    import json
+                    value_json = json.dumps(value_content, ensure_ascii=False)
+
+                    stock_info = {
+                        'code': stock_code,
+                        'trend': {
+                            strategy_name: {
+                                'score': rounded_score,
+                                'value': value_json
+                            }
+                        }
+                    }
+                    stocks_data.append(stock_info)
+
+                # Get the actual strategy ID from database
+                strategy_id = None
+                strategies = self.db_manager.get_strategies()
+
+                # Try to find the current strategy in the database
+                for strategy in strategies:
+                    if strategy.get('name') == strategy_name:
+                        strategy_id = strategy.get('_id')
+                        break
+
+                # If we couldn't find the strategy, use a default
+                if not strategy_id:
+                    strategy_id = f"unknown_{strategy_name}"
+
+                # Use strategy_id as the strategy key
+                strategy_key = strategy_id
+
+                # Get strategy parameters for this strategy
+                strategy_params = {}
+                for strategy_info in self.strategies:
+                    if strategy_info['name'] == strategy_name:
+                        strategy_params = strategy_info['params']
+                        break
+
+                # Save the selected stocks to pool
+                save_result = db_ops.save_selected_stocks_to_pool(
+                    strategy_key=strategy_key,
+                    agent_name="WeeklySelector",
+                    strategy_id=strategy_id,
+                    strategy_name=strategy_name,
+                    stocks=stocks_data,
+                    date=date,
+                    last_data_date=last_data_date,
+                    strategy_params=strategy_params  # Pass actual strategy parameters
+                )
+
+                if save_result:
+                    self.logger.info(f"Successfully saved {len(selected_stocks)} stocks for strategy {strategy_name}")
+                else:
+                    self.logger.error(f"Failed to save stocks for strategy {strategy_name}")
+
+            return True
         except Exception as e:
             self.logger.error(f"Error saving selected stocks: {e}")
             return False

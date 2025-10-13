@@ -177,6 +177,16 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Ensured consistency in pool record operations across all selector agents
 - Verified that sorting now works correctly with the proper field
 
+### Selection Reason Field Fix
+- **FIXED**: Resolved issue where `selection_reason` field was not being written to database pool dataset
+- **ROOT CAUSE**: Weekly Selector was calling `analyze` method but not properly passing `selection_reason` field through the result pipeline
+- **FIXES IMPLEMENTED**:
+  - Added `selection_reasons` dictionary in `_execute_strategy` method to store selection reasons for each stock
+  - Updated `strategy_results` structure from `(selected_stocks, last_data_date, selected_scores, technical_analysis_data)` to `(selected_stocks, selection_reasons, selected_scores, technical_analysis_data)`
+  - Fixed `save_selected_stocks` method to correctly extract `selection_reason` from `selection_reasons` dictionary
+  - Fixed indentation error in Weekly Selector that was causing syntax errors
+- **VERIFIED**: Created test script to confirm `selection_reason` field is now properly returned by strategies and passed through the Weekly Selector pipeline
+
 ### Enhanced Public Opinion Analysis Strategy V2 with Qian Gu Qian Ping Data Integration
 - Added support for qian gu qian ping (千股千评) data collection using `stock_comment_em()` function
 - Implemented one-time loading of overall market sentiment data for all stocks at strategy initialization
