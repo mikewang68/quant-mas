@@ -168,6 +168,7 @@
 
 策略思想:
 利用均线多头排列、MACD动量以及价格突破三大条件来识别稳健的趋势性上涨行情。只有当价格站稳在关键均线之上，且动量指标与价格行为相互确认时，才产生买入信号，有效避免震荡市中的频繁交易。
+
 参数设置:
 ma_fast: 快速均线周期 (默认: 5)
 ma_slow: 慢速均线周期 (默认: 13)
@@ -175,6 +176,7 @@ macd_fast: MACD快线周期 (默认: 12)
 macd_slow: MACD慢线周期 (默认: 26)
 macd_signal: MACD信号线周期 (默认: 9)
 new_high_period: 新高周期 (默认: 20)
+
 输出含义:
 ma_fast: 当前快速均线值 (MA5)
 ma_slow: 当前中期均线值 (MA13)
@@ -184,36 +186,54 @@ macd_histogram: 当前MACD柱状线值
 score: 趋势强度评分 (0 ~ 100)
 golden_cross: 金叉信号 (布尔值，True表示检测到金叉)
 position: 仓位大小 (0 ~ 1, 满仓=1)
+
 Score 计算公式:
-python
+```python
 score = max(
     0,
     min(
         100,
-        40 * (ma_fast - ma_slow) / ma_mid  # 均线排列强度
+        40 * (ma_fast - ma_slow) / ma_slow  # 均线排列强度
       + 30 * (macd_dif - macd_dea) / abs(macd_dea) if macd_dea != 0 else 0  # MACD动量
       + 20 * max(0, (macd_dif - 0)) / max(0.01, macd_dif)  # 零轴之上加分
-      + 10 * (price - max(historical_high)) / max(historical_high)  # 突破强度
+      + 10 * (price - historical_high) / historical_high  # 突破强度
     )
 )
+```
+
 解释：
 第一项 (40%)：快速与慢速均线的距离，反映近期趋势强度
 第二项 (30%)：MACD金叉后的扩散程度，体现动量加速
 第三项 (20%)：DIF线在零轴之上的偏离程度，确认多头市场
 第四项 (10%)：价格突破历史高点的幅度，过滤假信号
+
+**最新更新**:
+- 所有计算数值精确到小数点后2位
+- 添加ma_fast >= 前一个ma_fast的筛选条件，确保快速均线保持上升或持平趋势
+
+筛选条件：
+1. MA5 > MA13
+2. DIF > DEA
+3. 价格创20周期新高
+4. MA5 >= 前一个MA5 (确保快速均线保持上升或持平趋势)
+5. score > 60 (趋势强度确认)
+
 金叉检测：
 当快速均线(MA5)向上穿越中期均线(MA13)且MACD的DIF线上穿DEA线时，产生金叉确认信号。
+
 止损条件：
 当收盘价跌破慢速均线(MA13)时，触发止损信号，position设置为0。
+
 止盈条件：
 当收益率达到20%~30%时，开始分批止盈
 当收盘价跌破快速均线(MA5)时，清仓离场
 
 信号生成规则：
-基础信号：MA5 > MA13 && DIF > DEA && 价格创20周期新高
+基础信号：MA5 > MA13 && DIF > DEA && 价格创20周期新高 && MA5 >= 前一个MA5
 强度确认：score > 60 (可调节)
 仓位管理：score越高，position越接近1
 风险控制：严格执行止损止盈规则
+
 策略优势：
 多维度确认趋势，减少假信号
 量化趋势强度，实现动态仓位管理

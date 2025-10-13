@@ -13,6 +13,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from strategies.base_strategy import BaseStrategy
 
+
 class TrendFollowingStrategy(BaseStrategy):
     """
     Trend Following Strategy
@@ -49,7 +50,10 @@ class TrendFollowingStrategy(BaseStrategy):
                 mapped_params["macd_slow"] = int(mapped_params["macd_slow"])
             if "macd_signal" in mapped_params and "macd_signal" not in mapped_params:
                 mapped_params["macd_signal"] = int(mapped_params["macd_signal"])
-            if "new_high_period" in mapped_params and "new_high_period" not in mapped_params:
+            if (
+                "new_high_period" in mapped_params
+                and "new_high_period" not in mapped_params
+            ):
                 mapped_params["new_high_period"] = int(mapped_params["new_high_period"])
 
             # Ensure existing parameters are integers where needed
@@ -71,17 +75,21 @@ class TrendFollowingStrategy(BaseStrategy):
         super().__init__(name, params or {})
 
         # Strategy parameters
-        self.fast_period = self.params.get('fast', 5)
-        self.slow_period = self.params.get('slow', 13)
-        self.macd_fast = self.params.get('macd_fast', 12)
-        self.macd_slow = self.params.get('macd_slow', 26)
-        self.macd_signal = self.params.get('macd_signal', 9)
-        self.new_high_period = self.params.get('new_high_period', 5)  # Use 5-period breakout
+        self.fast_period = self.params.get("fast", 5)
+        self.slow_period = self.params.get("slow", 13)
+        self.macd_fast = self.params.get("macd_fast", 12)
+        self.macd_slow = self.params.get("macd_slow", 26)
+        self.macd_signal = self.params.get("macd_signal", 9)
+        self.new_high_period = self.params.get(
+            "new_high_period", 5
+        )  # Use 5-period breakout
 
-        self.logger.info(f"Initialized {self.name} strategy with params: "
-                        f"fast={self.fast_period}, slow={self.slow_period}, "
-                        f"macd_fast={self.macd_fast}, macd_slow={self.macd_slow}, "
-                        f"macd_signal={self.macd_signal}, new_high_period={self.new_high_period}")
+        self.logger.info(
+            f"Initialized {self.name} strategy with params: "
+            f"fast={self.fast_period}, slow={self.slow_period}, "
+            f"macd_fast={self.macd_fast}, macd_slow={self.macd_slow}, "
+            f"macd_signal={self.macd_signal}, new_high_period={self.new_high_period}"
+        )
 
     def analyze(self, data: pd.DataFrame) -> Tuple[bool, str, Optional[float], bool]:
         """
@@ -100,9 +108,12 @@ class TrendFollowingStrategy(BaseStrategy):
         try:
             # Get required data points
             required_data = max(
-                self.fast_period, self.slow_period,
-                self.macd_fast, self.macd_slow, self.macd_signal,
-                self.new_high_period
+                self.fast_period,
+                self.slow_period,
+                self.macd_fast,
+                self.macd_slow,
+                self.macd_signal,
+                self.new_high_period,
             )
             if len(data) < required_data:
                 return False, f"数据不足，需要{required_data}条数据", None, False
@@ -120,7 +131,7 @@ class TrendFollowingStrategy(BaseStrategy):
                 close_prices,
                 fastperiod=self.macd_fast,
                 slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal
+                signalperiod=self.macd_signal,
             )
 
             # Current values
@@ -131,17 +142,33 @@ class TrendFollowingStrategy(BaseStrategy):
             macd_dea_last = macd_dea[-1] if not np.isnan(macd_dea[-1]) else None
 
             # Check if all values are valid
-            if (ma_fast_last is None or ma_slow_last is None or
-                macd_dif_last is None or macd_dea_last is None):
+            if (
+                ma_fast_last is None
+                or ma_slow_last is None
+                or macd_dif_last is None
+                or macd_dea_last is None
+            ):
                 return False, "技术指标计算无效", None, False
 
             # Calculate historical high for scoring (long-term)
-            historical_high = np.max(high_prices[-self.new_high_period:]) if len(high_prices) >= self.new_high_period else None
+            historical_high = (
+                np.max(high_prices[-self.new_high_period :])
+                if len(high_prices) >= self.new_high_period
+                else None
+            )
 
             # Generate reason based on which conditions are met
             ma_condition = ma_fast_last > ma_slow_last
             macd_condition = macd_dif_last > macd_dea_last
-            breakout_condition = historical_high is not None and current_price > historical_high
+            breakout_condition = (
+                historical_high is not None and current_price > historical_high
+            )
+
+            # Check if ma_fast is increasing (current >= previous)
+            ma_fast_increasing = True
+            if len(ma_fast) >= 2:
+                ma_fast_prev = ma_fast[-2] if not np.isnan(ma_fast[-2]) else ma_fast_last
+                ma_fast_increasing = ma_fast_last >= ma_fast_prev
 
             # Check for golden cross pattern (MA5 crosses above MA13 and MACD DIF crosses above DEA)
             golden_cross_condition = self._detect_golden_cross(data)
@@ -150,12 +177,17 @@ class TrendFollowingStrategy(BaseStrategy):
             reason = f"满足趋势跟踪条件: 收盘价={current_price:.2f}, MA{self.fast_period}={ma_fast_last:.2f}, MA{self.slow_period}={ma_slow_last:.2f}, DIF={macd_dif_last:.2f}, DEA={macd_dea_last:.2f}"
             if golden_cross_condition:
                 reason += " (检测到金叉)"
+            if not ma_fast_increasing:
+                return False, f"MA{self.fast_period}未保持上升趋势", 0.0, False
 
             # For scoring, we'll use the historical high (5-period)
             score = self._calculate_score(
-                ma_fast_last, ma_slow_last,
-                macd_dif_last, macd_dea_last,
-                current_price, historical_high
+                ma_fast_last,
+                ma_slow_last,
+                macd_dif_last,
+                macd_dea_last,
+                current_price,
+                historical_high,
             )
 
             # Check strength confirmation (score > 60) - revert to original strict condition
@@ -194,7 +226,7 @@ class TrendFollowingStrategy(BaseStrategy):
                 close_prices,
                 fastperiod=self.macd_fast,
                 slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal
+                signalperiod=self.macd_signal,
             )
 
             # Current values
@@ -206,15 +238,23 @@ class TrendFollowingStrategy(BaseStrategy):
 
             # Prepare technical analysis data
             technical_analysis_data = {
-                'price': float(current_price),
-                'moving_averages': {
-                    f'sma_{self.fast_period}': float(ma_fast_last) if ma_fast_last is not None else 'N/A',
-                    f'sma_{self.slow_period}': float(ma_slow_last) if ma_slow_last is not None else 'N/A',
+                "price": round(float(current_price), 2),
+                "moving_averages": {
+                    f"sma_{self.fast_period}": round(float(ma_fast_last), 2)
+                    if ma_fast_last is not None
+                    else "N/A",
+                    f"sma_{self.slow_period}": round(float(ma_slow_last), 2)
+                    if ma_slow_last is not None
+                    else "N/A",
                 },
-                'macd': {
-                    'dif': float(macd_dif_last) if macd_dif_last is not None else 'N/A',
-                    'dea': float(macd_dea_last) if macd_dea_last is not None else 'N/A',
-                }
+                "macd": {
+                    "dif": round(float(macd_dif_last), 2)
+                    if macd_dif_last is not None
+                    else "N/A",
+                    "dea": round(float(macd_dea_last), 2)
+                    if macd_dea_last is not None
+                    else "N/A",
+                },
             }
 
             return technical_analysis_data
@@ -222,7 +262,9 @@ class TrendFollowingStrategy(BaseStrategy):
             self.log_error(f"获取技术分析数据错误: {e}")
             return {}
 
-    def _calculate_score(self, ma_fast, ma_slow, macd_dif, macd_dea, price, historical_high):
+    def _calculate_score(
+        self, ma_fast, ma_slow, macd_dif, macd_dea, price, historical_high
+    ):
         """
         Calculate trend strength score based on documented formula
 
@@ -240,22 +282,36 @@ class TrendFollowingStrategy(BaseStrategy):
         """
         try:
             # First term: Moving average arrangement strength (40%)
-            term1 = 40 * (ma_fast - ma_slow) / ma_slow if ma_slow != 0 else 0
+            term1 = (
+                round(40 * (ma_fast - ma_slow) / ma_slow, 2) if ma_slow != 0 else 0.0
+            )
 
             # Second term: MACD momentum (30%)
-            term2 = 30 * (macd_dif - macd_dea) / abs(macd_dea) if macd_dea != 0 else 0
+            term2 = (
+                round(30 * (macd_dif - macd_dea) / abs(macd_dea), 2)
+                if macd_dea != 0
+                else 0.0
+            )
 
             # Third term: Above zero axis bonus (20%)
-            term3 = 20 * max(0, macd_dif) / max(0.01, abs(macd_dif)) if macd_dif != 0 else 0
+            term3 = (
+                round(20 * max(0, macd_dif) / max(0.01, abs(macd_dif)), 2)
+                if macd_dif != 0
+                else 0.0
+            )
 
             # Fourth term: Breakout strength (10%)
-            term4 = 10 * (price - historical_high) / historical_high if historical_high != 0 else 0
+            term4 = (
+                round(10 * (price - historical_high) / historical_high, 2)
+                if historical_high != 0
+                else 0.0
+            )
 
-            score = max(0, min(100, term1 + term2 + term3 + term4))
+            score = round(max(0, min(100, term1 + term2 + term3 + term4)), 2)
             return score
         except Exception as e:
             self.log_warning(f"评分计算错误: {e}")
-            return 0
+            return 0.0
 
     def _detect_golden_cross(self, data: pd.DataFrame) -> bool:
         """
@@ -267,7 +323,9 @@ class TrendFollowingStrategy(BaseStrategy):
         Returns:
             True if golden cross detected, False otherwise
         """
-        if data.empty or len(data) < max(self.fast_period, self.slow_period, self.macd_signal):
+        if data.empty or len(data) < max(
+            self.fast_period, self.slow_period, self.macd_signal
+        ):
             return False
 
         try:
@@ -283,12 +341,16 @@ class TrendFollowingStrategy(BaseStrategy):
                 close_prices,
                 fastperiod=self.macd_fast,
                 slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal
+                signalperiod=self.macd_signal,
             )
 
             # Check if we have enough data points
-            if (len(ma_fast) < 2 or len(ma_slow) < 2 or
-                len(macd_dif) < 2 or len(macd_dea) < 2):
+            if (
+                len(ma_fast) < 2
+                or len(ma_slow) < 2
+                or len(macd_dif) < 2
+                or len(macd_dea) < 2
+            ):
                 return False
 
             # Check for golden cross (fast MA crosses above slow MA)
@@ -316,8 +378,12 @@ class TrendFollowingStrategy(BaseStrategy):
             )
 
             # Both conditions must be met for golden cross
-            return (current_fast_above_slow and previous_fast_below_slow and
-                    current_dif_above_dea and previous_dif_below_dea)
+            return (
+                current_fast_above_slow
+                and previous_fast_below_slow
+                and current_dif_above_dea
+                and previous_dif_below_dea
+            )
 
         except Exception as e:
             self.log_warning(f"金叉检测错误: {e}")
@@ -352,20 +418,23 @@ class TrendFollowingStrategy(BaseStrategy):
                     if not data.empty:
                         close_prices = data["close"].values
                         if len(close_prices) >= max(
-                            self.fast_period, self.slow_period,
-                            self.macd_fast, self.macd_slow, self.macd_signal,
-                            self.new_high_period
+                            self.fast_period,
+                            self.slow_period,
+                            self.macd_fast,
+                            self.macd_slow,
+                            self.macd_signal,
+                            self.new_high_period,
                         ):
                             # Calculate technical indicators for analysis
                             ma_fast_val = np.mean(
                                 np.array(
-                                    close_prices[-self.fast_period:],
+                                    close_prices[-self.fast_period :],
                                     dtype=np.float64,
                                 )
                             )
                             ma_slow_val = np.mean(
                                 np.array(
-                                    close_prices[-self.slow_period:],
+                                    close_prices[-self.slow_period :],
                                     dtype=np.float64,
                                 )
                             )
@@ -375,20 +444,28 @@ class TrendFollowingStrategy(BaseStrategy):
                                 np.array(close_prices, dtype=np.float64),
                                 fastperiod=self.macd_fast,
                                 slowperiod=self.macd_slow,
-                                signalperiod=self.macd_signal
+                                signalperiod=self.macd_signal,
                             )
 
                             technical_analysis = {
-                                "price": float(close_prices[-1]),
+                                "price": round(float(close_prices[-1]), 2),
                                 "moving_averages": {
-                                    f"sma_{self.fast_period}": float(ma_fast_val),
-                                    f"sma_{self.slow_period}": float(ma_slow_val),
+                                    f"sma_{self.fast_period}": round(
+                                        float(ma_fast_val), 2
+                                    ),
+                                    f"sma_{self.slow_period}": round(
+                                        float(ma_slow_val), 2
+                                    ),
                                 },
                                 "macd": {
-                                    "dif": float(macd_dif_arr[-1]) if not np.isnan(macd_dif_arr[-1]) else 0,
-                                    "dea": float(macd_dea_arr[-1]) if not np.isnan(macd_dea_arr[-1]) else 0,
+                                    "dif": round(float(macd_dif_arr[-1]), 2)
+                                    if not np.isnan(macd_dif_arr[-1])
+                                    else 0.0,
+                                    "dea": round(float(macd_dea_arr[-1]), 2)
+                                    if not np.isnan(macd_dea_arr[-1])
+                                    else 0.0,
                                 },
-                                "score": score,
+                                "score": round(score, 2),
                                 "golden_cross": golden_cross,
                             }
 
@@ -423,7 +500,7 @@ class TrendFollowingStrategy(BaseStrategy):
                 additional_metadata={
                     "strategy_version": "1.0",
                     "total_stocks_analyzed": len(stock_data),
-                }
+                },
             )
 
             save_success = self.save_to_pool(
@@ -444,7 +521,6 @@ class TrendFollowingStrategy(BaseStrategy):
                 self.log_error("保存策略结果到池中失败")
 
         return selected_stocks
-    
 
     def generate_signals(self, data: pd.DataFrame) -> pd.DataFrame:
         """
@@ -475,12 +551,18 @@ class TrendFollowingStrategy(BaseStrategy):
                     close_prices,
                     fastperiod=self.macd_fast,
                     slowperiod=self.macd_slow,
-                    signalperiod=self.macd_signal
+                    signalperiod=self.macd_signal,
                 )
 
                 # Calculate historical high
-                historical_high = np.array([np.max(high_prices[max(0, i-self.new_high_period+1):i+1])
-                                          for i in range(len(high_prices))])
+                historical_high = np.array(
+                    [
+                        np.max(
+                            high_prices[max(0, i - self.new_high_period + 1) : i + 1]
+                        )
+                        for i in range(len(high_prices))
+                    ]
+                )
 
                 # Generate buy signals when all conditions are met:
                 # 1. MA5 > MA13
@@ -488,9 +570,13 @@ class TrendFollowingStrategy(BaseStrategy):
                 # 3. Price breaks historical high
                 for i in range(len(signals)):
                     # Check if we have valid data
-                    if (np.isnan(ma_fast[i]) or np.isnan(ma_slow[i]) or
-                        np.isnan(macd_dif[i]) or np.isnan(macd_dea[i]) or
-                        np.isnan(historical_high[i])):
+                    if (
+                        np.isnan(ma_fast[i])
+                        or np.isnan(ma_slow[i])
+                        or np.isnan(macd_dif[i])
+                        or np.isnan(macd_dea[i])
+                        or np.isnan(historical_high[i])
+                    ):
                         continue
 
                     # Check basic conditions
@@ -503,12 +589,15 @@ class TrendFollowingStrategy(BaseStrategy):
                         signals.loc[signals.index[i], "signal"] = "BUY"
                         # Calculate position size based on score
                         score = self._calculate_score(
-                            ma_fast[i], ma_slow[i],
-                            macd_dif[i], macd_dea[i],
-                            close_prices[i], historical_high[i]
+                            ma_fast[i],
+                            ma_slow[i],
+                            macd_dif[i],
+                            macd_dea[i],
+                            close_prices[i],
+                            historical_high[i],
                         )
                         # Position size is proportional to score (0-1 range)
-                        position_size = min(1.0, max(0.0, score / 100.0))
+                        position_size = round(min(1.0, max(0.0, score / 100.0)), 2)
                         signals.loc[signals.index[i], "position"] = position_size
 
             except Exception as e:
@@ -516,8 +605,9 @@ class TrendFollowingStrategy(BaseStrategy):
 
         return signals
 
-    def calculate_position_size(self, signal: str, portfolio_value: float,
-                              price: float) -> float:
+    def calculate_position_size(
+        self, signal: str, portfolio_value: float, price: float
+    ) -> float:
         """
         Calculate position size based on signal and portfolio value.
 
@@ -545,29 +635,31 @@ class TrendFollowingStrategy(BaseStrategy):
         else:
             return 0.0  # Hold position
 
+
 # Example usage
 if __name__ == "__main__":
     import logging
-    
+
     # Configure logging
     logging.basicConfig(level=logging.INFO)
-    
+
     # Create sample data
-    dates = pd.date_range('2023-01-01', periods=100, freq='D')
-    sample_data = pd.DataFrame({
-        'date': dates,
-        'open': np.random.uniform(100, 110, 100),
-        'high': np.random.uniform(110, 120, 100),
-        'low': np.random.uniform(90, 100, 100),
-        'close': np.random.uniform(100, 110, 100),
-        'volume': np.random.uniform(1000000, 2000000, 100)
-    })
-    
+    dates = pd.date_range("2023-01-01", periods=100, freq="D")
+    sample_data = pd.DataFrame(
+        {
+            "date": dates,
+            "open": np.random.uniform(100, 110, 100),
+            "high": np.random.uniform(110, 120, 100),
+            "low": np.random.uniform(90, 100, 100),
+            "close": np.random.uniform(100, 110, 100),
+            "volume": np.random.uniform(1000000, 2000000, 100),
+        }
+    )
+
     # Initialize strategy
     strategy = TrendFollowingStrategy()
-    
+
     # Generate signals
     signals = strategy.generate_signals(sample_data)
     print(f"Generated {len(signals[signals['signal'] != 'HOLD'])} trading signals")
     print(signals.tail(10))
-
