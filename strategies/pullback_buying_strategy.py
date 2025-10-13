@@ -145,6 +145,7 @@ class PullbackBuyingStrategy(BaseStrategy):
             score = self._calculate_score(
                 current_price, ma_value, kdj_j_value, rsi_value
             )
+            score = round(score, 2)
 
             # Check strength confirmation (score > 60)
             if score <= 60:
@@ -205,11 +206,11 @@ class PullbackBuyingStrategy(BaseStrategy):
 
             # Prepare technical analysis data in a format specific to Pullback Buying strategy
             technical_analysis_data = {
-                'price': float(current_price),
-                'ma_value': float(ma_value) if ma_value is not None else 'N/A',
+                'price': round(float(current_price), 2),
+                'ma_value': round(float(ma_value), 2) if ma_value is not None else 'N/A',
                 'ma_trend': int(ma_trend),
-                'kdj_j': float(kdj_j_value) if kdj_j_value is not None else 'N/A',
-                'rsi_value': float(rsi_value) if rsi_value is not None else 'N/A',
+                'kdj_j': round(float(kdj_j_value), 2) if kdj_j_value is not None else 'N/A',
+                'rsi_value': round(float(rsi_value), 2) if rsi_value is not None else 'N/A',
                 'is_valid_pullback': bool(is_valid_pullback)
             }
 
@@ -228,12 +229,22 @@ class PullbackBuyingStrategy(BaseStrategy):
         Returns:
             Trend direction (1: upward, 0: flat, -1: downward)
         """
-        if len(ma_values) < 3:
+        if ma_values is None or len(ma_values) < 3:
             return 0
 
         # Check last 3 values to determine trend
         last_values = ma_values[-3:]
-        if np.isnan(last_values).any():
+
+        # Check for None values in the last 3 values
+        if any(v is None for v in last_values):
+            return 0
+
+        # Check for NaN values in the last 3 values
+        try:
+            if np.isnan(last_values).any():
+                return 0
+        except (TypeError, ValueError):
+            # If numpy can't handle the data type, return flat trend
             return 0
 
         # Calculate differences
@@ -264,6 +275,14 @@ class PullbackBuyingStrategy(BaseStrategy):
         Returns:
             True if valid pullback, False otherwise
         """
+        # Check if any required values are None
+        if ma_value is None or kdj_j is None or rsi_value is None:
+            return False
+
+        # Check if ma_value is zero to avoid division by zero
+        if ma_value == 0:
+            return False
+
         # Basic conditions
         price_condition = abs(close - ma_value) / ma_value <= self.support_band_pct  # Price within ±3% of MA
         oversold_condition = (kdj_j < 20) or (rsi_value < 30)  # Oversold state
@@ -287,6 +306,14 @@ class PullbackBuyingStrategy(BaseStrategy):
         )
         """
         try:
+            # Check if any required values are None
+            if ma_value is None or kdj_j is None or rsi_value is None:
+                return 0
+
+            # Check if ma_value is zero to avoid division by zero
+            if ma_value == 0:
+                return 0
+
             # First term: KDJ oversold degree (40%)
             term1 = 40 * max(0, (self.oversold_threshold - kdj_j)) / self.oversold_threshold
 
@@ -294,10 +321,10 @@ class PullbackBuyingStrategy(BaseStrategy):
             term2 = 30 * max(0, (self.oversold_threshold - rsi_value)) / self.oversold_threshold
 
             # Third term: Pullback depth (30%)
-            term3 = 30 * max(0, (ma_value - close)) / ma_value if ma_value != 0 else 0
+            term3 = 30 * max(0, (ma_value - close)) / ma_value
 
             score = max(0, min(100, term1 + term2 + term3))
-            return score
+            return round(score, 2)
         except Exception as e:
             self.log_warning(f"评分计算错误: {e}")
             return 0
@@ -466,7 +493,7 @@ class PullbackBuyingStrategy(BaseStrategy):
 
                         if position_size > 0:
                             signals.loc[signals.index[i], "signal"] = "BUY"
-                            signals.loc[signals.index[i], "position"] = position_size
+                            signals.loc[signals.index[i], "position"] = round(position_size, 2)
 
             except Exception as e:
                 self.log_warning(f"生成信号时出错: {e}")
