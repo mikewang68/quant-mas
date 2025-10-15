@@ -8,6 +8,7 @@ import time
 import json
 import sys
 import os
+import datetime
 
 # Add the project root to the Python path to resolve imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -401,7 +402,9 @@ def check_and_download_missing_data(db):
 
     # 获取在 k_data 中没有数据的股票代码
     missing_codes_df = find_missing_k_data(db)
-    missing_codes = missing_codes_df["missing_codes"].tolist() if not missing_codes_df.empty else []
+    missing_codes = (
+        missing_codes_df["missing_codes"].tolist() if not missing_codes_df.empty else []
+    )
 
     if missing_codes:
         print(f"Found {len(missing_codes)} stocks with missing data: {missing_codes}")
@@ -420,7 +423,9 @@ def check_and_download_missing_data(db):
                 initial_ip = get_current_ip(max_retries=3, retry_delay=2)
                 if initial_ip:
                     used_ip.append(initial_ip)
-                    print(f"Initial IP added to used list for missing data: {initial_ip}")
+                    print(
+                        f"Initial IP added to used list for missing data: {initial_ip}"
+                    )
 
             # 为缺失的数据下载创建一个简化版本的下载逻辑
             end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
@@ -499,7 +504,9 @@ def check_and_download_missing_data(db):
                             )
 
                         # 更新code数据集，将当前日期写入last_updated字段
-                        current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+                        current_date = time.strftime(
+                            "%Y%m%d", time.localtime(time.time())
+                        )
                         db["code"].update_one(
                             {"_id": code},
                             {"$set": {"last_updated": current_date}},
@@ -520,7 +527,9 @@ def check_and_download_missing_data(db):
                 print(f"Retrying {len(failed_codes)} failed codes for missing data...")
                 still_failed_codes = retry_failed_codes(db, failed_codes)
                 if still_failed_codes:
-                    print(f"Still failed to download data for {len(still_failed_codes)} missing codes: {still_failed_codes}")
+                    print(
+                        f"Still failed to download data for {len(still_failed_codes)} missing codes: {still_failed_codes}"
+                    )
                     return still_failed_codes
                 else:
                     print("All missing data successfully downloaded.")
@@ -568,7 +577,7 @@ def retry_failed_codes(db, failed_codes):
 
         while retry_count < max_retries and not success:
             try:
-                print(f"Retrying ({retry_count+1}/{max_retries}) code: {code}")
+                print(f"Retrying ({retry_count + 1}/{max_retries}) code: {code}")
 
                 # 获取该股票的最后更新日期
                 code_doc = db["code"].find_one({"code": code})
@@ -657,7 +666,9 @@ def retry_failed_codes(db, failed_codes):
 
             except Exception as e:
                 retry_count += 1
-                print(f"Error retrying code {code} (attempt {retry_count}/{max_retries}): {str(e)}")
+                print(
+                    f"Error retrying code {code} (attempt {retry_count}/{max_retries}): {str(e)}"
+                )
                 time.sleep(2)
 
                 # If it's a rate limit error, switch IP
@@ -675,7 +686,11 @@ def retry_failed_codes(db, failed_codes):
                     or "gateway timeout" in error_str
                 )
 
-                if ROUTER_CONTROL_AVAILABLE and is_rate_limit_error and retry_count < max_retries:
+                if (
+                    ROUTER_CONTROL_AVAILABLE
+                    and is_rate_limit_error
+                    and retry_count < max_retries
+                ):
                     print("Rate limit error detected during retry. Switching IP.")
                     controller = TPLinkWAN2Controller(
                         router_ip="192.168.1.1",
@@ -694,7 +709,9 @@ def retry_failed_codes(db, failed_codes):
 
                                 # Check if this IP has been used before
                                 while current_ip in used_ip:
-                                    print(f"IP {current_ip} has been used before, switching again...")
+                                    print(
+                                        f"IP {current_ip} has been used before, switching again..."
+                                    )
                                     controller = TPLinkWAN2Controller(
                                         router_ip="192.168.1.1",
                                         username="wangdg68",
@@ -702,11 +719,15 @@ def retry_failed_codes(db, failed_codes):
                                     )
                                     controller.switch_ip()
                                     time.sleep(5)
-                                    current_ip = get_current_ip(max_retries=3, retry_delay=2)
+                                    current_ip = get_current_ip(
+                                        max_retries=3, retry_delay=2
+                                    )
                                     if current_ip:
                                         print(f"New IP: {current_ip}")
                                     else:
-                                        print("Failed to get current IP after switching")
+                                        print(
+                                            "Failed to get current IP after switching"
+                                        )
                                         break
 
                                 # Add the new IP to the used list
@@ -715,14 +736,18 @@ def retry_failed_codes(db, failed_codes):
                                     print(f"Added {current_ip} to used IP list")
                                     print(f"Current used IP list: {used_ip}")
                             else:
-                                print("Failed to get current IP after multiple attempts during retry")
+                                print(
+                                    "Failed to get current IP after multiple attempts during retry"
+                                )
                     else:
                         print("IP switch failed during retry")
                     time.sleep(1)
 
         if not success:
             still_failed_codes.append(code)
-            print(f"Failed to download data for code: {code} after {max_retries} retries")
+            print(
+                f"Failed to download data for code: {code} after {max_retries} retries"
+            )
 
     return still_failed_codes
 
@@ -803,11 +828,7 @@ def update_industry(db):
             pb = row["市净率"]
 
             # 更新或插入行业、PE、PB信息
-            update_data = {
-                "industry": industry,
-                "PE": pe,
-                "PB": pb
-            }
+            update_data = {"industry": industry, "PE": pe, "PB": pb}
 
             # 移除空值
             update_data = {k: v for k, v in update_data.items() if pd.notna(v)}
@@ -816,7 +837,7 @@ def update_industry(db):
                 result = my_coll.update_one(
                     {"_id": stock_code},
                     {"$set": update_data},
-                    upsert=False  # 只更新已存在的文档，不创建新文档
+                    upsert=False,  # 只更新已存在的文档，不创建新文档
                 )
 
                 if result.modified_count > 0:
@@ -849,14 +870,16 @@ def should_update_data(db):
         trade_dates_df = ak.tool_trade_date_hist_sina()
 
         # 确保日期列是 datetime 类型
-        trade_dates_df['trade_date'] = pd.to_datetime(trade_dates_df['trade_date'])
+        trade_dates_df["trade_date"] = pd.to_datetime(trade_dates_df["trade_date"])
 
         # 转换日期格式用于比较
         last_update_dt = pd.to_datetime(last_update_date)
         current_dt = pd.to_datetime(current_date)
 
         # 筛选出在上次更新日期和当前日期之间的交易日
-        mask = (trade_dates_df['trade_date'] > last_update_dt) & (trade_dates_df['trade_date'] <= current_dt)
+        mask = (trade_dates_df["trade_date"] > last_update_dt) & (
+            trade_dates_df["trade_date"] <= current_dt
+        )
         trade_dates_in_range = trade_dates_df[mask]
 
         # 如果有交易日，则需要更新
@@ -878,7 +901,7 @@ def is_first_trading_day_of_month():
 
         # 获取交易日历
         trade_dates_df = ak.tool_trade_date_hist_sina()
-        trade_dates_df['trade_date'] = pd.to_datetime(trade_dates_df['trade_date'])
+        trade_dates_df["trade_date"] = pd.to_datetime(trade_dates_df["trade_date"])
 
         # 获取当前年份和月份
         current_year = current_dt.year
@@ -886,8 +909,8 @@ def is_first_trading_day_of_month():
 
         # 筛选出当前月份的交易日
         month_trade_dates = trade_dates_df[
-            (trade_dates_df['trade_date'].dt.year == current_year) &
-            (trade_dates_df['trade_date'].dt.month == current_month)
+            (trade_dates_df["trade_date"].dt.year == current_year)
+            & (trade_dates_df["trade_date"].dt.month == current_month)
         ]
 
         # 如果当前月份没有交易日，返回False
@@ -895,7 +918,7 @@ def is_first_trading_day_of_month():
             return False
 
         # 获取当前月份的第一个交易日
-        first_trading_day = month_trade_dates['trade_date'].min()
+        first_trading_day = month_trade_dates["trade_date"].min()
 
         # 判断今天是否是第一个交易日
         return current_dt.date() == first_trading_day.date()
@@ -906,20 +929,248 @@ def is_first_trading_day_of_month():
         return False
 
 
+def update_finance_data(db):
+    """
+    更新财务相关数据
+    使用多个akshare函数获取财务数据，并更新到对应的MongoDB集合中
+    清空集合后重新写入，使用股票代码作为_id
+    """
+    print("开始更新财务相关数据...")
+
+    try:
+        # 1. 更新业绩报表数据 (stock_yjbb_em -> fin_yjbb)
+        print("获取业绩报表数据...")
+        yjbb_data = ak.stock_yjbb_em()
+        if not yjbb_data.empty:
+            print(f"获取到 {len(yjbb_data)} 条业绩报表数据")
+            yjbb_collection = db["fin_yjbb"]
+
+            # 清空集合
+            yjbb_collection.delete_many({})
+
+            inserted_count = 0
+            for _, row in yjbb_data.iterrows():
+                stock_code = row.get("股票代码", "")
+                if stock_code:
+                    # 创建新文档，使用股票代码作为_id，同时保留股票代码字段
+                    record_data = {"_id": stock_code, "股票代码": stock_code}
+
+                    # 按dataframe列顺序添加字段，跳过"序号"字段
+                    for col in yjbb_data.columns:
+                        if col not in ["序号"]:
+                            value = row[col]
+                            if pd.notna(value):
+                                # 转换datetime.date对象为字符串
+                                if isinstance(value, datetime.date):
+                                    value = value.strftime("%Y-%m-%d")
+                                record_data[col] = value
+
+                    # 插入数据
+                    try:
+                        yjbb_collection.insert_one(record_data)
+                        inserted_count += 1
+                    except Exception as e:
+                        print(f"插入业绩报表数据失败 {stock_code}: {e}")
+
+            print(f"成功插入 {inserted_count} 条业绩报表记录")
+        else:
+            print("未获取到业绩报表数据")
+
+        # 2. 更新资产负债表数据 (stock_zcfz_em -> fin_zcfz)
+        print("获取资产负债表数据...")
+        zcfz_data = ak.stock_zcfz_em()
+        if not zcfz_data.empty:
+            print(f"获取到 {len(zcfz_data)} 条资产负债表数据")
+            zcfz_collection = db["fin_zcfz"]
+
+            # 清空集合
+            zcfz_collection.delete_many({})
+
+            inserted_count = 0
+            for _, row in zcfz_data.iterrows():
+                stock_code = row.get("股票代码", "")
+                if stock_code:
+                    # 创建新文档，使用股票代码作为_id，同时保留股票代码字段
+                    record_data = {"_id": stock_code, "股票代码": stock_code}
+
+                    # 按dataframe列顺序添加字段，跳过"序号"字段
+                    for col in zcfz_data.columns:
+                        if col not in ["序号"]:
+                            value = row[col]
+                            if pd.notna(value):
+                                # 转换datetime.date对象为字符串
+                                if isinstance(value, datetime.date):
+                                    value = value.strftime("%Y-%m-%d")
+                                record_data[col] = value
+
+                    # 插入数据
+                    try:
+                        zcfz_collection.insert_one(record_data)
+                        inserted_count += 1
+                    except Exception as e:
+                        print(f"插入资产负债表数据失败 {stock_code}: {e}")
+
+            print(f"成功插入 {inserted_count} 条资产负债表记录")
+        else:
+            print("未获取到资产负债表数据")
+
+        # 3. 更新利润表数据 (stock_lrb_em -> fin_lrb)
+        print("获取利润表数据...")
+        lrb_data = ak.stock_lrb_em()
+        if not lrb_data.empty:
+            print(f"获取到 {len(lrb_data)} 条利润表数据")
+            lrb_collection = db["fin_lrb"]
+
+            # 清空集合
+            lrb_collection.delete_many({})
+
+            inserted_count = 0
+            for _, row in lrb_data.iterrows():
+                stock_code = row.get("股票代码", "")
+                if stock_code:
+                    # 创建新文档，使用股票代码作为_id，同时保留股票代码字段
+                    record_data = {"_id": stock_code, "股票代码": stock_code}
+
+                    # 按dataframe列顺序添加字段，跳过"序号"字段
+                    for col in lrb_data.columns:
+                        if col not in ["序号"]:
+                            value = row[col]
+                            if pd.notna(value):
+                                # 转换datetime.date对象为字符串
+                                if isinstance(value, datetime.date):
+                                    value = value.strftime("%Y-%m-%d")
+                                record_data[col] = value
+
+                    # 插入数据
+                    try:
+                        lrb_collection.insert_one(record_data)
+                        inserted_count += 1
+                    except Exception as e:
+                        print(f"插入利润表数据失败 {stock_code}: {e}")
+
+            print(f"成功插入 {inserted_count} 条利润表记录")
+        else:
+            print("未获取到利润表数据")
+
+        # 4. 更新现金流量表数据 (stock_xjll_em -> fin_xjll)
+        print("获取现金流量表数据...")
+        xjll_data = ak.stock_xjll_em()
+        if not xjll_data.empty:
+            print(f"获取到 {len(xjll_data)} 条现金流量表数据")
+            xjll_collection = db["fin_xjll"]
+
+            # 清空集合
+            xjll_collection.delete_many({})
+
+            inserted_count = 0
+            for _, row in xjll_data.iterrows():
+                stock_code = row.get("股票代码", "")
+                if stock_code:
+                    # 创建新文档，使用股票代码作为_id，同时保留股票代码字段
+                    record_data = {"_id": stock_code, "股票代码": stock_code}
+
+                    # 按dataframe列顺序添加字段，跳过"序号"字段
+                    for col in xjll_data.columns:
+                        if col not in ["序号"]:
+                            value = row[col]
+                            if pd.notna(value):
+                                # 转换datetime.date对象为字符串
+                                if isinstance(value, datetime.date):
+                                    value = value.strftime("%Y-%m-%d")
+                                record_data[col] = value
+
+                    # 插入数据
+                    try:
+                        xjll_collection.insert_one(record_data)
+                        inserted_count += 1
+                    except Exception as e:
+                        print(f"插入现金流量表数据失败 {stock_code}: {e}")
+
+            print(f"成功插入 {inserted_count} 条现金流量表记录")
+        else:
+            print("未获取到现金流量表数据")
+
+        # 5. 更新盈利预测数据 (stock_profit_forecast_em -> fin_forecast)
+        print("获取盈利预测数据...")
+        forecast_data = ak.stock_profit_forecast_em()
+        if not forecast_data.empty:
+            print(f"获取到 {len(forecast_data)} 条盈利预测数据")
+            # print(f"盈利预测数据列名: {list(forecast_data.columns)}")
+            forecast_collection = db["fin_forecast"]
+
+            # 清空集合
+            forecast_collection.delete_many({})
+
+            # 去重处理：按股票代码分组，保留每个股票的最新记录（假设序号较大的记录较新）
+            unique_forecast_data = forecast_data.sort_values(
+                "序号", ascending=False
+            ).drop_duplicates(subset=["代码"], keep="first")
+            print(f"去重后保留 {len(unique_forecast_data)} 条唯一股票记录")
+
+            inserted_count = 0
+            for _, row in unique_forecast_data.iterrows():
+                # 使用"代码"字段作为股票代码
+                stock_code = row.get("代码", "")
+                if stock_code:
+                    # 创建新文档，使用股票代码作为_id，同时保留股票代码字段
+                    record_data = {"_id": stock_code, "股票代码": stock_code}
+
+                    # 按dataframe列顺序添加字段，跳过"序号"字段，但保留"代码"字段作为"股票代码"
+                    for col in unique_forecast_data.columns:
+                        if col not in ["序号"]:
+                            value = row[col]
+                            if pd.notna(value):
+                                # 转换datetime.date对象为字符串
+                                if isinstance(value, datetime.date):
+                                    value = value.strftime("%Y-%m-%d")
+                                # 将"名称"字段重命名为"股票简称"
+                                if col == "名称":
+                                    record_data["股票简称"] = value
+                                # 将"代码"字段重命名为"股票代码"（已在上面的record_data中设置）
+                                elif col == "代码":
+                                    record_data["股票代码"] = value
+                                else:
+                                    record_data[col] = value
+
+                    # 插入数据
+                    try:
+                        forecast_collection.insert_one(record_data)
+                        inserted_count += 1
+                    except Exception as e:
+                        print(f"插入盈利预测数据失败 {stock_code}: {e}")
+
+            print(f"成功插入 {inserted_count} 条盈利预测记录")
+        else:
+            print("未获取到盈利预测数据")
+
+        print("财务数据更新完成")
+
+    except Exception as e:
+        print(f"更新财务数据时发生错误: {str(e)}")
+
+
 def main():
     db = conn_mongo()
     update_code_name(db)
 
-    # 检查是否是当月第一个交易日，如果是则更新行业信息
+    # 检查是否是当月第一个交易日，如果是则更新行业信息和财务数据
     if is_first_trading_day_of_month():
-        print("Today is the first trading day of the month. Updating industry, PE, and PB information...")
+        print(
+            "Today is the first trading day of the month. Updating industry, PE, and PB information..."
+        )
         update_industry(db)
+        print("Updating finance data...")
+        update_finance_data(db)
     else:
-        print("Today is not the first trading day of the month. Skipping industry update.")
+        print(
+            "Today is not the first trading day of the month. Skipping industry and finance data update."
+        )
 
     # 检查是否需要更新数据
     if should_update_data(db):
-        print("Trade days found between last update and current date. Starting data download...")
+        print(
+            "Trade days found between last update and current date. Starting data download..."
+        )
 
         # 下载日常K线数据
         failed_codes = write_k_daily(db)
@@ -929,7 +1180,9 @@ def main():
             print(f"Found {len(failed_codes)} failed codes. Retrying...")
             still_failed_codes = retry_failed_codes(db, failed_codes)
             if still_failed_codes:
-                print(f"Still failed to download data for {len(still_failed_codes)} codes: {still_failed_codes}")
+                print(
+                    f"Still failed to download data for {len(still_failed_codes)} codes: {still_failed_codes}"
+                )
             else:
                 print("All failed codes successfully downloaded on retry.")
         else:
@@ -938,18 +1191,24 @@ def main():
         # 检查并下载缺失的数据
         missing_failed_codes = check_and_download_missing_data(db)
         if missing_failed_codes:
-            print(f"Failed to download data for {len(missing_failed_codes)} missing codes: {missing_failed_codes}")
+            print(
+                f"Failed to download data for {len(missing_failed_codes)} missing codes: {missing_failed_codes}"
+            )
         else:
             print("All missing data successfully downloaded.")
 
         # 更新最后更新日期
         set_lastest_date(db)
     else:
-        print("No trade days between last update and current date. Skipping data download.")
+        print(
+            "No trade days between last update and current date. Skipping data download."
+        )
         # 即使不更新数据，也检查是否有缺失的数据需要下载
         missing_failed_codes = check_and_download_missing_data(db)
         if missing_failed_codes:
-            print(f"Failed to download data for {len(missing_failed_codes)} missing codes: {missing_failed_codes}")
+            print(
+                f"Failed to download data for {len(missing_failed_codes)} missing codes: {missing_failed_codes}"
+            )
         else:
             print("All missing data successfully downloaded.")
 

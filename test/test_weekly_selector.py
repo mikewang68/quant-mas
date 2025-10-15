@@ -1,108 +1,72 @@
-#!/usr/bin/env python3
 """
-Test program for weekly selector
+Test script for Weekly Selector functionality
 """
 
 import sys
 import os
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
+import logging
 
-# Add the project root to the path
+# Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Mock classes to simulate the real dependencies
-class MockMongoDBManager:
-    def get_strategies(self):
-        return [{
-            'name': '三均线多头排列策略（基本型）',
-            'parameters': {
-                'short': 5,
-                'mid': 13,
-                'long': 34
-            },
-            'program': {
-                'file': 'three_ma_bullish_arrangement_strategy',
-                'class': 'ThreeMABullishArrangementStrategy'
-            }
-        }]
-
-    def get_stock_codes(self):
-        # Return a small list of stock codes for testing
-        return ['000001', '000002', '600000', '600036']
-
-    def get_adjusted_k_data(self, code, start_date, end_date, frequency='daily'):
-        # Return empty DataFrame to force data fetching
-        return pd.DataFrame()
-
-class MockAkshareClient:
-    def get_stock_list(self):
-        return ['000001', '000002', '600000', '600036']
-
-    def get_daily_k_data(self, code, start_date, end_date):
-        # Generate mock K-line data
-        dates = pd.date_range(start=start_date, end=end_date, freq='D')
-        # Remove weekends
-        dates = dates[dates.weekday < 5]
-
-        # Generate mock price data with some trend
-        n = len(dates)
-        open_prices = 100 + np.cumsum(np.random.randn(n) * 0.5)
-        close_prices = open_prices + np.random.randn(n) * 0.5
-        high_prices = np.maximum(open_prices, close_prices) + np.abs(np.random.randn(n) * 0.3)
-        low_prices = np.minimum(open_prices, close_prices) - np.abs(np.random.randn(n) * 0.3)
-        volumes = np.random.randint(1000000, 10000000, n)
-        amounts = close_prices * volumes
-
-        df = pd.DataFrame({
-            'date': dates,
-            'open': open_prices,
-            'high': high_prices,
-            'low': low_prices,
-            'close': close_prices,
-            'volume': volumes,
-            'amount': amounts
-        })
-
-        return df
-
-# Import the WeeklyStockSelector class
+from data.mongodb_manager import MongoDBManager
 from agents.weekly_selector import WeeklyStockSelector
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+
 def test_weekly_selector():
-    """Test the weekly selector functionality"""
-    print("Testing WeeklyStockSelector...")
+    """Test the Weekly Selector functionality"""
 
-    # Create mock dependencies
-    db_manager = MockMongoDBManager()
-    data_fetcher = MockAkshareClient()
+    try:
+        # Initialize components
+        db_manager = MongoDBManager()
 
-    # Create the selector
-    selector = WeeklyStockSelector(db_manager, data_fetcher)
+        # Create Weekly Selector instance
+        weekly_selector = WeeklyStockSelector(db_manager)
 
-    # Test stock selection
-    today = datetime.now().strftime('%Y-%m-%d')
-    selected_stocks, last_data_date, golden_cross_flags, scores, technical_analysis_data = selector.select_stocks(today)
+        print("=== Testing Weekly Selector ===")
+        print(f"Loaded strategy: {weekly_selector.strategy_name}")
+        print(f"Number of strategies: {len(weekly_selector.strategies)}")
 
-    print(f"Selected stocks: {selected_stocks}")
-    print(f"Last data date: {last_data_date}")
-    print(f"Golden cross flags: {golden_cross_flags}")
-    print(f"Scores: {scores}")
-    print(f"Technical analysis data: {technical_analysis_data}")
+        # Test stock selection
+        selected_stocks, last_data_date, golden_cross_flags, scores, technical_analysis_data, strategy_results = weekly_selector.select_stocks()
 
-    # Test saving selected stocks
-    result = selector.save_selected_stocks(
-        stocks=selected_stocks,
-        golden_cross_flags=golden_cross_flags,
-        date=today,
-        last_data_date=last_data_date,
-        scores=scores
-    )
+        print(f"\n=== Selection Results ===")
+        print(f"Selected stocks: {len(selected_stocks)}")
+        print(f"Last data date: {last_data_date}")
 
-    print(f"Save result: {result}")
-    print("Test completed successfully!")
+        if selected_stocks:
+            print(f"First 10 selected stocks: {selected_stocks[:10]}")
+
+            # Save results to pool
+            save_result = weekly_selector.save_selected_stocks(
+                stocks=selected_stocks,
+                golden_cross_flags=golden_cross_flags,
+                scores=scores,
+                technical_analysis_data=technical_analysis_data,
+                strategy_results=strategy_results
+            )
+
+            print(f"Save to pool successful: {save_result}")
+        else:
+            print("No stocks selected - this might be normal if no stocks meet the criteria")
+
+        return True
+
+    except Exception as e:
+        print(f"Error testing Weekly Selector: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 if __name__ == "__main__":
-    test_weekly_selector()
+    success = test_weekly_selector()
+    if success:
+        print("\n✅ Weekly Selector test completed successfully")
+    else:
+        print("\n❌ Weekly Selector test failed")
 

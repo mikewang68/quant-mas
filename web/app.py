@@ -50,9 +50,11 @@ def get_pinyin_abbreviation(chinese_text: str) -> str:
 
     try:
         # Get pinyin for each character, take first letter of each pinyin
-        pinyin_list = pypinyin.lazy_pinyin(chinese_text, style=pypinyin.Style.FIRST_LETTER)
+        pinyin_list = pypinyin.lazy_pinyin(
+            chinese_text, style=pypinyin.Style.FIRST_LETTER
+        )
         # Convert to uppercase and join
-        abbreviation = ''.join(pinyin_list).upper()
+        abbreviation = "".join(pinyin_list).upper()
         return abbreviation
     except Exception as e:
         logger.warning(f"Error converting {chinese_text} to pinyin: {e}")
@@ -217,11 +219,13 @@ def register_routes(app: Flask):
             stocks_cursor = app.config["MONGO_DB"].code.find()
             all_stocks = []
             for stock in stocks_cursor:
-                all_stocks.append({
-                    "code": stock.get("code", ""),
-                    "name": stock.get("name", ""),
-                    "pinyin": stock.get("pinyin", "")
-                })
+                all_stocks.append(
+                    {
+                        "code": stock.get("code", ""),
+                        "name": stock.get("name", ""),
+                        "pinyin": stock.get("pinyin", ""),
+                    }
+                )
 
             # Filter stocks based on search term with correct logic
             search_term_lower = search_term.lower()
@@ -229,7 +233,7 @@ def register_routes(app: Flask):
 
             # Determine search type based on input
             is_numeric = search_term.isdigit()
-            is_chinese = any('一' <= char <= '鿿' for char in search_term)
+            is_chinese = any("一" <= char <= "鿿" for char in search_term)
             is_english = search_term.isalpha()
 
             for stock in all_stocks:
@@ -256,11 +260,13 @@ def register_routes(app: Flask):
                         matched_stocks.append(stock)
                         continue
 
-            return jsonify({
-                "status": "success",
-                "search_term": search_term,
-                "results": matched_stocks[:50]  # Limit to 50 results
-            }), 200
+            return jsonify(
+                {
+                    "status": "success",
+                    "search_term": search_term,
+                    "results": matched_stocks[:50],  # Limit to 50 results
+                }
+            ), 200
 
         except Exception as e:
             logger.error(f"Error searching stocks: {e}")
@@ -830,163 +836,54 @@ def register_routes(app: Flask):
 
             # Check if this is the weekly selector agent
             if is_weekly_selector:
-                # Actually run the weekly selector agent with strategy parameters
-                logger.info(f"Running weekly selector agent {agent['name']}")
+                # Handle weekly selector agents
+                strategy_ids = agent.get("strategies", [])
+                logger.info(
+                    f"Running weekly selector agent {agent['name']} with strategies {strategy_ids}"
+                )
 
                 try:
                     # Initialize components
                     db_manager = app.config["MONGO_MANAGER"]
-                    from utils.akshare_client import AkshareClient
 
-                    data_fetcher = AkshareClient()
+                    # Initialize the weekly stock selector
                     from agents.weekly_selector import WeeklyStockSelector
 
-                    # Get strategies associated with this agent
-                    strategy_ids = agent.get("strategies", [])
-                    logger.info(
-                        f"Agent has {len(strategy_ids)} strategies: {strategy_ids}"
-                    )
+                    selector = WeeklyStockSelector(db_manager)
 
-                    # Execute each strategy with its specific parameters and collect all selected stocks
-                    all_selected_stocks = []
-                    selectors = []  # Keep track of all selector instances
-                    last_data_date = None  # Track the latest data date
-                    all_golden_cross_flags = {}
-                    all_selected_scores = {}
-                    all_technical_analysis_data = {}
+                    # Execute weekly selection - all business logic is inside the agent
+                    success = selector.run()
 
-                    # If no strategies specified, use default parameters
-                    if not strategy_ids:
-                        logger.info("No strategies specified, using default parameters")
-                        # Initialize selector with default parameters
-                        selector = WeeklyStockSelector(db_manager, data_fetcher)
-                        selectors.append(selector)
+                    if success:
+                        logger.info("Successfully executed weekly selector agent")
 
-                        # Select stocks
-                        (
-                            selected_stocks,
-                            strategy_last_data_date,
-                            golden_cross_flags,
-                            selected_scores,
-                            technical_analysis_data,
-                        ) = selector.select_stocks()
-                        all_selected_stocks.extend(selected_stocks)
-                        all_golden_cross_flags.update(golden_cross_flags)
-                        all_selected_scores.update(selected_scores)
-                        all_technical_analysis_data.update(technical_analysis_data)
+                        # Get the count of selected stocks from the pool
+                        pool_collection = db_manager.db["pool"]
+                        latest_pool_record = pool_collection.find_one(sort=[("_id", -1)])
+                        stock_count = latest_pool_record.get("count", 0) if latest_pool_record else 0
 
-                        # Update last_data_date
-                        if strategy_last_data_date and (
-                            not last_data_date
-                            or strategy_last_data_date > last_data_date
-                        ):
-                            last_data_date = strategy_last_data_date
-                    else:
-                        # Execute each strategy with its specific parameters
-                        for strategy_id in strategy_ids:
-                            # Get strategy details
-                            strategy = app.config["MONGO_MANAGER"].get_strategy(
-                                strategy_id
-                            )
-                            if not strategy:
-                                logger.warning(f"Strategy {strategy_id} not found")
-                                continue
-
-                            logger.info(
-                                f"Executing strategy {strategy['name']} with parameters: {strategy.get('parameters', {})}"
-                            )
-
-                            # Initialize selector with specific strategy ID
-                            selector = WeeklyStockSelector(
-                                db_manager, data_fetcher, strategy_id
-                            )
-                            selectors.append(selector)
-
-                            # Select stocks using this strategy
-                            (
-                                selected_stocks,
-                                strategy_last_data_date,
-                                golden_cross_flags,
-                                selected_scores,
-                                technical_analysis_data,
-                            ) = selector.select_stocks()
-                            all_selected_stocks.extend(selected_stocks)
-                            all_golden_cross_flags.update(golden_cross_flags)
-                            all_selected_scores.update(selected_scores)
-                            all_technical_analysis_data.update(technical_analysis_data)
-                            logger.info(
-                                f"Strategy {strategy['name']} selected {len(selected_stocks)} stocks"
-                            )
-
-                            # Update last_data_date to the latest date among all strategies
-                            if strategy_last_data_date and (
-                                not last_data_date
-                                or strategy_last_data_date > last_data_date
-                            ):
-                                last_data_date = strategy_last_data_date
-
-                    # Remove duplicates while preserving order
-                    selected_stocks = list(dict.fromkeys(all_selected_stocks))
-                    logger.info(
-                        f"Total selected {len(selected_stocks)} stocks: {selected_stocks}"
-                    )
-
-                    # Save selection to pool collection using the first selector instance or create a default one if needed
-                    if selectors:
-                        selector_to_use = selectors[
-                            0
-                        ]  # Use the first selector instance
-                    else:
-                        selector_to_use = WeeklyStockSelector(db_manager, data_fetcher)
-
-                    if selected_stocks is not None:
-                        success = selector_to_use.save_selected_stocks(
-                            stocks=selected_stocks,
-                            golden_cross_flags=all_golden_cross_flags,
-                            date=datetime.now().strftime("%Y-%m-%d"),
-                            last_data_date=last_data_date,
-                            scores=all_selected_scores,
-                            technical_analysis_data=all_technical_analysis_data,
+                        return jsonify(
+                            {
+                                "status": "success",
+                                "message": f"Agent {agent['name']} completed successfully",
+                                "agent_id": agent_id,
+                                "result": {
+                                    "selection_complete": True,
+                                    "stocks_updated": True,
+                                    "count": stock_count,
+                                },
+                            }
                         )
-                        if success:
-                            logger.info(
-                                "Successfully saved selected stocks to pool collection"
-                            )
-                        else:
-                            logger.error(
-                                "Failed to save selected stocks to pool collection"
-                            )
                     else:
-                        logger.warning("No stocks selected")
-                        # Still save an empty selection to pool collection
-                        success = selector_to_use.save_selected_stocks(
-                            stocks=[],
-                            golden_cross_flags={},
-                            date=datetime.now().strftime("%Y-%m-%d"),
-                            last_data_date=last_data_date,
-                            scores={},
-                            technical_analysis_data={},
-                        )
-                        if success:
-                            logger.info(
-                                "Successfully saved empty selection to pool collection"
-                            )
-                        else:
-                            logger.error(
-                                "Failed to save empty selection to pool collection"
-                            )
+                        logger.error("Failed to execute weekly selector agent")
+                        return jsonify(
+                            {
+                                "status": "error",
+                                "message": f"Failed to run weekly selector agent: Execution failed",
+                                "agent_id": agent_id,
+                            }
+                        ), 500
 
-                    return jsonify(
-                        {
-                            "status": "success",
-                            "message": f"Agent {agent['name']} completed successfully",
-                            "agent_id": agent_id,
-                            "result": {
-                                "selected_stocks": selected_stocks,
-                                "count": len(selected_stocks),
-                            },
-                        }
-                    )
                 except Exception as selector_error:
                     logger.error(
                         f"Error running weekly selector agent: {selector_error}"
@@ -1016,8 +913,8 @@ def register_routes(app: Flask):
 
                     selector = TechnicalStockSelector(db_manager, data_fetcher)
 
-                    # Execute technical analysis and update pool
-                    success = selector.update_pool_with_technical_analysis()
+                    # Execute technical analysis - all business logic is inside the agent
+                    success = selector.run()
 
                     if success:
                         logger.info("Successfully executed technical analysis agent")
@@ -1519,7 +1416,7 @@ def register_routes(app: Flask):
                     "price": stock_k_data.get("price", 0.0),
                     "change_percent": stock_k_data.get("change_percent", 0.0),
                     "turnover_rate": stock_k_data.get("turnover_rate", 0.0),
-                    "signal": stock.get("signals", {}),
+                    "signal": stock.get("signal", {}),
                     "trend": {
                         "score": stock.get("trend", {}).get("score", 0.0)
                         if stock.get("trend")
@@ -1714,14 +1611,11 @@ def register_routes(app: Flask):
                     last_execution_time = last_execution_time.strftime(
                         "%Y-%m-%d %H:%M:%S"
                     )
+                return jsonify({"last_execution_time": last_execution_time}), 200
             else:
-                # Fall back to using the record's _id timestamp
-                from datetime import datetime
+                # If no specific time field found, return None
+                return jsonify({"last_execution_time": None}), 200
 
-                timestamp = latest_record["_id"].generation_time
-                last_execution_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-
-            return jsonify({"last_execution_time": last_execution_time}), 200
         except Exception as e:
             logger.error(f"Error getting last execution time for agent {agent_id}: {e}")
             return jsonify({"last_execution_time": None}), 200
@@ -1779,8 +1673,14 @@ def register_routes(app: Flask):
                 # Fall back to using the record's _id timestamp
                 from datetime import datetime
 
-                timestamp = latest_record["_id"].generation_time
-                last_execution_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                # Check if _id is an ObjectId with generation_time
+                record_id = latest_record["_id"]
+                if hasattr(record_id, "generation_time"):
+                    timestamp = record_id.generation_time
+                    last_execution_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    # If _id is a string or doesn't have generation_time, return None
+                    last_execution_time = None
 
             return jsonify({"last_execution_time": last_execution_time}), 200
         except Exception as e:

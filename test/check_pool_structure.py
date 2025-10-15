@@ -1,97 +1,56 @@
-#!/usr/bin/env python3
 """
-Test script to check the current structure of pool collection in MongoDB
+检查pool数据集的记录结构和_id格式
 """
-
 import sys
 import os
-import pymongo
-from datetime import datetime
 
-# Add the project root directory to Python path
+# Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-def main():
-    """Main function to check pool structure"""
-    print("Checking Pool Collection Structure...")
+from data.mongodb_manager import MongoDBManager
 
-    try:
-        # Database connection parameters
-        host = "192.168.1.2"
-        port = 27017
-        database = "stock"
-        username = "stock"
-        password = "681123"
-        auth_database = "admin"
+def check_pool_structure():
+    """检查pool数据集的记录结构"""
 
-        # Connect to MongoDB with authentication
-        uri = f"mongodb://{username}:{password}@{host}:{port}/{database}?authSource={auth_database}"
-        client = pymongo.MongoClient(uri, serverSelectionTimeoutMS=5000)
+    # Initialize MongoDB manager
+    db_manager = MongoDBManager()
+    pool_collection = db_manager.get_collection("pool")
 
-        # Test connection
-        client.admin.command('ping')
-        print(f"✓ Successfully connected to MongoDB: {host}:{port}/{database}")
+    # 获取所有pool记录
+    pool_records = list(pool_collection.find().sort("_id", -1).limit(10))
 
-        # Access database and collection
-        db = client[database]
-        pool_collection = db['pool']
+    print(f"Total pool records: {len(pool_records)}")
+    print("\n=== Pool Records Structure ===")
 
-        # Get the latest pool record
-        latest_pool_record = pool_collection.find_one(sort=[('selection_date', -1)])
+    for i, record in enumerate(pool_records):
+        print(f"\nRecord {i+1}:")
+        print(f"  _id: {record.get('_id')}")
+        print(f"  _id type: {type(record.get('_id'))}")
+        print(f"  stocks count: {len(record.get('stocks', []))}")
 
-        if latest_pool_record:
-            print("\nLatest Pool Record Structure:")
-            print("=" * 50)
+        # 检查是否有其他关键字段
+        for key in ['selection_date', 'date', 'updated_at', 'metadata']:
+            if key in record:
+                print(f"  {key}: {record[key]}")
 
-            # Print top-level fields
-            print("Top-level fields:")
-            for key, value in latest_pool_record.items():
-                if key == '_id':
-                    print(f"  {key}: {value} (ObjectId)")
-                elif key == 'stocks':
-                    print(f"  {key}: {len(value)} stocks")
-                elif isinstance(value, datetime):
-                    print(f"  {key}: {value.strftime('%Y-%m-%d %H:%M:%S')}")
-                else:
-                    print(f"  {key}: {value} ({type(value).__name__})")
+    # 检查最新的记录
+    if pool_records:
+        latest_record = pool_records[0]
+        print(f"\n=== Latest Record Details ===")
+        print(f"_id: {latest_record.get('_id')}")
 
-            # Print sample stocks structure
-            if 'stocks' in latest_pool_record and latest_pool_record['stocks']:
-                print("\nSample Stock Structure (first 2 stocks):")
-                for i, stock in enumerate(latest_pool_record['stocks'][:2]):
-                    print(f"  Stock {i+1}:")
-                    for key, value in stock.items():
-                        if key == 'tech':
-                            print(f"    {key}: {{")
-                            if isinstance(value, dict):
-                                for tech_key, tech_value in value.items():
-                                    print(f"      {tech_key}: {{")
-                                    if isinstance(tech_value, dict):
-                                        for sub_key, sub_value in tech_value.items():
-                                            print(f"        {sub_key}: {sub_value}")
-                                    print(f"      }}")
-                            print(f"    }}")
-                        else:
-                            print(f"    {key}: {value}")
+        # 检查stocks字段中的策略分布
+        stocks = latest_record.get("stocks", [])
+        strategy_counts = {}
+        for stock in stocks:
+            trend_data = stock.get("trend", {})
+            for strategy_name in trend_data.keys():
+                strategy_counts[strategy_name] = strategy_counts.get(strategy_name, 0) + 1
 
-            # Count stocks with tech data
-            stocks_with_tech = [s for s in latest_pool_record.get('stocks', []) if 'tech' in s]
-            print(f"\nStocks with tech data: {len(stocks_with_tech)}/{len(latest_pool_record.get('stocks', []))}")
-
-        else:
-            print("No records found in pool collection")
-
-        client.close()
-
-    except Exception as e:
-        print(f"Error checking pool structure: {e}")
-        import traceback
-        traceback.print_exc()
-        return 1
-
-    print("\nCheck completed!")
-    return 0
+        print(f"Strategies in latest record:")
+        for strategy, count in strategy_counts.items():
+            print(f"  {strategy}: {count} stocks")
 
 if __name__ == "__main__":
-    sys.exit(main())
+    check_pool_structure()
 

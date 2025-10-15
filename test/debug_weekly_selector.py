@@ -1,69 +1,89 @@
 #!/usr/bin/env python3
 """
-Debug script to test weekly selector parameter loading
+Debug script to test weekly selector and identify the unpacking error
 """
 
 import sys
 import os
+import logging
 
-# Add project root to path
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, project_root)
+# Add the project root to the Python path to resolve imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Mock the database manager to avoid connection issues
-class MockDBManager:
-    def get_strategies(self):
-        # Return the actual strategy from database
-        return [{
-            "_id": "68a6591d8dace06d7edd9582",
-            "name": "三均线多头排列策略（基本型）",
-            "type": "technical",
-            "description": "使用斐波那契数列设置3均线，分别是5,13,34,均线多头排列",
-            "parameters": {
-                "ma_long": "34",
-                "ma_mid": "13",
-                "ma_short": "5"
-            },
-            "program": {
-                "file": "three_ma_bullish_arrangement_strategy",
-                "class": "ThreeMABullishArrangementStrategy"
-            },
-            "created_at": "2025-08-15",
-            "class_name": "ThreeMABullishArrangementStrategy",
-            "file": "three_ma_bullish_arrangement_strategy"
-        }]
+from agents.weekly_selector import WeeklyStockSelector
+from data.mongodb_manager import MongoDBManager
+from utils.akshare_client import AkshareClient
 
-# Mock the data fetcher
-class MockDataFetcher:
-    pass
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
-def test_weekly_selector_loading():
-    """Test how weekly selector loads and processes strategy parameters"""
-    print("Testing weekly selector parameter loading...")
+logger = logging.getLogger(__name__)
 
-    # Import after setting up mocks
-    from agents.weekly_selector import WeeklyStockSelector
 
-    # Create instances
-    db_manager = MockDBManager()
-    data_fetcher = MockDataFetcher()
+def main():
+    """Debug main function"""
+    try:
+        # Initialize components
+        logger.info("Initializing components...")
+        db_manager = MongoDBManager()
+        data_fetcher = AkshareClient()
 
-    # Create selector
-    selector = WeeklyStockSelector(db_manager, data_fetcher)
+        # Initialize selector
+        logger.info("Initializing weekly stock selector...")
+        selector = WeeklyStockSelector(db_manager, data_fetcher)
 
-    # Check loaded parameters
-    print(f"Strategy name: {selector.strategy_name}")
-    print(f"Strategy file: {selector.strategy_file}")
-    print(f"Strategy class name: {selector.strategy_class_name}")
-    print(f"Strategy params: {selector.strategy_params}")
+        # Select stocks
+        logger.info("Selecting stocks...")
+        strategy_results = selector.select_stocks()
 
-    # Check if strategy instance was created
-    if selector.strategy_instance:
-        print(f"Strategy instance created: {selector.strategy_instance}")
-        print(f"Strategy instance params: {getattr(selector.strategy_instance, 'params', 'No params attribute')}")
-    else:
-        print("No strategy instance created")
+        logger.info("Strategy results structure:")
+        logger.info(f"Type of strategy_results: {type(strategy_results)}")
+        logger.info(f"Keys in strategy_results: {list(strategy_results.keys())}")
+
+        # Check each strategy result
+        for strategy_name, strategy_result in strategy_results.items():
+            logger.info(f"Strategy: {strategy_name}")
+            logger.info(f"  Type: {type(strategy_result)}")
+            logger.info(f"  Length: {len(strategy_result)}")
+            logger.info(f"  Content: {strategy_result}")
+
+            # Try to unpack
+            try:
+                if len(strategy_result) >= 3:
+                    selected_stocks = strategy_result[0]
+                    selected_scores = strategy_result[1]
+                    json_values = strategy_result[2]
+                    logger.info(f"  Successfully unpacked 3 values")
+                else:
+                    logger.error(f"  Not enough values to unpack")
+            except Exception as unpack_error:
+                logger.error(f"  Error unpacking: {unpack_error}")
+
+        logger.info("wdg..................")
+        logger.info(strategy_results)
+
+        # Save selection to pool collection
+        logger.info("Saving selected stocks to pool collection...")
+        success = selector.save_selected_stocks(strategy_results, date="2025-10-17")
+
+        if success:
+            logger.info("Successfully saved selected stocks to pool collection")
+        else:
+            logger.error("Failed to save selected stocks to pool collection")
+
+        # Close database connection
+        db_manager.close_connection()
+        logger.info("Weekly stock selection completed")
+
+    except Exception as e:
+        logger.error(f"Error running weekly stock selector: {e}", exc_info=True)
+        import traceback
+
+        logger.error(f"Full traceback: {traceback.format_exc()}")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
-    test_weekly_selector_loading()
-
+    main()

@@ -663,6 +663,19 @@ python -m backtesting.backtester
 - **MODIFIED**: Updated `execute` method to ensure position_size values have 2 decimal places precision
 - **VERIFIED**: Comprehensive testing confirms all numerical outputs now consistently display with 2 decimal places precision
 
+### Weekly Selector Pool Data Field Fix and Display Enhancement
+- **FIXED**: Resolved Weekly Selector pool data field errors where:
+  - `_id` field was incorrectly set to strategy ID instead of year-week format (e.g., "2025-42")
+  - `strategy_key` field contained strategy names instead of strategy IDs
+- **MODIFIED**: Updated `save_selected_stocks` method to ensure:
+  - `_id` field uses correct year-week format for both new and updated records
+  - `strategy_key` field contains actual strategy IDs
+  - All data items are completely overwritten without retaining original values
+- **ENHANCED**: Modified Web application to display stock count for trend selection agent
+  - Updated `run_agent` function in `web/app.py` to return stock count from pool data
+  - Web interface now displays "已完成 (X 支股票)" instead of just "已完成"
+- **VERIFIED**: Trend selection agent now correctly displays the number of selected stocks in the web interface
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-13*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-16*
 

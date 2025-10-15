@@ -21,7 +21,7 @@ class StrategyResultFormatter:
         technical_analysis_data: Optional[Dict] = None,
         reason_text: str = "",
         score: Any = None,
-        strategy_name: Optional[str] = None
+        strategy_name: Optional[str] = None,
     ) -> str:
         """
         Format value field based on technical analysis data or reason text
@@ -38,11 +38,15 @@ class StrategyResultFormatter:
         try:
             # Priority 1: Use technical analysis data if available
             if technical_analysis_data and isinstance(technical_analysis_data, dict):
-                return StrategyResultFormatter._format_from_technical_data(technical_analysis_data)
+                return StrategyResultFormatter._format_from_technical_data(
+                    technical_analysis_data
+                )
 
             # Priority 2: Extract from reason text if it contains technical information
             if reason_text and ("收盘价=" in reason_text or "MA" in reason_text):
-                extracted_value = StrategyResultFormatter._extract_from_reason_text(reason_text)
+                extracted_value = StrategyResultFormatter._extract_from_reason_text(
+                    reason_text
+                )
                 if extracted_value:
                     return extracted_value
 
@@ -70,42 +74,67 @@ class StrategyResultFormatter:
         """
         try:
             # Try to get price from various possible locations
-            price = StrategyResultFormatter._extract_value(technical_analysis_data, ['price', 'close', 'current_price'])
+            price = StrategyResultFormatter._extract_value(
+                technical_analysis_data, ["price", "close", "current_price"]
+            )
 
             # Try to get moving averages - handle different naming conventions
-            ma5 = StrategyResultFormatter._extract_value(technical_analysis_data,
-                                                        ['ma_short', 'ma5', 'sma_5', 'MA5', 'short_ma'])
-            ma13 = StrategyResultFormatter._extract_value(technical_analysis_data,
-                                                         ['ma_mid', 'ma13', 'sma_13', 'MA13', 'mid_ma'])
-            ma34 = StrategyResultFormatter._extract_value(technical_analysis_data,
-                                                         ['ma_long', 'ma34', 'sma_34', 'MA34', 'long_ma'])
+            ma5 = StrategyResultFormatter._extract_value(
+                technical_analysis_data, ["ma_short", "ma5", "sma_5", "MA5", "short_ma"]
+            )
+            ma13 = StrategyResultFormatter._extract_value(
+                technical_analysis_data, ["ma_mid", "ma13", "sma_13", "MA13", "mid_ma"]
+            )
+            ma34 = StrategyResultFormatter._extract_value(
+                technical_analysis_data,
+                ["ma_long", "ma34", "sma_34", "MA34", "long_ma"],
+            )
 
             # Try to get MACD values
-            dif = StrategyResultFormatter._extract_value(technical_analysis_data,
-                                                       ['dif', 'DIF', 'macd_dif'])
-            dea = StrategyResultFormatter._extract_value(technical_analysis_data,
-                                                       ['dea', 'DEA', 'macd_dea'])
+            dif = StrategyResultFormatter._extract_value(
+                technical_analysis_data, ["dif", "DIF", "macd_dif"]
+            )
+            dea = StrategyResultFormatter._extract_value(
+                technical_analysis_data, ["dea", "DEA", "macd_dea"]
+            )
 
             # If we don't have standard moving averages, try to find any moving averages
             if ma5 is None or ma13 is None or ma34 is None:
                 # Look in nested moving_averages dict
-                if 'moving_averages' in technical_analysis_data and isinstance(technical_analysis_data['moving_averages'], dict):
-                    ma_dict = technical_analysis_data['moving_averages']
+                if "moving_averages" in technical_analysis_data and isinstance(
+                    technical_analysis_data["moving_averages"], dict
+                ):
+                    ma_dict = technical_analysis_data["moving_averages"]
                     if ma5 is None:
-                        ma5 = StrategyResultFormatter._extract_value(ma_dict, ['ma_short', 'ma5', 'sma_5', 'MA5', 'short_ma', 'sma_5'])
+                        ma5 = StrategyResultFormatter._extract_value(
+                            ma_dict,
+                            ["ma_short", "ma5", "sma_5", "MA5", "short_ma", "sma_5"],
+                        )
                     if ma13 is None:
-                        ma13 = StrategyResultFormatter._extract_value(ma_dict, ['ma_mid', 'ma13', 'sma_13', 'MA13', 'mid_ma', 'sma_13'])
+                        ma13 = StrategyResultFormatter._extract_value(
+                            ma_dict,
+                            ["ma_mid", "ma13", "sma_13", "MA13", "mid_ma", "sma_13"],
+                        )
                     if ma34 is None:
-                        ma34 = StrategyResultFormatter._extract_value(ma_dict, ['ma_long', 'ma34', 'sma_34', 'MA34', 'long_ma', 'sma_34'])
+                        ma34 = StrategyResultFormatter._extract_value(
+                            ma_dict,
+                            ["ma_long", "ma34", "sma_34", "MA34", "long_ma", "sma_34"],
+                        )
 
             # If we don't have MACD values, try to find them in nested macd dict
             if dif is None or dea is None:
-                if 'macd' in technical_analysis_data and isinstance(technical_analysis_data['macd'], dict):
-                    macd_dict = technical_analysis_data['macd']
+                if "macd" in technical_analysis_data and isinstance(
+                    technical_analysis_data["macd"], dict
+                ):
+                    macd_dict = technical_analysis_data["macd"]
                     if dif is None:
-                        dif = StrategyResultFormatter._extract_value(macd_dict, ['dif', 'DIF', 'macd_dif'])
+                        dif = StrategyResultFormatter._extract_value(
+                            macd_dict, ["dif", "DIF", "macd_dif"]
+                        )
                     if dea is None:
-                        dea = StrategyResultFormatter._extract_value(macd_dict, ['dea', 'DEA', 'macd_dea'])
+                        dea = StrategyResultFormatter._extract_value(
+                            macd_dict, ["dea", "DEA", "macd_dea"]
+                        )
 
             # Format the values
             price_str = StrategyResultFormatter._format_number(price)
@@ -116,14 +145,25 @@ class StrategyResultFormatter:
             dea_str = StrategyResultFormatter._format_number(dea)
 
             # Check if this is Pullback Buying strategy data (has pullback-specific fields)
-            has_pullback_data = any(key in technical_analysis_data for key in ['ma_value', 'kdj_j', 'rsi_value', 'is_valid_pullback'])
+            has_pullback_data = any(
+                key in technical_analysis_data
+                for key in ["ma_value", "kdj_j", "rsi_value", "is_valid_pullback"]
+            )
 
             if has_pullback_data:
                 # Format for Pullback Buying strategy
-                ma_value = StrategyResultFormatter._extract_value(technical_analysis_data, ['ma_value'])
-                kdj_j = StrategyResultFormatter._extract_value(technical_analysis_data, ['kdj_j'])
-                rsi_value = StrategyResultFormatter._extract_value(technical_analysis_data, ['rsi_value'])
-                is_valid_pullback = technical_analysis_data.get('is_valid_pullback', False)
+                ma_value = StrategyResultFormatter._extract_value(
+                    technical_analysis_data, ["ma_value"]
+                )
+                kdj_j = StrategyResultFormatter._extract_value(
+                    technical_analysis_data, ["kdj_j"]
+                )
+                rsi_value = StrategyResultFormatter._extract_value(
+                    technical_analysis_data, ["rsi_value"]
+                )
+                is_valid_pullback = technical_analysis_data.get(
+                    "is_valid_pullback", False
+                )
 
                 ma_value_str = StrategyResultFormatter._format_number(ma_value)
                 kdj_j_str = StrategyResultFormatter._format_number(kdj_j)
@@ -134,17 +174,37 @@ class StrategyResultFormatter:
                 return f"收盘价={price_str}, 均线值={ma_value_str}, KDJ_J={kdj_j_str}, RSI={rsi_value_str}, 状态={pullback_status}"
 
             # Check if this is Volume Breakout strategy data (has volume-specific fields)
-            has_volume_data = any(key in technical_analysis_data for key in ['breakout_high', 'current_volume', 'avg_volume', 'volume_ratio'])
+            has_volume_data = any(
+                key in technical_analysis_data
+                for key in [
+                    "breakout_high",
+                    "current_volume",
+                    "avg_volume",
+                    "volume_ratio",
+                ]
+            )
 
             if has_volume_data:
                 # Format for Volume Breakout strategy
-                breakout_high = StrategyResultFormatter._extract_value(technical_analysis_data, ['breakout_high'])
-                current_volume = StrategyResultFormatter._extract_value(technical_analysis_data, ['current_volume'])
-                avg_volume = StrategyResultFormatter._extract_value(technical_analysis_data, ['avg_volume'])
-                volume_ratio = StrategyResultFormatter._extract_value(technical_analysis_data, ['volume_ratio'])
+                breakout_high = StrategyResultFormatter._extract_value(
+                    technical_analysis_data, ["breakout_high"]
+                )
+                current_volume = StrategyResultFormatter._extract_value(
+                    technical_analysis_data, ["current_volume"]
+                )
+                avg_volume = StrategyResultFormatter._extract_value(
+                    technical_analysis_data, ["avg_volume"]
+                )
+                volume_ratio = StrategyResultFormatter._extract_value(
+                    technical_analysis_data, ["volume_ratio"]
+                )
 
-                breakout_high_str = StrategyResultFormatter._format_number(breakout_high)
-                current_volume_str = StrategyResultFormatter._format_number(current_volume)
+                breakout_high_str = StrategyResultFormatter._format_number(
+                    breakout_high
+                )
+                current_volume_str = StrategyResultFormatter._format_number(
+                    current_volume
+                )
                 avg_volume_str = StrategyResultFormatter._format_number(avg_volume)
                 volume_ratio_str = StrategyResultFormatter._format_number(volume_ratio)
 
@@ -194,7 +254,7 @@ class StrategyResultFormatter:
         Returns:
             Formatted string
         """
-        if value is None or (isinstance(value, str) and value.upper() == 'N/A'):
+        if value is None or (isinstance(value, str) and value.upper() == "N/A"):
             return "N/A"
         try:
             return f"{float(value):.2f}"
@@ -215,6 +275,7 @@ class StrategyResultFormatter:
         try:
             # Look for pattern: "收盘价=..., MA5=..., MA13=..., MA34=..."
             import re
+
             pattern = r"收盘价=[^,\s]+, MA\d+=[^,\s]+, MA\d+=[^,\s]+, MA\d+=[^,\s]+"
             match = re.search(pattern, reason_text)
             if match:
@@ -245,9 +306,9 @@ class StrategyResultFormatter:
     def format_stock_data_for_pool(
         stock_code: str,
         score: Any = None,
-        golden_cross: bool = False,
+        # golden_cross: bool = False,
         technical_analysis_data: Optional[Dict] = None,
-        reason_text: str = ""
+        reason_text: str = "",
     ) -> Dict[str, Any]:
         """
         Format complete stock data for pool storage
@@ -273,14 +334,14 @@ class StrategyResultFormatter:
             stock_code=stock_code,
             technical_analysis_data=technical_analysis_data,
             reason_text=reason_text,
-            score=score
+            score=score,
         )
 
         return {
-            'code': str(stock_code),
-            'score': score_float,
-            'golden_cross': bool(golden_cross),
-            'value': value_text
+            "code": str(stock_code),
+            "score": score_float,
+            # "golden_cross": bool(golden_cross),
+            "value": value_text,
         }
 
 
@@ -290,43 +351,29 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     # Example 1: Format from technical analysis data (three MA strategy format)
-    tech_data_1 = {
-        'price': 10.50,
-        'ma_short': 9.80,
-        'ma_mid': 9.20,
-        'ma_long': 8.60
-    }
+    tech_data_1 = {"price": 10.50, "ma_short": 9.80, "ma_mid": 9.20, "ma_long": 8.60}
 
     formatted_value_1 = StrategyResultFormatter.format_value_field(
-        stock_code="000001",
-        technical_analysis_data=tech_data_1
+        stock_code="000001", technical_analysis_data=tech_data_1
     )
     print("Formatted value 1:", formatted_value_1)
 
     # Example 2: Format from technical analysis data (trend following strategy format)
     tech_data_2 = {
-        'price': 12.30,
-        'moving_averages': {
-            'sma_5': 11.80,
-            'sma_13': 11.20
-        },
-        'macd': {
-            'dif': 0.15,
-            'dea': 0.10
-        }
+        "price": 12.30,
+        "moving_averages": {"sma_5": 11.80, "sma_13": 11.20},
+        "macd": {"dif": 0.15, "dea": 0.10},
     }
 
     formatted_value_2 = StrategyResultFormatter.format_value_field(
-        stock_code="000002",
-        technical_analysis_data=tech_data_2
+        stock_code="000002", technical_analysis_data=tech_data_2
     )
     print("Formatted value 2:", formatted_value_2)
 
     # Example 3: Format from reason text
     reason_text = "满足多头排列: 收盘价=15.20, MA5=14.80, MA13=14.20, MA34=13.60"
     formatted_value_3 = StrategyResultFormatter.format_value_field(
-        stock_code="000003",
-        reason_text=reason_text
+        stock_code="000003", reason_text=reason_text
     )
     print("Formatted value 3:", formatted_value_3)
 
@@ -334,9 +381,8 @@ if __name__ == "__main__":
     stock_data = StrategyResultFormatter.format_stock_data_for_pool(
         stock_code="000004",
         score=85.5,
-        golden_cross=True,
+        # golden_cross=True,
         technical_analysis_data=tech_data_1,
-        reason_text="趋势强度得分85.50, MA5(9.80) > MA13(9.20), DIF(0.1500) > DEA(0.1000)"
+        reason_text="趋势强度得分85.50, MA5(9.80) > MA13(9.20), DIF(0.1500) > DEA(0.1000)",
     )
     print("Formatted stock data:", stock_data)
-

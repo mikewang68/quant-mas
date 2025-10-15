@@ -7,12 +7,14 @@ price breakout, significant volume increase, and momentum confirmation.
 import pandas as pd
 import numpy as np
 import talib
+import json
 from typing import Dict, Tuple, Optional
 import sys
 import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from strategies.base_strategy import BaseStrategy
+
 
 class VolumeBreakoutStrategy(BaseStrategy):
     """
@@ -40,12 +42,25 @@ class VolumeBreakoutStrategy(BaseStrategy):
             mapped_params = params.copy()
 
             # Map database parameter names to strategy parameter names
-            if "breakout_period" in mapped_params and "breakout_period" not in mapped_params:
+            if (
+                "breakout_period" in mapped_params
+                and "breakout_period" not in mapped_params
+            ):
                 mapped_params["breakout_period"] = int(mapped_params["breakout_period"])
-            if "volume_ma_period" in mapped_params and "volume_ma_period" not in mapped_params:
-                mapped_params["volume_ma_period"] = int(mapped_params["volume_ma_period"])
-            if "volume_multiplier" in mapped_params and "volume_multiplier" not in mapped_params:
-                mapped_params["volume_multiplier"] = float(mapped_params["volume_multiplier"])
+            if (
+                "volume_ma_period" in mapped_params
+                and "volume_ma_period" not in mapped_params
+            ):
+                mapped_params["volume_ma_period"] = int(
+                    mapped_params["volume_ma_period"]
+                )
+            if (
+                "volume_multiplier" in mapped_params
+                and "volume_multiplier" not in mapped_params
+            ):
+                mapped_params["volume_multiplier"] = float(
+                    mapped_params["volume_multiplier"]
+                )
             if "macd_fast" in mapped_params and "macd_fast" not in mapped_params:
                 mapped_params["macd_fast"] = int(mapped_params["macd_fast"])
             if "macd_slow" in mapped_params and "macd_slow" not in mapped_params:
@@ -57,9 +72,13 @@ class VolumeBreakoutStrategy(BaseStrategy):
             if "breakout_period" in mapped_params:
                 mapped_params["breakout_period"] = int(mapped_params["breakout_period"])
             if "volume_ma_period" in mapped_params:
-                mapped_params["volume_ma_period"] = int(mapped_params["volume_ma_period"])
+                mapped_params["volume_ma_period"] = int(
+                    mapped_params["volume_ma_period"]
+                )
             if "volume_multiplier" in mapped_params:
-                mapped_params["volume_multiplier"] = float(mapped_params["volume_multiplier"])
+                mapped_params["volume_multiplier"] = float(
+                    mapped_params["volume_multiplier"]
+                )
             if "macd_fast" in mapped_params:
                 mapped_params["macd_fast"] = int(mapped_params["macd_fast"])
             if "macd_slow" in mapped_params:
@@ -72,40 +91,80 @@ class VolumeBreakoutStrategy(BaseStrategy):
         super().__init__(name, params or {})
 
         # Strategy parameters
-        self.breakout_period = self.params.get('breakout_period', 13)
-        self.volume_ma_period = self.params.get('volume_ma_period', 5)
-        self.volume_multiplier = self.params.get('volume_multiplier', 1.8)
-        self.macd_fast = self.params.get('macd_fast', 12)
-        self.macd_slow = self.params.get('macd_slow', 26)
-        self.macd_signal = self.params.get('macd_signal', 9)
+        self.breakout_period = self.params.get("breakout_period", 13)
+        self.volume_ma_period = self.params.get("volume_ma_period", 5)
+        self.volume_multiplier = self.params.get("volume_multiplier", 1.8)
+        self.macd_fast = self.params.get("macd_fast", 12)
+        self.macd_slow = self.params.get("macd_slow", 26)
+        self.macd_signal = self.params.get("macd_signal", 9)
 
-        self.logger.info(f"Initialized {self.name} strategy with params: "
-                        f"breakout_period={self.breakout_period}, volume_ma_period={self.volume_ma_period}, "
-                        f"volume_multiplier={self.volume_multiplier}, macd_fast={self.macd_fast}, "
-                        f"macd_slow={self.macd_slow}, macd_signal={self.macd_signal}")
+        self.logger.info(
+            f"Initialized {self.name} strategy with params: "
+            f"breakout_period={self.breakout_period}, volume_ma_period={self.volume_ma_period}, "
+            f"volume_multiplier={self.volume_multiplier}, macd_fast={self.macd_fast}, "
+            f"macd_slow={self.macd_slow}, macd_signal={self.macd_signal}"
+        )
 
-    def analyze(self, data: pd.DataFrame) -> Tuple[bool, str, Optional[float], bool]:
+    def analyze(self, data: pd.DataFrame, code: str = None) -> Tuple[bool, float, str]:
         """
         Analyze stock data and determine if it meets selection criteria
 
         Args:
             data: DataFrame with stock data including OHLCV columns
+            code: Stock code (optional)
 
         Returns:
-            Tuple of (meets_criteria, selection_reason, score, breakout_signal)
+            Tuple of (meets_criteria, score, value)
+            value contains JSON string with: {
+                "code": code,
+                "score": score,
+                "selection_reason": reason,
+                "technical_analysis": technical_analysis,
+                "breakout_signal": breakout_signal,
+                "position": position_size
+            }
         """
 
         if data.empty:
-            return False, "数据为空", None, False
+            return (
+                False,
+                0.0,
+                json.dumps(
+                    {
+                        "code": code or "",
+                        "score": 0.0,
+                        "selection_reason": "数据为空",
+                        "technical_analysis": {},
+                        "breakout_signal": False,
+                        "position": 0.0,
+                    }
+                ),
+            )
 
         try:
             # Get required data points
             required_data = max(
-                self.breakout_period, self.volume_ma_period,
-                self.macd_fast, self.macd_slow, self.macd_signal
+                self.breakout_period,
+                self.volume_ma_period,
+                self.macd_fast,
+                self.macd_slow,
+                self.macd_signal,
             )
             if len(data) < required_data:
-                return False, f"数据不足，需要{required_data}条数据", None, False
+                return (
+                    False,
+                    0.0,
+                    json.dumps(
+                        {
+                            "code": code or "",
+                            "score": 0.0,
+                            "selection_reason": f"数据不足，需要{required_data}条数据",
+                            "technical_analysis": {},
+                            "breakout_signal": False,
+                            "position": 0.0,
+                        }
+                    ),
+                )
 
             # Convert pandas Series to numpy array for TA-Lib
             close_prices = np.array(data["close"].values, dtype=np.float64)
@@ -113,7 +172,11 @@ class VolumeBreakoutStrategy(BaseStrategy):
             volume_data = np.array(data["volume"].values, dtype=np.float64)
 
             # Calculate breakout high (historical high)
-            breakout_high = np.max(high_prices[-self.breakout_period:]) if len(high_prices) >= self.breakout_period else None
+            breakout_high = (
+                np.max(high_prices[-self.breakout_period :])
+                if len(high_prices) >= self.breakout_period
+                else None
+            )
 
             # Calculate volume moving average
             volume_ma = talib.SMA(volume_data, timeperiod=self.volume_ma_period)
@@ -123,7 +186,7 @@ class VolumeBreakoutStrategy(BaseStrategy):
                 close_prices,
                 fastperiod=self.macd_fast,
                 slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal
+                signalperiod=self.macd_signal,
             )
 
             # Current values
@@ -133,9 +196,26 @@ class VolumeBreakoutStrategy(BaseStrategy):
             macd_dif_last = macd_dif[-1] if not np.isnan(macd_dif[-1]) else None
 
             # Check if all values are valid
-            if (breakout_high is None or current_volume is None or
-                avg_volume is None or macd_dif_last is None):
-                return False, "技术指标计算无效", None, False
+            if (
+                breakout_high is None
+                or current_volume is None
+                or avg_volume is None
+                or macd_dif_last is None
+            ):
+                return (
+                    False,
+                    0.0,
+                    json.dumps(
+                        {
+                            "code": code or "",
+                            "score": 0.0,
+                            "selection_reason": "技术指标计算无效",
+                            "technical_analysis": {},
+                            "breakout_signal": False,
+                            "position": 0.0,
+                        }
+                    ),
+                )
 
             # Calculate volume ratio
             volume_ratio = current_volume / avg_volume if avg_volume != 0 else 0
@@ -151,7 +231,9 @@ class VolumeBreakoutStrategy(BaseStrategy):
             macd_condition = macd_dif_last > 0
 
             # Combined condition - all three must be met
-            breakout_signal = price_breakout_condition and volume_condition and macd_condition
+            breakout_signal = (
+                price_breakout_condition and volume_condition and macd_condition
+            )
 
             # Prepare selection reason
             reason = f"放量突破条件: 收盘价={current_price:.2f}, 突破高点={breakout_high:.2f}, 当前成交量={current_volume:.0f}, 平均成交量={avg_volume:.0f}, 量比={volume_ratio:.2f}, DIF={macd_dif_last:.4f}"
@@ -159,19 +241,58 @@ class VolumeBreakoutStrategy(BaseStrategy):
                 reason += " (满足放量突破)"
 
             # Calculate score using the documented formula
-            score = self._calculate_score(
-                volume_ratio, current_price, breakout_high, macd_dif_last
+            score = round(
+                self._calculate_score(
+                    volume_ratio, current_price, breakout_high, macd_dif_last
+                )
+                / 100,
+                2,
             )
 
-            # Check strength confirmation (score > 60)
-            if score <= 60:
-                return False, f"突破强度不足，得分={score:.2f}", score, False
+            # Get technical analysis data
+            technical_analysis = self.get_technical_analysis_data(data)
 
-            return True, reason, score, breakout_signal
+            # Calculate position size based on score
+            position_size = 0.0
+            if score >= 80:
+                position_size = 1.0
+            elif score >= 70:
+                position_size = 0.7
+            elif score >= 60:
+                position_size = 0.4
+
+            # Create value dictionary
+            value = {
+                "code": code or "",
+                "score": score,
+                "selection_reason": reason,
+                "technical_analysis": technical_analysis,
+                "breakout_signal": 1 if breakout_signal else 0,
+                "position": position_size,
+            }
+
+            # Check strength confirmation (score > 60)
+            if score <= 0.6:
+                return False, score, json.dumps(value)
+
+            return True, score, json.dumps(value)
 
         except Exception as e:
             self.log_error(f"分析错误: {e}")
-            return False, f"分析错误: {e}", None, False
+            return (
+                False,
+                0.0,
+                json.dumps(
+                    {
+                        "code": code or "",
+                        "score": 0.0,
+                        "selection_reason": f"分析错误: {e}",
+                        "technical_analysis": {},
+                        "breakout_signal": False,
+                        "position": 0.0,
+                    }
+                ),
+            )
 
     def get_technical_analysis_data(self, data: pd.DataFrame) -> Dict:
         """
@@ -193,7 +314,11 @@ class VolumeBreakoutStrategy(BaseStrategy):
             volume_data = np.array(data["volume"].values, dtype=np.float64)
 
             # Calculate breakout high (historical high)
-            breakout_high = np.amax(high_prices[-self.breakout_period:]) if len(high_prices) >= self.breakout_period else None
+            breakout_high = (
+                np.amax(high_prices[-self.breakout_period :])
+                if len(high_prices) >= self.breakout_period
+                else None
+            )
 
             # Calculate volume moving average
             volume_ma = talib.SMA(volume_data, timeperiod=self.volume_ma_period)
@@ -203,7 +328,7 @@ class VolumeBreakoutStrategy(BaseStrategy):
                 close_prices,
                 fastperiod=self.macd_fast,
                 slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal
+                signalperiod=self.macd_signal,
             )
 
             # Current values
@@ -211,19 +336,38 @@ class VolumeBreakoutStrategy(BaseStrategy):
             current_volume = volume_data[-1] if not np.isnan(volume_data[-1]) else None
             avg_volume = volume_ma[-1] if not np.isnan(volume_ma[-1]) else None
             macd_dif_last = macd_dif[-1] if not np.isnan(macd_dif[-1]) else None
-            volume_ratio = current_volume / avg_volume if avg_volume and avg_volume != 0 and current_volume is not None and avg_volume is not None else 0
+            volume_ratio = (
+                current_volume / avg_volume
+                if avg_volume
+                and avg_volume != 0
+                and current_volume is not None
+                and avg_volume is not None
+                else 0
+            )
 
             # Prepare technical analysis data in a format specific to Volume Breakout strategy
             technical_analysis_data = {
-                'price': float(current_price),
-                'breakout_high': float(breakout_high) if breakout_high is not None else 'N/A',
-                'current_volume': float(current_volume) if current_volume is not None else 'N/A',
-                'avg_volume': float(avg_volume) if avg_volume is not None else 'N/A',
-                'volume_ratio': float(volume_ratio) if volume_ratio is not None else 'N/A',
-                'macd': {
-                    'dif': float(macd_dif_last) if macd_dif_last is not None else 'N/A',
-                    'dea': float(macd_dea[-1]) if not np.isnan(macd_dea[-1]) else 'N/A',
-                }
+                "price": round(float(current_price), 2),
+                "breakout_high": round(float(breakout_high), 2)
+                if breakout_high is not None
+                else "N/A",
+                "current_volume": round(float(current_volume), 2)
+                if current_volume is not None
+                else "N/A",
+                "avg_volume": round(float(avg_volume), 2)
+                if avg_volume is not None
+                else "N/A",
+                "volume_ratio": round(float(volume_ratio), 2)
+                if volume_ratio is not None
+                else "N/A",
+                "macd": {
+                    "dif": round(float(macd_dif_last), 2)
+                    if macd_dif_last is not None
+                    else "N/A",
+                    "dea": round(float(macd_dea[-1]), 2)
+                    if not np.isnan(macd_dea[-1])
+                    else "N/A",
+                },
             }
 
             return technical_analysis_data
@@ -251,10 +395,16 @@ class VolumeBreakoutStrategy(BaseStrategy):
             term1 = 40 * min(2.0, (volume_ratio - 1)) / 1.0
 
             # Second term: Breakout magnitude strength (35%)
-            term2 = 35 * (price - breakout_high) / breakout_high if breakout_high != 0 else 0
+            term2 = (
+                35 * (price - breakout_high) / breakout_high
+                if breakout_high != 0
+                else 0
+            )
 
             # Third term: Momentum confirmation strength (25%)
-            term3 = 25 * max(0, macd_dif) / max(0.01, abs(macd_dif)) if macd_dif != 0 else 0
+            term3 = (
+                25 * max(0, macd_dif) / max(0.01, abs(macd_dif)) if macd_dif != 0 else 0
+            )
 
             score = max(0, min(100, term1 + term2 + term3))
             return score
@@ -283,7 +433,18 @@ class VolumeBreakoutStrategy(BaseStrategy):
         # Analyze each stock
         for code, data in stock_data.items():
             try:
-                meets_criteria, reason, score, breakout_signal = self.analyze(data)
+                meets_criteria, score, value = self.analyze(data)
+
+                # Parse the value to extract reason and breakout_signal
+                import json
+
+                try:
+                    value_data = json.loads(value)
+                    reason = value_data.get("selection_reason", "")
+                    breakout_signal = value_data.get("breakout_signal", False)
+                except:
+                    reason = ""
+                    breakout_signal = False
 
                 if meets_criteria:
                     # Add technical analysis data
@@ -294,20 +455,29 @@ class VolumeBreakoutStrategy(BaseStrategy):
                         volume_data = data["volume"].values
 
                         if len(close_prices) >= max(
-                            self.breakout_period, self.volume_ma_period,
-                            self.macd_fast, self.macd_slow, self.macd_signal
+                            self.breakout_period,
+                            self.volume_ma_period,
+                            self.macd_fast,
+                            self.macd_slow,
+                            self.macd_signal,
                         ):
                             # Calculate technical indicators for analysis
-                            breakout_high = np.max(high_prices[-self.breakout_period:])
-                            volume_ma_val = np.mean(volume_data[-self.volume_ma_period:])
-                            volume_ratio = volume_data[-1] / volume_ma_val if volume_ma_val != 0 else 0
+                            breakout_high = np.max(high_prices[-self.breakout_period :])
+                            volume_ma_val = np.mean(
+                                volume_data[-self.volume_ma_period :]
+                            )
+                            volume_ratio = (
+                                volume_data[-1] / volume_ma_val
+                                if volume_ma_val != 0
+                                else 0
+                            )
 
                             # Calculate MACD for technical analysis
                             macd_dif_arr, macd_dea_arr, _ = talib.MACD(
                                 np.array(close_prices, dtype=np.float64),
                                 fastperiod=self.macd_fast,
                                 slowperiod=self.macd_slow,
-                                signalperiod=self.macd_signal
+                                signalperiod=self.macd_signal,
                             )
 
                             technical_analysis = {
@@ -317,20 +487,25 @@ class VolumeBreakoutStrategy(BaseStrategy):
                                 "avg_volume": float(volume_ma_val),
                                 "volume_ratio": float(volume_ratio),
                                 "macd": {
-                                    "dif": float(macd_dif_arr[-1]) if not np.isnan(macd_dif_arr[-1]) else 0,
-                                    "dea": float(macd_dea_arr[-1]) if not np.isnan(macd_dea_arr[-1]) else 0,
+                                    "dif": float(macd_dif_arr[-1])
+                                    if not np.isnan(macd_dif_arr[-1])
+                                    else 0,
+                                    "dea": float(macd_dea_arr[-1])
+                                    if not np.isnan(macd_dea_arr[-1])
+                                    else 0,
                                 },
-                                "score": score,
-                                "breakout_signal": breakout_signal,
+                                # "score": score,
+                                # "breakout_signal": breakout_signal,
                             }
 
                     selected_stocks.append(
                         {
                             "code": code,
-                            "selection_reason": reason,
                             "score": score,
+                            "selection_reason": reason,
                             "technical_analysis": technical_analysis,
                             "breakout_signal": breakout_signal,
+                            "position": value_data.get("position", 0.0),
                         }
                     )
 
@@ -387,8 +562,14 @@ class VolumeBreakoutStrategy(BaseStrategy):
                 volume_data = np.array(data["volume"].values, dtype=np.float64)
 
                 # Calculate breakout high
-                breakout_high = np.array([np.max(high_prices[max(0, i-self.breakout_period+1):i+1])
-                                          for i in range(len(high_prices))])
+                breakout_high = np.array(
+                    [
+                        np.max(
+                            high_prices[max(0, i - self.breakout_period + 1) : i + 1]
+                        )
+                        for i in range(len(high_prices))
+                    ]
+                )
 
                 # Calculate volume moving average
                 volume_ma = talib.SMA(volume_data, timeperiod=self.volume_ma_period)
@@ -398,7 +579,7 @@ class VolumeBreakoutStrategy(BaseStrategy):
                     close_prices,
                     fastperiod=self.macd_fast,
                     slowperiod=self.macd_slow,
-                    signalperiod=self.macd_signal
+                    signalperiod=self.macd_signal,
                 )
 
                 # Calculate volume ratio
@@ -415,12 +596,18 @@ class VolumeBreakoutStrategy(BaseStrategy):
                 # 3. MACD maintains bullish momentum
                 for i in range(len(signals)):
                     # Check if we have valid data
-                    if (np.isnan(breakout_high[i]) or np.isnan(volume_ratio[i]) or
-                        np.isnan(macd_dif[i]) or np.isnan(macd_dea[i])):
+                    if (
+                        np.isnan(breakout_high[i])
+                        or np.isnan(volume_ratio[i])
+                        or np.isnan(macd_dif[i])
+                        or np.isnan(macd_dea[i])
+                    ):
                         continue
 
                     # Check basic conditions
-                    price_breakout_condition = close_prices[i] > breakout_high[i] * 1.015
+                    price_breakout_condition = (
+                        close_prices[i] > breakout_high[i] * 1.015
+                    )
                     volume_condition = volume_ratio[i] >= self.volume_multiplier
                     macd_condition = macd_dif[i] > 0
 
@@ -429,7 +616,10 @@ class VolumeBreakoutStrategy(BaseStrategy):
                         signals.loc[signals.index[i], "signal"] = "BUY"
                         # Calculate position size based on score
                         score = self._calculate_score(
-                            volume_ratio[i], close_prices[i], breakout_high[i], macd_dif[i]
+                            volume_ratio[i],
+                            close_prices[i],
+                            breakout_high[i],
+                            macd_dif[i],
                         )
                         # Position size based on score thresholds
                         if score >= 80:
@@ -447,8 +637,9 @@ class VolumeBreakoutStrategy(BaseStrategy):
 
         return signals
 
-    def calculate_position_size(self, signal: str, portfolio_value: float,
-                              price: float) -> float:
+    def calculate_position_size(
+        self, signal: str, portfolio_value: float, price: float
+    ) -> float:
         """
         Calculate position size based on signal and portfolio value.
 
@@ -476,6 +667,7 @@ class VolumeBreakoutStrategy(BaseStrategy):
         else:
             return 0.0  # Hold position
 
+
 # Example usage
 if __name__ == "__main__":
     import logging
@@ -484,15 +676,17 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     # Create sample data
-    dates = pd.date_range('2023-01-01', periods=100, freq='D')
-    sample_data = pd.DataFrame({
-        'date': dates,
-        'open': np.random.uniform(100, 110, 100),
-        'high': np.random.uniform(110, 120, 100),
-        'low': np.random.uniform(90, 100, 100),
-        'close': np.random.uniform(100, 110, 100),
-        'volume': np.random.uniform(1000000, 2000000, 100)
-    })
+    dates = pd.date_range("2023-01-01", periods=100, freq="D")
+    sample_data = pd.DataFrame(
+        {
+            "date": dates,
+            "open": np.random.uniform(100, 110, 100),
+            "high": np.random.uniform(110, 120, 100),
+            "low": np.random.uniform(90, 100, 100),
+            "close": np.random.uniform(100, 110, 100),
+            "volume": np.random.uniform(1000000, 2000000, 100),
+        }
+    )
 
     # Initialize strategy
     strategy = VolumeBreakoutStrategy()
@@ -501,4 +695,3 @@ if __name__ == "__main__":
     signals = strategy.generate_signals(sample_data)
     print(f"Generated {len(signals[signals['signal'] != 'HOLD'])} trading signals")
     print(signals.tail(10))
-
