@@ -709,6 +709,22 @@ python -m backtesting.backtester
 - **DOCUMENTATION**: Added comprehensive strategy documentation to STRATEGIES_DOCUMENTATION.md
 - **TESTED**: Strategy functionality verified with comprehensive test scripts
 
+### K-line Chart Tooltip OHLC Data Display Fix
+- **FIXED**: Resolved K线图tooltip中OHLC数据显示错误问题
+- **ROOT CAUSE**: ECharts candlestick图表在tooltip中传递的数据格式是5元素数组`[index, open, close, low, high]`，而不是我们预期的4元素OHLC数据
+- **FIXES IMPLEMENTED**:
+  - 修正了tooltip formatter中OHLC数据的索引访问：
+    - data[1]: 开盘价
+    - data[2]: 收盘价
+    - data[3]: 最低价
+    - data[4]: 最高价
+  - 添加了调试日志来诊断tooltip数据问题
+- **VERIFIED**: 以000006为例，tooltip现在能正确显示：
+  - 开盘：11.17
+  - 收盘：11.45
+  - 最高：11.87
+  - 最低：11.17
+
 ---
 *This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-16*
 

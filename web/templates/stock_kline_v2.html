@@ -472,6 +472,9 @@
                 }
 
                 // Process the data to ensure it matches expected format
+                console.log('Raw API data:', data);
+
+                // Data is array of objects with {date, open, high, low, close, volume} fields
                 klineData = data.map(item => ({
                     date: item.date,
                     open: parseFloat(item.open),
@@ -804,6 +807,12 @@
     function renderCharts() {
         console.log('Rendering charts with klineData:', klineData);
 
+        // Debug: Check first item fields
+        if (klineData && klineData.length > 0) {
+            console.log('First klineData item fields:', Object.keys(klineData[0]));
+            console.log('First klineData item values:', klineData[0]);
+        }
+
         // Use all data instead of paginated data for charts
         let displayData = klineData;
 
@@ -1035,18 +1044,20 @@
                         let result = `<div style="font-size: 14px; margin-bottom: 5px;">${params[0].axisValue}</div>`;
 
                         params.forEach(param => {
+                            console.log('Tooltip param:', param.seriesName, param.data);
                             if (param.seriesName === 'K线图') {
                                 // K线数据 - 先显示基本信息
                                 const data = param.data;
+                                console.log('K线图数据:', data);
                                 result += `<div style="display: flex; align-items: center; margin: 2px 0;">
                                     <span style="color: ${param.color}; margin-right: 8px;">●</span>
                                     <span style="min-width: 60px;">${param.seriesName}</span>
                                 </div>
                                 <div style="margin-left: 24px; margin-bottom: 4px;">
-                                    <div>开: ${data[0].toFixed(2)}</div>
-                                    <div>收: ${data[1].toFixed(2)}</div>
-                                    <div>低: ${data[2].toFixed(2)}</div>
-                                    <div>高: ${data[3].toFixed(2)}</div>
+                                    <div>开: ${typeof data[1] === 'number' ? data[1].toFixed(2) : data[1]}</div>
+                                    <div>收: ${typeof data[2] === 'number' ? data[2].toFixed(2) : data[2]}</div>
+                                    <div>低: ${typeof data[3] === 'number' ? data[3].toFixed(2) : data[3]}</div>
+                                    <div>高: ${typeof data[4] === 'number' ? data[4].toFixed(2) : data[4]}</div>
                                 </div>`;
                             } else if (param.seriesName === '成交量' || param.seriesName === '短期成交量MA' || param.seriesName === '中期成交量MA') {
                                 // 成交量数据 - 包括MA成交量
