@@ -6,6 +6,7 @@ A strategy that identifies pullback opportunities in uptrends for buying.
 import pandas as pd
 import numpy as np
 import talib
+import json
 from typing import Dict, Tuple, Optional
 import sys
 import os
@@ -77,19 +78,41 @@ class PullbackBuyingStrategy(BaseStrategy):
                         f"rsi_period={self.rsi_period}, oversold_threshold={self.oversold_threshold}, "
                         f"support_band_pct={self.support_band_pct}")
 
-    def analyze(self, data: pd.DataFrame) -> Tuple[bool, str, Optional[float], bool]:
+    def analyze(self, data: pd.DataFrame, code: str = None) -> Tuple[bool, float, str]:
         """
         Analyze stock data and determine if it meets selection criteria
 
         Args:
             data: DataFrame with stock data including OHLCV columns
+            code: Stock code (optional)
 
         Returns:
-            Tuple of (meets_criteria, selection_reason, score, pullback_signal)
+            Tuple of (meets_criteria, score, value)
+            value contains JSON string with: {
+                "code": code,
+                "score": score,
+                "selection_reason": reason,
+                "technical_analysis": technical_analysis,
+                "pullback_signal": pullback_signal,
+                "position": position_size
+            }
         """
 
         if data.empty:
-            return False, "数据为空", None, False
+            return (
+                False,
+                0.0,
+                json.dumps(
+                    {
+                        "code": code or "",
+                        "score": 0.0,
+                        "selection_reason": "数据为空",
+                        "technical_analysis": {},
+                        "pullback_signal": False,
+                        "position": 0.0,
+                    }
+                ),
+            )
 
         try:
             # Get required data points
@@ -97,7 +120,20 @@ class PullbackBuyingStrategy(BaseStrategy):
                 self.ma_period, self.kdj_n, self.rsi_period
             )
             if len(data) < required_data:
-                return False, f"数据不足，需要{required_data}条数据", None, False
+                return (
+                    False,
+                    0.0,
+                    json.dumps(
+                        {
+                            "code": code or "",
+                            "score": 0.0,
+                            "selection_reason": f"数据不足，需要{required_data}条数据",
+                            "technical_analysis": {},
+                            "pullback_signal": False,
+                            "position": 0.0,
+                        }
+                    ),
+                )
 
             # Convert pandas Series to numpy array for TA-Lib
             close_prices = np.array(data["close"].values, dtype=np.float64)
@@ -126,7 +162,20 @@ class PullbackBuyingStrategy(BaseStrategy):
 
             # Check if all values are valid
             if (ma_value is None or kdj_j_value is None or rsi_value is None):
-                return False, "技术指标计算无效", None, False
+                return (
+                    False,
+                    0.0,
+                    json.dumps(
+                        {
+                            "code": code or "",
+                            "score": 0.0,
+                            "selection_reason": "技术指标计算无效",
+                            "technical_analysis": {},
+                            "pullback_signal": False,
+                            "position": 0.0,
+                        }
+                    ),
+                )
 
             # Calculate MA trend (1: upward, 0: flat, -1: downward)
             ma_trend = self._calculate_ma_trend(ma_values)
@@ -147,15 +196,50 @@ class PullbackBuyingStrategy(BaseStrategy):
             )
             score = round(score, 2)
 
-            # Check strength confirmation (score > 60)
-            if score <= 60:
-                return False, f"低吸机会不足，得分={score:.2f}", score, False
+            # Get technical analysis data
+            technical_analysis = self.get_technical_analysis_data(data)
 
-            return True, reason, score, is_valid_pullback
+            # Calculate position size based on score
+            position_size = 0.0
+            if score >= 0.8:
+                position_size = 0.8
+            elif score >= 0.7:
+                position_size = 0.6
+            elif score >= 0.6:
+                position_size = 0.4
+
+            # Create value dictionary
+            value = {
+                "code": code or "",
+                "score": score,
+                "selection_reason": reason,
+                "technical_analysis": technical_analysis,
+                "pullback_signal": 1 if is_valid_pullback else 0,
+                "position": position_size,
+            }
+
+            # Check strength confirmation (score > 0.6)
+            if score <= 0.6:
+                return False, score, json.dumps(value)
+
+            return True, score, json.dumps(value)
 
         except Exception as e:
             self.log_error(f"分析错误: {e}")
-            return False, f"分析错误: {e}", None, False
+            return (
+                False,
+                0.0,
+                json.dumps(
+                    {
+                        "code": code or "",
+                        "score": 0.0,
+                        "selection_reason": f"分析错误: {e}",
+                        "technical_analysis": {},
+                        "pullback_signal": False,
+                        "position": 0.0,
+                    }
+                ),
+            )
 
     def get_technical_analysis_data(self, data: pd.DataFrame) -> Dict:
         """
@@ -324,7 +408,8 @@ class PullbackBuyingStrategy(BaseStrategy):
             term3 = 30 * max(0, (ma_value - close)) / ma_value
 
             score = max(0, min(100, term1 + term2 + term3))
-            return round(score, 2)
+            # Divide by 100 and round to 2 decimal places
+            return round(score / 100, 2)
         except Exception as e:
             self.log_warning(f"评分计算错误: {e}")
             return 0
@@ -350,7 +435,16 @@ class PullbackBuyingStrategy(BaseStrategy):
         # Analyze each stock
         for code, data in stock_data.items():
             try:
-                meets_criteria, reason, score, pullback_signal = self.analyze(data)
+                meets_criteria, score, value = self.analyze(data, code)
+
+                # Parse the value to extract reason and pullback_signal
+                try:
+                    value_data = json.loads(value)
+                    reason = value_data.get("selection_reason", "")
+                    pullback_signal = value_data.get("pullback_signal", False)
+                except:
+                    reason = ""
+                    pullback_signal = False
 
                 if meets_criteria:
                     # Add technical analysis data
@@ -368,17 +462,18 @@ class PullbackBuyingStrategy(BaseStrategy):
                             technical_analysis = {
                                 "price": float(close_prices[-1]),
                                 "ma_value": float(ma_value),
-                                "score": score,
-                                "pullback_signal": pullback_signal,
+                                # "score": score,
+                                # "pullback_signal": pullback_signal,
                             }
 
                     selected_stocks.append(
                         {
                             "code": code,
-                            "selection_reason": reason,
                             "score": score,
+                            "selection_reason": reason,
                             "technical_analysis": technical_analysis,
                             "pullback_signal": pullback_signal,
+                            "position": value_data.get("position", 0.0),
                         }
                     )
 

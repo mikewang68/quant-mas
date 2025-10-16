@@ -1,6 +1,6 @@
 """
-Trend Following Strategy
-A strategy that generates buy/sell signals based on trend following principles.
+Bullish Golden Cross Volume Strategy
+A strategy that identifies bullish golden cross opportunities with volume confirmation.
 """
 
 import pandas as pd
@@ -15,81 +15,84 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from strategies.base_strategy import BaseStrategy
 
 
-class TrendFollowingStrategy(BaseStrategy):
+class BullishGoldenCrossVolumeStrategy(BaseStrategy):
     """
-    Trend Following Strategy
-    Utilizes moving average bullish arrangement, MACD momentum, and price breakout
-    to identify robust trending upward market conditions.
+    Bullish Golden Cross Volume Strategy
+    Identifies bullish golden cross opportunities with volume confirmation.
     """
 
-    def __init__(self, name: str = "趋势跟踪策略", params: Optional[Dict] = None):
+    def __init__(
+        self, name: str = "趋势-多头金叉放量策略", params: Optional[Dict] = None
+    ):
         """
-        Initialize the Trend Following strategy.
+        Initialize the Bullish Golden Cross Volume strategy.
 
         Args:
             name: Strategy name
             params: Strategy parameters
                 - ma_fast: Fast moving average period (default: 5)
-                - ma_slow: Slow moving average period (default: 13)
-                - macd_fast: MACD fast period (default: 12)
-                - macd_slow: MACD slow period (default: 26)
-                - macd_signal: MACD signal period (default: 9)
-                - new_high_period: New high period (default: 20)
+                - ma_mid: Middle moving average period (default: 10)
+                - ma_slow: Slow moving average period (default: 20)
+                - volume_ma_period: Volume moving average period (default: 5)
+                - volume_multiplier: Volume multiplier (default: 1.5)
         """
         # Handle parameter name mapping from database storage format to strategy format
         if params:
             mapped_params = params.copy()
 
             # Map database parameter names to strategy parameter names
-            if "ma_fast" in mapped_params and "fast" not in mapped_params:
-                mapped_params["fast"] = int(mapped_params["ma_fast"])
-            if "ma_slow" in mapped_params and "slow" not in mapped_params:
-                mapped_params["slow"] = int(mapped_params["ma_slow"])
-            if "macd_fast" in mapped_params and "macd_fast" not in mapped_params:
-                mapped_params["macd_fast"] = int(mapped_params["macd_fast"])
-            if "macd_slow" in mapped_params and "macd_slow" not in mapped_params:
-                mapped_params["macd_slow"] = int(mapped_params["macd_slow"])
-            if "macd_signal" in mapped_params and "macd_signal" not in mapped_params:
-                mapped_params["macd_signal"] = int(mapped_params["macd_signal"])
+            if "ma_fast" in mapped_params and "ma_fast" not in mapped_params:
+                mapped_params["ma_fast"] = int(mapped_params["ma_fast"])
+            if "ma_mid" in mapped_params and "ma_mid" not in mapped_params:
+                mapped_params["ma_mid"] = int(mapped_params["ma_mid"])
+            if "ma_slow" in mapped_params and "ma_slow" not in mapped_params:
+                mapped_params["ma_slow"] = int(mapped_params["ma_slow"])
             if (
-                "new_high_period" in mapped_params
-                and "new_high_period" not in mapped_params
+                "volume_ma_period" in mapped_params
+                and "volume_ma_period" not in mapped_params
             ):
-                mapped_params["new_high_period"] = int(mapped_params["new_high_period"])
+                mapped_params["volume_ma_period"] = int(
+                    mapped_params["volume_ma_period"]
+                )
+            if (
+                "volume_multiplier" in mapped_params
+                and "volume_multiplier" not in mapped_params
+            ):
+                mapped_params["volume_multiplier"] = float(
+                    mapped_params["volume_multiplier"]
+                )
 
-            # Ensure existing parameters are integers where needed
-            if "fast" in mapped_params:
-                mapped_params["fast"] = int(mapped_params["fast"])
-            if "slow" in mapped_params:
-                mapped_params["slow"] = int(mapped_params["slow"])
-            if "macd_fast" in mapped_params:
-                mapped_params["macd_fast"] = int(mapped_params["macd_fast"])
-            if "macd_slow" in mapped_params:
-                mapped_params["macd_slow"] = int(mapped_params["macd_slow"])
-            if "macd_signal" in mapped_params:
-                mapped_params["macd_signal"] = int(mapped_params["macd_signal"])
-            if "new_high_period" in mapped_params:
-                mapped_params["new_high_period"] = int(mapped_params["new_high_period"])
+            # Ensure existing parameters are correct types
+            if "ma_fast" in mapped_params:
+                mapped_params["ma_fast"] = int(mapped_params["ma_fast"])
+            if "ma_mid" in mapped_params:
+                mapped_params["ma_mid"] = int(mapped_params["ma_mid"])
+            if "ma_slow" in mapped_params:
+                mapped_params["ma_slow"] = int(mapped_params["ma_slow"])
+            if "volume_ma_period" in mapped_params:
+                mapped_params["volume_ma_period"] = int(
+                    mapped_params["volume_ma_period"]
+                )
+            if "volume_multiplier" in mapped_params:
+                mapped_params["volume_multiplier"] = float(
+                    mapped_params["volume_multiplier"]
+                )
 
             params = mapped_params
 
         super().__init__(name, params or {})
 
         # Strategy parameters
-        self.fast_period = self.params.get("fast", 5)
-        self.slow_period = self.params.get("slow", 13)
-        self.macd_fast = self.params.get("macd_fast", 12)
-        self.macd_slow = self.params.get("macd_slow", 26)
-        self.macd_signal = self.params.get("macd_signal", 9)
-        self.new_high_period = self.params.get(
-            "new_high_period", 5
-        )  # Use 5-period breakout
+        self.ma_fast = self.params.get("ma_fast", 5)
+        self.ma_mid = self.params.get("ma_mid", 13)
+        self.ma_slow = self.params.get("ma_slow", 34)
+        self.volume_ma_period = self.params.get("volume_ma_period", 5)
+        self.volume_multiplier = self.params.get("volume_multiplier", 1.5)
 
         self.logger.info(
             f"Initialized {self.name} strategy with params: "
-            f"fast={self.fast_period}, slow={self.slow_period}, "
-            f"macd_fast={self.macd_fast}, macd_slow={self.macd_slow}, "
-            f"macd_signal={self.macd_signal}, new_high_period={self.new_high_period}"
+            f"ma_fast={self.ma_fast}, ma_mid={self.ma_mid}, ma_slow={self.ma_slow}, "
+            f"volume_ma_period={self.volume_ma_period}, volume_multiplier={self.volume_multiplier}"
         )
 
     def analyze(self, data: pd.DataFrame, code: str = None) -> Tuple[bool, float, str]:
@@ -107,7 +110,7 @@ class TrendFollowingStrategy(BaseStrategy):
                 "score": score,
                 "selection_reason": reason,
                 "technical_analysis": technical_analysis,
-                "golden_cross": golden_cross,
+                "golden_cross_signal": golden_cross_signal,
                 "position": position_size
             }
         """
@@ -122,7 +125,7 @@ class TrendFollowingStrategy(BaseStrategy):
                         "score": 0.0,
                         "selection_reason": "数据为空",
                         "technical_analysis": {},
-                        "golden_cross": False,
+                        "golden_cross_signal": False,
                         "position": 0.0,
                     }
                 ),
@@ -131,12 +134,10 @@ class TrendFollowingStrategy(BaseStrategy):
         try:
             # Get required data points
             required_data = max(
-                self.fast_period,
-                self.slow_period,
-                self.macd_fast,
-                self.macd_slow,
-                self.macd_signal,
-                self.new_high_period,
+                self.ma_fast,
+                self.ma_mid,
+                self.ma_slow,
+                self.volume_ma_period,
             )
             if len(data) < required_data:
                 return (
@@ -148,7 +149,7 @@ class TrendFollowingStrategy(BaseStrategy):
                             "score": 0.0,
                             "selection_reason": f"数据不足，需要{required_data}条数据",
                             "technical_analysis": {},
-                            "golden_cross": False,
+                            "golden_cross_signal": False,
                             "position": 0.0,
                         }
                     ),
@@ -156,33 +157,31 @@ class TrendFollowingStrategy(BaseStrategy):
 
             # Convert pandas Series to numpy array for TA-Lib
             close_prices = np.array(data["close"].values, dtype=np.float64)
-            high_prices = np.array(data["high"].values, dtype=np.float64)
+            volume_data = np.array(data["volume"].values, dtype=np.float64)
 
             # Calculate moving averages
-            ma_fast = talib.SMA(close_prices, timeperiod=self.fast_period)
-            ma_slow = talib.SMA(close_prices, timeperiod=self.slow_period)
+            ma_fast = talib.SMA(close_prices, timeperiod=self.ma_fast)
+            ma_mid = talib.SMA(close_prices, timeperiod=self.ma_mid)
+            ma_slow = talib.SMA(close_prices, timeperiod=self.ma_slow)
 
-            # Calculate MACD
-            macd_dif, macd_dea, _ = talib.MACD(
-                close_prices,
-                fastperiod=self.macd_fast,
-                slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal,
-            )
+            # Calculate volume moving average
+            volume_ma = talib.SMA(volume_data, timeperiod=self.volume_ma_period)
 
             # Current values
             current_price = close_prices[-1]
             ma_fast_last = ma_fast[-1] if not np.isnan(ma_fast[-1]) else None
+            ma_mid_last = ma_mid[-1] if not np.isnan(ma_mid[-1]) else None
             ma_slow_last = ma_slow[-1] if not np.isnan(ma_slow[-1]) else None
-            macd_dif_last = macd_dif[-1] if not np.isnan(macd_dif[-1]) else None
-            macd_dea_last = macd_dea[-1] if not np.isnan(macd_dea[-1]) else None
+            current_volume = volume_data[-1] if not np.isnan(volume_data[-1]) else None
+            avg_volume = volume_ma[-1] if not np.isnan(volume_ma[-1]) else None
 
             # Check if all values are valid
             if (
                 ma_fast_last is None
+                or ma_mid_last is None
                 or ma_slow_last is None
-                or macd_dif_last is None
-                or macd_dea_last is None
+                or current_volume is None
+                or avg_volume is None
             ):
                 return (
                     False,
@@ -193,40 +192,28 @@ class TrendFollowingStrategy(BaseStrategy):
                             "score": 0.0,
                             "selection_reason": "技术指标计算无效",
                             "technical_analysis": {},
-                            "golden_cross": False,
+                            "golden_cross_signal": False,
                             "position": 0.0,
                         }
                     ),
                 )
 
-            # Calculate historical high for scoring (long-term)
-            historical_high = (
-                np.max(high_prices[-self.new_high_period :])
-                if len(high_prices) >= self.new_high_period
-                else None
-            )
-
-            # Generate reason based on which conditions are met
-            ma_condition = ma_fast_last > ma_slow_last
-            macd_condition = macd_dif_last > macd_dea_last
-            breakout_condition = (
-                historical_high is not None and current_price > historical_high
-            )
-
-            # Check if ma_fast is increasing (current >= previous)
-            ma_fast_increasing = True
-            if len(ma_fast) >= 2:
-                ma_fast_prev = ma_fast[-2] if not np.isnan(ma_fast[-2]) else ma_fast_last
-                ma_fast_increasing = ma_fast_last >= ma_fast_prev
-
-            # Check for golden cross pattern (MA5 crosses above MA13 and MACD DIF crosses above DEA)
+            # Check golden cross conditions
             golden_cross_condition = self._detect_golden_cross(data)
 
+            # Check volume condition
+            volume_ratio = current_volume / avg_volume if avg_volume != 0 else 0
+            volume_condition = volume_ratio >= self.volume_multiplier
+
             # Prepare selection reason
-            reason = f"满足趋势跟踪条件: 收盘价={current_price:.2f}, MA{self.fast_period}={ma_fast_last:.2f}, MA{self.slow_period}={ma_slow_last:.2f}, DIF={macd_dif_last:.2f}, DEA={macd_dea_last:.2f}"
+            reason = f"金叉放量启动信号: 收盘价={current_price:.2f}, MA{self.ma_fast}={ma_fast_last:.2f}, MA{self.ma_mid}={ma_mid_last:.2f}, MA{self.ma_slow}={ma_slow_last:.2f}, 成交量={current_volume:.0f}, 平均成交量={avg_volume:.0f}, 量比={volume_ratio:.2f}"
             if golden_cross_condition:
                 reason += " (检测到金叉)"
-            if not ma_fast_increasing:
+            if volume_condition:
+                reason += " (成交量放大)"
+
+            # 核心条件：必须有金叉和成交量放大
+            if not golden_cross_condition or not volume_condition:
                 return (
                     False,
                     0.0,
@@ -234,22 +221,21 @@ class TrendFollowingStrategy(BaseStrategy):
                         {
                             "code": code or "",
                             "score": 0.0,
-                            "selection_reason": f"MA{self.fast_period}未保持上升趋势",
+                            "selection_reason": f"未满足金叉放量启动条件: 金叉={golden_cross_condition}, 成交量放大={volume_condition}",
                             "technical_analysis": {},
-                            "golden_cross": False,
+                            "golden_cross_signal": False,
                             "position": 0.0,
                         }
                     ),
                 )
 
-            # For scoring, we'll use the historical high (5-period)
+            # Calculate score
             score = self._calculate_score(
                 ma_fast_last,
+                ma_mid_last,
                 ma_slow_last,
-                macd_dif_last,
-                macd_dea_last,
-                current_price,
-                historical_high,
+                volume_ratio,
+                golden_cross_condition,
             )
 
             # Get technical analysis data
@@ -270,11 +256,11 @@ class TrendFollowingStrategy(BaseStrategy):
                 "score": score,
                 "selection_reason": reason,
                 "technical_analysis": technical_analysis,
-                "golden_cross": 1 if golden_cross_condition else 0,
+                "golden_cross_signal": 1 if golden_cross_condition else 0,
                 "position": position_size,
             }
 
-            # Check strength confirmation (score > 0.6) - revert to original strict condition
+            # Check strength confirmation (score > 0.6)
             if score <= 0.6:
                 return False, score, json.dumps(value)
 
@@ -291,7 +277,7 @@ class TrendFollowingStrategy(BaseStrategy):
                         "score": 0.0,
                         "selection_reason": f"分析错误: {e}",
                         "technical_analysis": {},
-                        "golden_cross": False,
+                        "golden_cross_signal": False,
                         "position": 0.0,
                     }
                 ),
@@ -313,45 +299,66 @@ class TrendFollowingStrategy(BaseStrategy):
         try:
             # Convert pandas Series to numpy array for TA-Lib
             close_prices = np.array(data["close"].values, dtype=np.float64)
+            volume_data = np.array(data["volume"].values, dtype=np.float64)
 
             # Calculate moving averages
-            ma_fast = talib.SMA(close_prices, timeperiod=self.fast_period)
-            ma_slow = talib.SMA(close_prices, timeperiod=self.slow_period)
+            ma_fast = talib.SMA(close_prices, timeperiod=self.ma_fast)
+            ma_mid = talib.SMA(close_prices, timeperiod=self.ma_mid)
+            ma_slow = talib.SMA(close_prices, timeperiod=self.ma_slow)
 
-            # Calculate MACD
-            macd_dif, macd_dea, _ = talib.MACD(
-                close_prices,
-                fastperiod=self.macd_fast,
-                slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal,
-            )
+            # Calculate volume moving average
+            volume_ma = talib.SMA(volume_data, timeperiod=self.volume_ma_period)
 
             # Current values
             current_price = close_prices[-1]
             ma_fast_last = ma_fast[-1] if not np.isnan(ma_fast[-1]) else None
+            ma_mid_last = ma_mid[-1] if not np.isnan(ma_mid[-1]) else None
             ma_slow_last = ma_slow[-1] if not np.isnan(ma_slow[-1]) else None
-            macd_dif_last = macd_dif[-1] if not np.isnan(macd_dif[-1]) else None
-            macd_dea_last = macd_dea[-1] if not np.isnan(macd_dea[-1]) else None
+            current_volume = volume_data[-1] if not np.isnan(volume_data[-1]) else None
+            avg_volume = volume_ma[-1] if not np.isnan(volume_ma[-1]) else None
+
+            # Calculate volume ratio
+            volume_ratio = (
+                current_volume / avg_volume
+                if avg_volume and avg_volume != 0 and current_volume is not None
+                else 0
+            )
+
+            # Check golden cross conditions
+            golden_cross_condition = self._detect_golden_cross(data)
+
+            # Check bullish arrangement
+            bullish_arrangement = (
+                ma_fast_last > ma_mid_last and ma_mid_last > ma_slow_last
+            )
 
             # Prepare technical analysis data
             technical_analysis_data = {
                 "price": round(float(current_price), 2),
                 "moving_averages": {
-                    f"sma_{self.fast_period}": round(float(ma_fast_last), 2)
+                    f"sma_{self.ma_fast}": round(float(ma_fast_last), 2)
                     if ma_fast_last is not None
                     else "N/A",
-                    f"sma_{self.slow_period}": round(float(ma_slow_last), 2)
+                    f"sma_{self.ma_mid}": round(float(ma_mid_last), 2)
+                    if ma_mid_last is not None
+                    else "N/A",
+                    f"sma_{self.ma_slow}": round(float(ma_slow_last), 2)
                     if ma_slow_last is not None
                     else "N/A",
                 },
-                "macd": {
-                    "dif": round(float(macd_dif_last), 2)
-                    if macd_dif_last is not None
+                "volume": {
+                    "current": round(float(current_volume), 2)
+                    if current_volume is not None
                     else "N/A",
-                    "dea": round(float(macd_dea_last), 2)
-                    if macd_dea_last is not None
+                    "average": round(float(avg_volume), 2)
+                    if avg_volume is not None
+                    else "N/A",
+                    "ratio": round(float(volume_ratio), 2)
+                    if volume_ratio is not None
                     else "N/A",
                 },
+                "golden_cross": bool(golden_cross_condition),
+                "bullish_arrangement": bool(bullish_arrangement),
             }
 
             return technical_analysis_data
@@ -360,60 +367,41 @@ class TrendFollowingStrategy(BaseStrategy):
             return {}
 
     def _calculate_score(
-        self, ma_fast, ma_slow, macd_dif, macd_dea, price, historical_high
+        self,
+        ma_fast,
+        ma_mid,
+        ma_slow,
+        volume_ratio,
+        golden_cross_condition,
     ):
         """
-        Calculate trend strength score based on documented formula
+        Calculate golden cross volume startup signal strength score
 
         Score calculation formula:
-        score = max(
-            0,
-            min(
-                100,
-                40 * (ma_fast - ma_slow) / ma_slow  # 均线排列强度
-              + 30 * (macd_dif - macd_dea) / abs(macd_dea) if macd_dea != 0 else 0  # MACD动量
-              + 20 * max(0, (macd_dif - 0)) / max(0.01, macd_dif)  # 零轴之上加分
-              + 10 * (price - historical_high) / historical_high  # 突破强度
-            )
-        )
+        - If no golden cross: score = 0
+        - If golden cross: score = 60 + 40 * min(2.0, (volume_ratio - 1)) / 1.0
+        (金叉权重60%，成交量放大权重40%)
         """
         try:
-            # First term: Moving average arrangement strength (40%)
-            term1 = (
-                round(40 * (ma_fast - ma_slow) / ma_slow, 2) if ma_slow != 0 else 0.0
-            )
+            # If no golden cross, score is 0
+            if not golden_cross_condition:
+                return 0.0
 
-            # Second term: MACD momentum (30%)
-            term2 = (
-                round(30 * (macd_dif - macd_dea) / abs(macd_dea), 2)
-                if macd_dea != 0
-                else 0.0
-            )
+            # Calculate volume amplification strength (0-40 points)
+            volume_strength = 40 * min(2.0, (volume_ratio - 1)) / 1.0
 
-            # Third term: Above zero axis bonus (20%)
-            term3 = (
-                round(20 * max(0, macd_dif) / max(0.01, abs(macd_dif)), 2)
-                if macd_dif != 0
-                else 0.0
-            )
-
-            # Fourth term: Breakout strength (10%)
-            term4 = (
-                round(10 * (price - historical_high) / historical_high, 2)
-                if historical_high != 0
-                else 0.0
-            )
-
-            score = round(max(0, min(100, term1 + term2 + term3 + term4)), 2)
+            # Golden cross gives 60 points, volume gives up to 40 points
+            score = 60 + volume_strength
             # Divide by 100 and round to 2 decimal places
             return round(score / 100, 2)
         except Exception as e:
             self.log_warning(f"评分计算错误: {e}")
-            return 0.0
+            return 0
 
     def _detect_golden_cross(self, data: pd.DataFrame) -> bool:
         """
-        Detect golden cross pattern (MA5 crosses above MA13 and MACD DIF crosses above DEA)
+        Detect golden cross pattern (MA5 crosses above MA10 and MA10 crosses above MA20)
+        Focus on detecting the startup signal when the cross happens
 
         Args:
             data: DataFrame with K-line data
@@ -421,9 +409,7 @@ class TrendFollowingStrategy(BaseStrategy):
         Returns:
             True if golden cross detected, False otherwise
         """
-        if data.empty or len(data) < max(
-            self.fast_period, self.slow_period, self.macd_signal
-        ):
+        if data.empty or len(data) < max(self.ma_fast, self.ma_mid, self.ma_slow):
             return False
 
         try:
@@ -431,56 +417,44 @@ class TrendFollowingStrategy(BaseStrategy):
             close_prices = np.asarray(data["close"].values, dtype=np.float64)
 
             # Calculate moving averages
-            ma_fast = talib.SMA(close_prices, timeperiod=self.fast_period)
-            ma_slow = talib.SMA(close_prices, timeperiod=self.slow_period)
-
-            # Calculate MACD
-            macd_dif, macd_dea, _ = talib.MACD(
-                close_prices,
-                fastperiod=self.macd_fast,
-                slowperiod=self.macd_slow,
-                signalperiod=self.macd_signal,
-            )
+            ma_fast = talib.SMA(close_prices, timeperiod=self.ma_fast)
+            ma_mid = talib.SMA(close_prices, timeperiod=self.ma_mid)
+            ma_slow = talib.SMA(close_prices, timeperiod=self.ma_slow)
 
             # Check if we have enough data points
-            if (
-                len(ma_fast) < 2
-                or len(ma_slow) < 2
-                or len(macd_dif) < 2
-                or len(macd_dea) < 2
-            ):
+            if len(ma_fast) < 2 or len(ma_mid) < 2 or len(ma_slow) < 2:
                 return False
 
-            # Check for golden cross (fast MA crosses above slow MA)
-            current_fast_above_slow = (
-                ma_fast[-1] > ma_slow[-1]
-                if not np.isnan(ma_fast[-1]) and not np.isnan(ma_slow[-1])
+            # Check for golden cross (fast MA crosses above middle MA)
+            current_fast_above_mid = (
+                ma_fast[-1] > ma_mid[-1]
+                if not np.isnan(ma_fast[-1]) and not np.isnan(ma_mid[-1])
                 else False
             )
-            previous_fast_below_slow = (
-                ma_fast[-2] <= ma_slow[-2]
-                if not np.isnan(ma_fast[-2]) and not np.isnan(ma_slow[-2])
+            previous_fast_below_mid = (
+                ma_fast[-2] <= ma_mid[-2]
+                if not np.isnan(ma_fast[-2]) and not np.isnan(ma_mid[-2])
                 else False
             )
 
-            # Check for MACD golden cross (DIF crosses above DEA)
-            current_dif_above_dea = (
-                macd_dif[-1] > macd_dea[-1]
-                if not np.isnan(macd_dif[-1]) and not np.isnan(macd_dea[-1])
+            # Check for golden cross (middle MA crosses above slow MA)
+            current_mid_above_slow = (
+                ma_mid[-1] > ma_slow[-1]
+                if not np.isnan(ma_mid[-1]) and not np.isnan(ma_slow[-1])
                 else False
             )
-            previous_dif_below_dea = (
-                macd_dif[-2] <= macd_dea[-2]
-                if not np.isnan(macd_dif[-2]) and not np.isnan(macd_dea[-2])
+            previous_mid_below_slow = (
+                ma_mid[-2] <= ma_slow[-2]
+                if not np.isnan(ma_mid[-2]) and not np.isnan(ma_slow[-2])
                 else False
             )
 
             # Both conditions must be met for golden cross
             return (
-                current_fast_above_slow
-                and previous_fast_below_slow
-                and current_dif_above_dea
-                and previous_dif_below_dea
+                current_fast_above_mid
+                and previous_fast_below_mid
+                and current_mid_above_slow
+                and previous_mid_below_slow
             )
 
         except Exception as e:
@@ -510,66 +484,65 @@ class TrendFollowingStrategy(BaseStrategy):
             try:
                 meets_criteria, score, value = self.analyze(data, code)
 
-                # Parse the value to extract reason and golden_cross
+                # Parse the value to extract reason and golden_cross_signal
                 try:
                     value_data = json.loads(value)
                     reason = value_data.get("selection_reason", "")
-                    golden_cross = value_data.get("golden_cross", False)
+                    golden_cross_signal = value_data.get("golden_cross_signal", False)
                 except:
                     reason = ""
-                    golden_cross = False
+                    golden_cross_signal = False
 
                 if meets_criteria:
                     # Add technical analysis data
                     technical_analysis = {}
                     if not data.empty:
                         close_prices = data["close"].values
+                        volume_data = data["volume"].values
+
                         if len(close_prices) >= max(
-                            self.fast_period,
-                            self.slow_period,
-                            self.macd_fast,
-                            self.macd_slow,
-                            self.macd_signal,
-                            self.new_high_period,
+                            self.ma_fast,
+                            self.ma_mid,
+                            self.ma_slow,
+                            self.volume_ma_period,
                         ):
                             # Calculate technical indicators for analysis
                             ma_fast_val = np.mean(
                                 np.array(
-                                    close_prices[-self.fast_period :],
+                                    close_prices[-self.ma_fast :],
+                                    dtype=np.float64,
+                                )
+                            )
+                            ma_mid_val = np.mean(
+                                np.array(
+                                    close_prices[-self.ma_mid :],
                                     dtype=np.float64,
                                 )
                             )
                             ma_slow_val = np.mean(
                                 np.array(
-                                    close_prices[-self.slow_period :],
+                                    close_prices[-self.ma_slow :],
                                     dtype=np.float64,
                                 )
                             )
-
-                            # Calculate MACD for technical analysis
-                            macd_dif_arr, macd_dea_arr, _ = talib.MACD(
-                                np.array(close_prices, dtype=np.float64),
-                                fastperiod=self.macd_fast,
-                                slowperiod=self.macd_slow,
-                                signalperiod=self.macd_signal,
+                            avg_volume = np.mean(
+                                np.array(
+                                    volume_data[-self.volume_ma_period :],
+                                    dtype=np.float64,
+                                )
                             )
 
                             technical_analysis = {
                                 "price": float(close_prices[-1]),
                                 "moving_averages": {
-                                    f"sma_{self.fast_period}": float(ma_fast_val),
-                                    f"sma_{self.slow_period}": float(ma_slow_val),
+                                    f"sma_{self.ma_fast}": float(ma_fast_val),
+                                    f"sma_{self.ma_mid}": float(ma_mid_val),
+                                    f"sma_{self.ma_slow}": float(ma_slow_val),
                                 },
-                                "macd": {
-                                    "dif": float(macd_dif_arr[-1])
-                                    if not np.isnan(macd_dif_arr[-1])
-                                    else 0,
-                                    "dea": float(macd_dea_arr[-1])
-                                    if not np.isnan(macd_dea_arr[-1])
-                                    else 0,
+                                "volume": {
+                                    "current": float(volume_data[-1]),
+                                    "average": float(avg_volume),
                                 },
-                                # "score": score,
-                                # "golden_cross": golden_cross,
                             }
 
                     selected_stocks.append(
@@ -578,7 +551,7 @@ class TrendFollowingStrategy(BaseStrategy):
                             "score": score,
                             "selection_reason": reason,
                             "technical_analysis": technical_analysis,
-                            "golden_cross": golden_cross,
+                            "golden_cross_signal": golden_cross_signal,
                             "position": value_data.get("position", 0.0),
                         }
                     )
@@ -632,64 +605,74 @@ class TrendFollowingStrategy(BaseStrategy):
             try:
                 # Convert pandas Series to numpy array for TA-Lib
                 close_prices = np.array(data["close"].values, dtype=np.float64)
-                high_prices = np.array(data["high"].values, dtype=np.float64)
+                volume_data = np.array(data["volume"].values, dtype=np.float64)
 
                 # Calculate moving averages
-                ma_fast = talib.SMA(close_prices, timeperiod=self.fast_period)
-                ma_slow = talib.SMA(close_prices, timeperiod=self.slow_period)
+                ma_fast = talib.SMA(close_prices, timeperiod=self.ma_fast)
+                ma_mid = talib.SMA(close_prices, timeperiod=self.ma_mid)
+                ma_slow = talib.SMA(close_prices, timeperiod=self.ma_slow)
 
-                # Calculate MACD
-                macd_dif, macd_dea, _ = talib.MACD(
-                    close_prices,
-                    fastperiod=self.macd_fast,
-                    slowperiod=self.macd_slow,
-                    signalperiod=self.macd_signal,
-                )
+                # Calculate volume moving average
+                volume_ma = talib.SMA(volume_data, timeperiod=self.volume_ma_period)
 
-                # Calculate historical high
-                historical_high = np.array(
-                    [
-                        np.max(
-                            high_prices[max(0, i - self.new_high_period + 1) : i + 1]
-                        )
-                        for i in range(len(high_prices))
-                    ]
-                )
+                # Calculate volume ratio
+                volume_ratio = np.zeros(len(volume_data))
+                for i in range(len(volume_data)):
+                    if volume_ma[i] != 0 and not np.isnan(volume_ma[i]):
+                        volume_ratio[i] = volume_data[i] / volume_ma[i]
+                    else:
+                        volume_ratio[i] = 0
 
                 # Generate buy signals when all conditions are met:
-                # 1. MA5 > MA13
-                # 2. DIF > DEA
-                # 3. Price breaks historical high
+                # 1. Golden cross detected
+                # 2. Volume ratio >= multiplier
                 for i in range(len(signals)):
                     # Check if we have valid data
                     if (
                         np.isnan(ma_fast[i])
+                        or np.isnan(ma_mid[i])
                         or np.isnan(ma_slow[i])
-                        or np.isnan(macd_dif[i])
-                        or np.isnan(macd_dea[i])
-                        or np.isnan(historical_high[i])
+                        or np.isnan(volume_ratio[i])
                     ):
                         continue
 
-                    # Check basic conditions
-                    ma_condition = ma_fast[i] > ma_slow[i]
-                    macd_condition = macd_dif[i] > macd_dea[i]
-                    breakout_condition = close_prices[i] > historical_high[i]
+                    # Check golden cross
+                    golden_cross_condition = False
+                    if i >= 1:
+                        current_fast_above_mid = ma_fast[i] > ma_mid[i]
+                        previous_fast_below_mid = ma_fast[i - 1] <= ma_mid[i - 1]
+                        current_mid_above_slow = ma_mid[i] > ma_slow[i]
+                        previous_mid_below_slow = ma_mid[i - 1] <= ma_slow[i - 1]
+                        golden_cross_condition = (
+                            current_fast_above_mid
+                            and previous_fast_below_mid
+                            and current_mid_above_slow
+                            and previous_mid_below_slow
+                        )
 
-                    # Combined basic condition
-                    if ma_condition and macd_condition and breakout_condition:
+                    # Check volume condition
+                    volume_condition = volume_ratio[i] >= self.volume_multiplier
+
+                    # Combined condition - only golden cross and volume
+                    if golden_cross_condition and volume_condition:
                         signals.loc[signals.index[i], "signal"] = "BUY"
                         # Calculate position size based on score
                         score = self._calculate_score(
                             ma_fast[i],
+                            ma_mid[i],
                             ma_slow[i],
-                            macd_dif[i],
-                            macd_dea[i],
-                            close_prices[i],
-                            historical_high[i],
+                            volume_ratio[i],
+                            golden_cross_condition,
                         )
-                        # Position size is proportional to score (0-1 range)
-                        position_size = round(min(1.0, max(0.0, score / 100.0)), 2)
+                        # Position size based on score thresholds
+                        if score >= 80:
+                            position_size = 1.0
+                        elif score >= 70:
+                            position_size = 0.7
+                        elif score >= 60:
+                            position_size = 0.4
+                        else:
+                            position_size = 0.0
                         signals.loc[signals.index[i], "position"] = position_size
 
             except Exception as e:
@@ -749,7 +732,7 @@ if __name__ == "__main__":
     )
 
     # Initialize strategy
-    strategy = TrendFollowingStrategy()
+    strategy = BullishGoldenCrossVolumeStrategy()
 
     # Generate signals
     signals = strategy.generate_signals(sample_data)

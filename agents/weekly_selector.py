@@ -495,11 +495,8 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
                 scores = strategy_result[1]  # 分数字典
                 json_values = strategy_result[2]  # JSON值字典
 
-                if not selected_stocks:
-                    self.logger.info(
-                        f"No stocks selected by strategy {strategy_name}, skipping save"
-                    )
-                    continue
+                # Process stocks data - this will be empty list if no stocks selected
+                # The save logic below will handle both cases (0 stocks and >0 stocks)
 
                 # Find the strategy configuration to get strategy_id
                 strategy_config = None

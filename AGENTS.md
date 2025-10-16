@@ -676,6 +676,32 @@ python -m backtesting.backtester
   - Web interface now displays "已完成 (X 支股票)" instead of just "已完成"
 - **VERIFIED**: Trend selection agent now correctly displays the number of selected stocks in the web interface
 
+### Weekly Selector Zero Stocks Handling Enhancement
+- **ENHANCED**: Modified Weekly Selector to properly handle 0 stocks selection scenario
+- **SIMPLIFIED**: Removed complex empty stock checking logic, now uses unified database write logic for both 0 and >0 stocks cases
+- **CONSISTENT BEHAVIOR**: Pool records are always created/updated with:
+  - `count`: 0 when no stocks selected, actual count when stocks selected
+  - `stocks`: empty list when no stocks selected, stock data when stocks selected
+- **WEB DISPLAY**: Web interface now correctly displays "0只股票" when no stocks are selected
+- **VERIFIED**: System behavior is consistent regardless of selection outcome
+
+### Strategy Score Normalization Enhancement
+- **COMPLETED**: Modified three strategies to use 0-1 score range for screening conditions
+- **BULLISH GOLDEN CROSS STRATEGY**: Updated screening conditions to use 0.6 threshold and position sizing based on 0.8/0.7/0.6 thresholds
+- **TREND FOLLOWING STRATEGY**: Updated screening conditions to use 0.6 threshold and position sizing based on 0.8/0.7/0.6 thresholds
+- **PULLBACK BUYING STRATEGY**: Updated screening conditions to use 0.6 threshold and position sizing based on 0.8/0.7/0.6 thresholds
+- **UNIFIED STANDARD**: All strategies now follow the same pattern as volume breakout strategy for consistency
+- **VERIFIED**: All strategies correctly output scores in 0-1 range with 2 decimal places precision
+
+### Bullish Golden Cross Volume Strategy Implementation
+- **COMPLETED**: Created new "趋势-多头金叉放量策略" (BullishGoldenCrossVolumeStrategy)
+- **STRATEGY FOCUS**: Detects golden cross startup signals (MA5 crosses above MA10 and MA10 crosses above MA20) with volume amplification
+- **SIMPLIFIED CONDITIONS**: Focuses only on golden cross and volume conditions, removed MA slow increasing restriction
+- **SCORING LOGIC**: 60% weight for golden cross signal, 40% weight for volume amplification
+- **DATABASE INTEGRATION**: Added strategy configuration to MongoDB strategies collection
+- **DOCUMENTATION**: Added comprehensive strategy documentation to STRATEGIES_DOCUMENTATION.md
+- **TESTED**: Strategy functionality verified with comprehensive test scripts
+
 ---
 *This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-16*
 
