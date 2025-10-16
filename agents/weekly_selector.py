@@ -487,16 +487,21 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
             if date is None:
                 date = datetime.now().strftime("%Y-%m-%d")
 
-            # Process each strategy's results
+            # Collect all data from all strategies first
+            all_stocks_data = []  # List to collect all stock data from all strategies
+            all_strategy_ids = []  # List to collect all strategy IDs
+            all_strategy_names = []  # List to collect all strategy names
+
+            # Dictionary to track stocks by code to avoid duplicates
+            stocks_by_code = {}
+
+            # Process each strategy's results and collect data
             for strategy_name, strategy_result in strategy_results.items():
                 # Extract strategy results using standard format
                 # Standard format: (selected_stocks, scores, json_values)
                 selected_stocks = strategy_result[0]
                 scores = strategy_result[1]  # 分数字典
                 json_values = strategy_result[2]  # JSON值字典
-
-                # Process stocks data - this will be empty list if no stocks selected
-                # The save logic below will handle both cases (0 stocks and >0 stocks)
 
                 # Find the strategy configuration to get strategy_id
                 strategy_config = None
@@ -515,8 +520,13 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
                 strategy_id = str(strategy_config.get("_id", ""))
                 strategy_key = strategy_config.get("name", strategy_name)
 
-                # Convert stocks list to the expected format (list of dicts)
-                stocks_data = []
+                # Add strategy ID and name to collections
+                if strategy_id and strategy_id not in all_strategy_ids:
+                    all_strategy_ids.append(strategy_id)
+                if strategy_name and strategy_name not in all_strategy_names:
+                    all_strategy_names.append(strategy_name)
+
+                # Process stocks for this strategy
                 for stock_code in selected_stocks:
                     # Get score from scores dictionary - use the original score directly
                     score = 0.0
@@ -550,85 +560,99 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
                             }
                         },
                     }
-                    stocks_data.append(stock_data)
 
-                # Get pool collection
-                collection = self.db_manager.db["pool"]
-
-                # Find the latest pool record
-                latest_record = collection.find_one(sort=[("_id", -1)])
-
-                if not latest_record:
-                    self.log_error("No pool record found")
-                    return False
-
-                # Determine if we should update existing record or create new one based on year-week
-                # Get year-week from latest record's _id (assuming _id is in year-week format like "2025-41")
-                latest_record_year_week = latest_record["_id"]
-
-                # Validate that the _id is in the expected year-week format
-                if not (isinstance(latest_record_year_week, str) and "-" in latest_record_year_week and len(latest_record_year_week) == 7):
-                    # If _id is not in expected format, use current week
-                    latest_record_year_week = f"{datetime.now().isocalendar()[0]}-{datetime.now().isocalendar()[1]:02d}"
-
-                current_year_week = f"{datetime.now().isocalendar()[0]}-{datetime.now().isocalendar()[1]:02d}"
-
-                is_same_week = latest_record_year_week == current_year_week
-
-                if is_same_week:
-                    # UPDATE existing record - same week
-                    # Completely replace all data instead of merging
-                    update_data = {
-                        "$set": {
-                            "stocks": stocks_data,
-                            "updated_at": datetime.now(),
-                            "count": len(stocks_data),
-                            "strategy_key": [strategy_id],
-                            "strategy_name": [strategy_name]
+                    # Check if we already have this stock
+                    if stock_code in stocks_by_code:
+                        # Merge trend information for existing stock
+                        existing_stock = stocks_by_code[stock_code]
+                        existing_stock["trend"][strategy_key] = {
+                            "score": score,
+                            "value": value_text,
                         }
+                    else:
+                        # Add new stock
+                        stocks_by_code[stock_code] = stock_data
+
+            # Convert stocks_by_code dictionary to list
+            all_stocks_data = list(stocks_by_code.values())
+
+            # Get pool collection
+            collection = self.db_manager.db["pool"]
+
+            # Find the latest pool record
+            latest_record = collection.find_one(sort=[("_id", -1)])
+
+            if not latest_record:
+                self.log_error("No pool record found")
+                return False
+
+            # Determine if we should update existing record or create new one based on year-week
+            # Get year-week from latest record's _id (assuming _id is in year-week format like "2025-41")
+            latest_record_year_week = latest_record["_id"]
+
+            # Validate that the _id is in the expected year-week format
+            if not (isinstance(latest_record_year_week, str) and "-" in latest_record_year_week and len(latest_record_year_week) == 7):
+                # If _id is not in expected format, use current week
+                latest_record_year_week = f"{datetime.now().isocalendar()[0]}-{datetime.now().isocalendar()[1]:02d}"
+
+            current_year_week = f"{datetime.now().isocalendar()[0]}-{datetime.now().isocalendar()[1]:02d}"
+
+            is_same_week = latest_record_year_week == current_year_week
+
+            if is_same_week:
+                # UPDATE existing record - same week
+                # Completely replace all data instead of merging
+                update_data = {
+                    "$set": {
+                        "stocks": all_stocks_data,
+                        "updated_at": datetime.now(),
+                        "count": len(all_stocks_data),
+                        "strategy_key": all_strategy_ids,
+                        "strategy_name": all_strategy_names
                     }
+                }
 
-                    # Update the pool record
-                    result = collection.update_one(
-                        {"_id": latest_record["_id"]},
-                        update_data
-                    )
-                else:
-                    # CREATE new record - different week
-                    # Prepare new record data with correct _id (year-week format)
-                    current_year_week = f"{datetime.now().isocalendar()[0]}-{datetime.now().isocalendar()[1]:02d}"
-                    new_record = {
-                        "_id": current_year_week,
-                        "stocks": stocks_data,
-                        "strategy_key": [strategy_id],  # Use strategy_id instead of strategy_key
-                        "strategy_name": [strategy_name],
-                        "count": len(stocks_data),
-                        "created_at": datetime.now(),
-                        "updated_at": datetime.now()
-                    }
+                # Update the pool record
+                result = collection.update_one(
+                    {"_id": latest_record["_id"]},
+                    update_data
+                )
+            else:
+                # CREATE new record - different week
+                # Prepare new record data with correct _id (year-week format)
+                current_year_week = f"{datetime.now().isocalendar()[0]}-{datetime.now().isocalendar()[1]:02d}"
+                new_record = {
+                    "_id": current_year_week,
+                    "stocks": all_stocks_data,
+                    "strategy_key": all_strategy_ids,  # Use all strategy IDs
+                    "strategy_name": all_strategy_names,  # Use all strategy names
+                    "count": len(all_stocks_data),
+                    "created_at": datetime.now(),
+                    "updated_at": datetime.now()
+                }
 
-                    # Insert new pool record
-                    result = collection.insert_one(new_record)
+                # Insert new pool record
+                result = collection.insert_one(new_record)
 
-                if (hasattr(result, 'modified_count') and result.modified_count > 0) or result.inserted_id:
-                    self.log_info(
-                        f"Successfully {'updated' if is_same_week else 'created'} pool with {len(stocks_data)} stocks from strategy {strategy_name}"
-                    )
-                    success = True
-                else:
-                    self.log_warning("No changes made to pool record")
-                    success = False
+            if (hasattr(result, 'modified_count') and result.modified_count > 0) or result.inserted_id:
+                self.log_info(
+                    f"Successfully {'updated' if is_same_week else 'created'} pool with {len(all_stocks_data)} stocks from {len(all_strategy_names)} strategies"
+                )
+                success = True
+            else:
+                self.log_warning("No changes made to pool record")
+                success = False
 
-                if success:
-                    self.logger.info(
-                        f"Successfully saved {len(stocks_data)} stocks from strategy {strategy_name}"
-                    )
-                else:
-                    self.logger.error(
-                        f"Failed to save stocks from strategy {strategy_name}"
-                    )
+            if success:
+                self.logger.info(
+                    f"Successfully saved {len(all_stocks_data)} stocks from {len(all_strategy_names)} strategies"
+                )
+            else:
+                self.logger.error(
+                    f"Failed to save stocks from strategies"
+                )
 
-            return True
+            return success
         except Exception as e:
             self.logger.error(f"Error saving selected stocks: {e}")
             return False

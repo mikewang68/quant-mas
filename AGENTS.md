@@ -137,6 +137,13 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Verified strategy functionality with test scripts and confirmed successful execution
 - Integrated strategy with existing Public Opinion Selector agent framework
 
+### Weekly Selector Multi-Strategy Fix
+- **FIXED**: Resolved issue where Weekly Selector was only writing the last strategy's data to pool dataset when running multiple strategies
+- **ENHANCED**: Modified `save_selected_stocks` method to collect all strategy data first, then write to pool in a single operation
+- **IMPROVED**: Strategy IDs and names are now properly stored as arrays containing all strategies
+- **OPTIMIZED**: Stock data is merged using `stocks_by_code` dictionary to avoid duplicates and properly handle stocks selected by multiple strategies
+- **VERIFIED**: Tested with 4 strategies - successfully saved 291 stocks with 8 stocks selected by multiple strategies, each containing trend data from all relevant strategies
+
 ### FireCrawl Integration Enhancement and Fix
 - **FIXED**: Resolved FireCrawl availability detection issue where custom "SCRAPERS-JS" deployments were incorrectly identified as incompatible
 - **FIXED**: Corrected FireCrawl API request format to properly work with v1 endpoints
