@@ -859,8 +859,14 @@ def register_routes(app: Flask):
 
                         # Get the count of selected stocks from the pool
                         pool_collection = db_manager.db["pool"]
-                        latest_pool_record = pool_collection.find_one(sort=[("_id", -1)])
-                        stock_count = latest_pool_record.get("count", 0) if latest_pool_record else 0
+                        latest_pool_record = pool_collection.find_one(
+                            sort=[("_id", -1)]
+                        )
+                        stock_count = (
+                            latest_pool_record.get("count", 0)
+                            if latest_pool_record
+                            else 0
+                        )
 
                         return jsonify(
                             {
@@ -1581,9 +1587,16 @@ def register_routes(app: Flask):
             # Extract all time fields from the latest record
             all_times = {}
             time_fields = [
-                "updated_at", "tech_at", "fund_at", "pub_at",
-                "ml_at", "dl_at", "rl_at", "signals_at",
-                "risk_at", "analyze_at"
+                "updated_at",
+                "tech_at",
+                "fund_at",
+                "pub_at",
+                "ml_at",
+                "dl_at",
+                "rl_at",
+                "signals_at",
+                "risk_at",
+                "analyze_at",
             ]
 
             for field in time_fields:
@@ -1599,28 +1612,6 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error getting all last execution times: {e}")
             return jsonify({"all_times": {}}), 200
-
-            if not latest_record:
-                return jsonify({"last_execution_time": None}), 200
-
-            # Get the appropriate time field or default to record timestamp
-            if time_field and time_field in latest_record:
-                # Use the specific time field
-                last_execution_time = latest_record[time_field]
-                # If it's a datetime object, format it as string
-                if hasattr(last_execution_time, "strftime"):
-                    last_execution_time = last_execution_time.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-                return jsonify({"last_execution_time": last_execution_time}), 200
-            else:
-                # If no specific time field found, return None
-                return jsonify({"last_execution_time": None}), 200
-
-        except Exception as e:
-            logger.error(f"Error getting last execution time for agent {agent_id}: {e}")
-            return jsonify({"last_execution_time": None}), 200
-
 
     @app.route("/api/pool-data/<code>")
     def get_pool_data_by_code(code):
@@ -2316,7 +2307,6 @@ def register_routes(app: Flask):
                     "message": f"Failed to update market data: {str(e)}",
                 }
             ), 500
-
 
 
 # Example usage
