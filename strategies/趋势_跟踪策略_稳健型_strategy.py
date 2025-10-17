@@ -1,22 +1,23 @@
 """
-信号生成V1 Strategy
-Auto-generated strategy template for 信号生成V1
+趋势-跟踪策略（稳健型） Strategy
+Auto-generated strategy template for 趋势-跟踪策略（稳健型）
 """
 
 import pandas as pd
 import numpy as np
+import talib
 from typing import Dict, Optional
 from strategies.base_strategy import BaseStrategy
 
-class 信号生成v1Strategy(BaseStrategy):
+class 趋势-跟踪策略（稳健型）Strategy(BaseStrategy):
     """
-    信号生成V1 Strategy
+    趋势-跟踪策略（稳健型） Strategy
     TODO: Add strategy description here
     """
     
-    def __init__(self, name: str = "信号生成V1", params: Optional[Dict] = None):
+    def __init__(self, name: str = "趋势-跟踪策略（稳健型）", params: Optional[Dict] = None):
         """
-        Initialize the 信号生成V1 strategy.
+        Initialize the 趋势-跟踪策略（稳健型） strategy.
         
         Args:
             name: Strategy name
@@ -34,7 +35,7 @@ class 信号生成v1Strategy(BaseStrategy):
         Generate trading signals.
         
         Args:
-            data: DataFrame with required data
+            data: DataFrame with columns ['date', 'open', 'high', 'low', 'close', 'volume']
             
         Returns:
             DataFrame with signals
@@ -48,6 +49,23 @@ class 信号生成v1Strategy(BaseStrategy):
         signals['close'] = data['close']
         signals['signal'] = 'HOLD'
         signals['position'] = 0.0
+        
+        # Example implementation (replace with actual logic):
+        # for i in range(1, len(signals)):
+        #     # Buy signal condition
+        #     if some_condition:
+        #         signals.loc[i, 'signal'] = 'BUY'
+        #         signals.loc[i, 'position'] = 1.0
+        #     
+        #     # Sell signal condition
+        #     elif some_other_condition:
+        #         signals.loc[i, 'signal'] = 'SELL'
+        #         signals.loc[i, 'position'] = -1.0
+        #     
+        #     # Hold signal
+        #     else:
+        #         signals.loc[i, 'signal'] = 'HOLD'
+        #         signals.loc[i, 'position'] = signals.loc[i-1, 'position']
         
         return signals
     
@@ -82,5 +100,21 @@ if __name__ == "__main__":
     # Configure logging
     logging.basicConfig(level=logging.INFO)
     
-    # TODO: Add example usage
-    pass
+    # Create sample data
+    dates = pd.date_range('2023-01-01', periods=100, freq='D')
+    sample_data = pd.DataFrame({
+        'date': dates,
+        'open': np.random.uniform(100, 110, 100),
+        'high': np.random.uniform(110, 120, 100),
+        'low': np.random.uniform(90, 100, 100),
+        'close': np.random.uniform(100, 110, 100),
+        'volume': np.random.uniform(1000000, 2000000, 100)
+    })
+    
+    # Initialize strategy
+    strategy = 趋势-跟踪策略（稳健型）Strategy()
+    
+    # Generate signals
+    signals = strategy.generate_signals(sample_data)
+    print(f"Generated {len(signals[signals['signal'] != 'HOLD'])} trading signals")
+    print(signals.tail(10))

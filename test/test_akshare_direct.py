@@ -1,121 +1,65 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-直接测试akshare功能
+直接测试Akshare数据源
 """
 
-import akshare as ak
-import pandas as pd
-from datetime import datetime
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-def test_akshare_directly():
-    """直接测试akshare功能"""
-    print("=== 直接测试akshare功能 ===")
-    print(f"当前系统时间: {datetime.now().strftime('%Y-%m-%d')}")
+from utils.akshare_client import AkshareClient
+import datetime
 
-    # 测试用户提到的股票和时间范围
-    test_code = "001216"
-    start_date = "20250617"
-    end_date = "20250816"
-    adjust_type = "qfq"
-
-    print(f"\n测试股票: {test_code}")
-    print(f"时间范围: {start_date} 到 {end_date}")
-    print(f"复权类型: {adjust_type}")
+def test_akshare_direct():
+    """直接测试Akshare数据源"""
 
     try:
-        # 直接调用akshare
-        print("\n1. 直接调用akshare.stock_zh_a_hist:")
-        data = ak.stock_zh_a_hist(
-            symbol=test_code,
-            period="daily",
-            start_date=start_date,
-            end_date=end_date,
-            adjust=adjust_type
-        )
-        if data.empty:
-            print("  未获取到数据")
-        else:
-            print(f"  成功获取 {len(data)} 条记录")
-            print(f"  列名: {list(data.columns)}")
-            print(data.head())
-    except Exception as e:
-        print(f"  调用akshare时出错: {e}")
+        akshare_client = AkshareClient()
 
-    # 测试获取历史数据（2024年）
-    print("\n2. 测试获取2024年历史数据:")
-    try:
-        data = ak.stock_zh_a_hist(
-            symbol=test_code,
-            period="daily",
-            start_date="20240101",
-            end_date="20241231",
-            adjust=adjust_type
-        )
-        if data.empty:
-            print("  未获取到2024年数据")
-        else:
-            print(f"  成功获取2024年数据 {len(data)} 条记录")
-            print(f"  数据日期范围: {data['日期'].min()} 到 {data['日期'].max()}")
-    except Exception as e:
-        print(f"  获取2024年数据时出错: {e}")
+        # 测试几个股票
+        stocks = ["000006", "600036", "000001"]
 
-    # 测试获取近期历史数据
-    print("\n3. 测试获取近期历史数据（最近3个月）:")
-    try:
-        end_date_recent = datetime.now().strftime('%Y%m%d')
-        start_date_recent = (datetime.now() - pd.Timedelta(days=90)).strftime('%Y%m%d')
-        print(f"  请求日期范围: {start_date_recent} 到 {end_date_recent}")
+        for stock in stocks:
+            print(f"\n=== 测试股票 {stock} ===")
 
-        data = ak.stock_zh_a_hist(
-            symbol=test_code,
-            period="daily",
-            start_date=start_date_recent,
-            end_date=end_date_recent,
-            adjust=adjust_type
-        )
-        if data.empty:
-            print("  未获取到近期数据")
-        else:
-            print(f"  成功获取近期数据 {len(data)} 条记录")
-            print(f"  数据日期范围: {data['日期'].min()} 到 {data['日期'].max()}")
-    except Exception as e:
-        print(f"  获取近期数据时出错: {e}")
+            # 计算日期范围（最近1年）
+            end_date = datetime.date.today()
+            start_date = end_date - datetime.timedelta(days=365)
 
-    # 测试股票代码格式化
-    print("\n4. 测试股票代码格式化:")
-    try:
-        # 测试sz格式
-        data_sz = ak.stock_zh_a_hist(
-            symbol=f"sz{test_code}",
-            period="daily",
-            start_date="20240101",
-            end_date="20241231",
-            adjust=adjust_type
-        )
-        if data_sz.empty:
-            print(f"  sz{test_code} 未获取到数据")
-        else:
-            print(f"  sz{test_code} 成功获取 {len(data_sz)} 条记录")
-    except Exception as e:
-        print(f"  测试sz{test_code}时出错: {e}")
+            # 获取前复权数据
+            data = akshare_client.get_daily_k_data(
+                code=stock,
+                start_date=start_date.strftime("%Y%m%d"),
+                end_date=end_date.strftime("%Y%m%d"),
+                adjust_type="q"  # 前复权
+            )
 
-    try:
-        # 测试sh格式
-        data_sh = ak.stock_zh_a_hist(
-            symbol=f"sh{test_code}",
-            period="daily",
-            start_date="20240101",
-            end_date="20241231",
-            adjust=adjust_type
-        )
-        if data_sh.empty:
-            print(f"  sh{test_code} 未获取到数据")
-        else:
-            print(f"  sh{test_code} 成功获取 {len(data_sh)} 条记录")
+            if data is not None and not data.empty:
+                print(f"数据条数: {len(data)}")
+                print("数据列名:", list(data.columns))
+
+                # 显示最新几条数据
+                print("\n最新5条数据:")
+                for i in range(min(5, len(data))):
+                    row = data.iloc[i]
+                    print(f"  第{i+1}条: 日期={row.get('date', 'N/A')}, 开盘={row.get('open', 'N/A')}, 最高={row.get('high', 'N/A')}, 最低={row.get('low', 'N/A')}, 收盘={row.get('close', 'N/A')}")
+
+                # 检查是否有异常数据
+                print("\n数据异常检查:")
+                for i in range(min(10, len(data))):
+                    row = data.iloc[i]
+                    open_price = row.get('open', 0)
+                    if open_price > 100:
+                        print(f"  ❌ 异常数据: 日期={row.get('date', 'N/A')}, 开盘价={open_price}")
+
+            else:
+                print("没有获取到数据")
+
     except Exception as e:
-        print(f"  测试sh{test_code}时出错: {e}")
+        print(f"测试失败: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    test_akshare_directly()
+    test_akshare_direct()
 

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>K线数据流程测试</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.0/dist/echarts.min.js"></script>
+</head>
+<body>
+    <h1>K线数据流程测试</h1>
+    <div>
+        <label>股票代码: <input type="text" id="stockCode" value="600036"></label>
+        <button onclick="testDataFlow()">测试数据流程</button>
+    </div>
+    <div id="debugOutput" style="margin-top: 20px; font-family: monospace; white-space: pre;"></div>
+    <div id="chartContainer" style="width: 800px; height: 400px; margin-top: 20px;"></div>
+
+    <script>
+        function testDataFlow() {
+            const stockCode = document.getElementById('stockCode').value;
+            const debugOutput = document.getElementById('debugOutput');
+            debugOutput.innerHTML = '开始测试数据流程...\n';
+
+            // 模拟API调用
+            fetch(`/api/stock-kline-realtime/${stockCode}`)
+                .then(response => {
+                    debugOutput.innerHTML += `API响应状态: ${response.status}\n`;
+                    return response.json();
+                })
+                .then(data => {
+                    debugOutput.innerHTML += `API返回数据条数: ${data.length}\n`;
+
+                    if (data.error) {
+                        debugOutput.innerHTML += `API错误: ${data.error}\n`;
+                        return;
+                    }
+
+                    // 显示第一条数据
+                    if (data.length > 0) {
+                        const firstItem = data[0];
+                        debugOutput.innerHTML += `\n第一条原始数据:\n`;
+                        debugOutput.innerHTML += JSON.stringify(firstItem, null, 2) + '\n';
+
+                        // 检查异常值
+                        const openPrice = firstItem.open;
+                        const highPrice = firstItem.high;
+                        const lowPrice = firstItem.low;
+                        const closePrice = firstItem.close;
+
+                        debugOutput.innerHTML += `\n价格检查:\n`;
+                        debugOutput.innerHTML += `开盘价: ${openPrice}\n`;
+                        debugOutput.innerHTML += `最高价: ${highPrice}\n`;
+                        debugOutput.innerHTML += `最低价: ${lowPrice}\n`;
+                        debugOutput.innerHTML += `收盘价: ${closePrice}\n`;
+
+                        if (openPrice > 100) {
+                            debugOutput.innerHTML += `❌ 开盘价异常高!\n`;
+                        }
+                        if (highPrice < lowPrice) {
+                            debugOutput.innerHTML += `❌ 最高价 < 最低价!\n`;
+                        }
+
+                        // 模拟前端数据处理
+                        debugOutput.innerHTML += `\n模拟前端数据处理:\n`;
+                        const klineData = data.map(item => ({
+                            date: item.date,
+                            open: parseFloat(item.open),
+                            high: parseFloat(item.high),
+                            low: parseFloat(item.low),
+                            close: parseFloat(item.close),
+                            volume: parseFloat(item.volume)
+                        }));
+
+                        debugOutput.innerHTML += `处理后第一条数据:\n`;
+                        debugOutput.innerHTML += JSON.stringify(klineData[0], null, 2) + '\n';
+
+                        // 构建OHLC数据
+                        const ohlcData = klineData.map(item => [
+                            item.open,
+                            item.close,
+                            item.low,
+                            item.high
+                        ]);
+
+                        debugOutput.innerHTML += `\nOHLC数据构建 (open, close, low, high):\n`;
+                        debugOutput.innerHTML += JSON.stringify(ohlcData[0], null, 2) + '\n';
+
+                        // 检查OHLC数据顺序
+                        const ohlc = ohlcData[0];
+                        debugOutput.innerHTML += `\nOHLC数据检查:\n`;
+                        debugOutput.innerHTML += `data[0] (开): ${ohlc[0]}\n`;
+                        debugOutput.innerHTML += `data[1] (收): ${ohlc[1]}\n`;
+                        debugOutput.innerHTML += `data[2] (低): ${ohlc[2]}\n`;
+                        debugOutput.innerHTML += `data[3] (高): ${ohlc[3]}\n`;
+
+                        // 渲染图表
+                        renderChart(klineData, ohlcData);
+                    }
+                })
+                .catch(error => {
+                    debugOutput.innerHTML += `错误: ${error}\n`;
+                });
+        }
+
+        function renderChart(klineData, ohlcData) {
+            const chartDom = document.getElementById('chartContainer');
+            const chart = echarts.init(chartDom);
+
+            const dates = klineData.map(item => item.date);
+
+            const option = {
+                title: {
+                    text: 'K线图测试'
+                },
+                tooltip: {
+                    trigger: 'axis',
+                    axisPointer: {
+                        type: 'cross'
+                    }
+                },
+                xAxis: {
+                    type: 'category',
+                    data: dates.slice(0, 20)
+                },
+                yAxis: {
+                    scale: true
+                },
+                series: [{
+                    name: 'K线图',
+                    type: 'candlestick',
+                    data: ohlcData.slice(0, 20),
+                    itemStyle: {
+                        color: '#ef232a',
+                        color0: '#14b143',
+                        borderColor: '#ef232a',
+                        borderColor0: '#14b143'
+                    }
+                }]
+            };
+
+            chart.setOption(option);
+        }
+
+        // 页面加载时自动测试
+        window.onload = function() {
+            testDataFlow();
+        };
+    </script>
+</body>
+</html>
+

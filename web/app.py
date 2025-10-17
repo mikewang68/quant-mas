@@ -1560,44 +1560,45 @@ def register_routes(app: Flask):
             logger.error(f"Error getting strategy {strategy_name}: {e}")
             return jsonify({"error": f"Failed to get strategy: {str(e)}"}), 500
 
-    @app.route("/api/agent-last-execution-time/<agent_id>")
-    def get_agent_last_execution_time(agent_id):
-        """Get last execution time for a specific agent from pool data"""
+    @app.route("/api/all-last-execution-times")
+    def get_all_last_execution_times():
+        """Get all last execution times from pool data"""
         try:
             # Check if MongoDB connection is available
             if app.config["MONGO_DB"] is None:
                 logger.error("MongoDB connection not available")
-                return jsonify({"last_execution_time": None}), 200
-
-            # Get the agent to determine its type
-            agent = app.config["MONGO_MANAGER"].get_agent(agent_id)
-            if not agent:
-                logger.error(f"Agent {agent_id} not found")
-                return jsonify({"last_execution_time": None}), 200
-
-            # Determine the time field based on agent type
-            agent_name = agent.get("name", "")
-            time_field = None
-
-            if "趋势选股" in agent_name:
-                time_field = "updated_at"
-            elif "技术分析" in agent_name:
-                time_field = "tech_at"
-            elif "基本面分析" in agent_name:
-                time_field = "fund_at"
-            elif "舆情分析" in agent_name:
-                time_field = "pub_at"
-            elif "信号生成" in agent_name:
-                time_field = "signals_at"
-            else:
-                # Default to using the record's timestamp
-                time_field = None
+                return jsonify({"all_times": {}}), 200
 
             # Get the pool collection
             pool_collection = app.config["MONGO_DB"]["pool"]
 
             # Find the latest pool record
             latest_record = pool_collection.find_one(sort=[("_id", -1)])
+
+            if not latest_record:
+                return jsonify({"all_times": {}}), 200
+
+            # Extract all time fields from the latest record
+            all_times = {}
+            time_fields = [
+                "updated_at", "tech_at", "fund_at", "pub_at",
+                "ml_at", "dl_at", "rl_at", "signals_at",
+                "risk_at", "analyze_at"
+            ]
+
+            for field in time_fields:
+                if field in latest_record:
+                    time_value = latest_record[field]
+                    # If it's a datetime object, format it as string
+                    if hasattr(time_value, "strftime"):
+                        time_value = time_value.strftime("%Y-%m-%d %H:%M:%S")
+                    all_times[field] = time_value
+
+            return jsonify({"all_times": all_times}), 200
+
+        except Exception as e:
+            logger.error(f"Error getting all last execution times: {e}")
+            return jsonify({"all_times": {}}), 200
 
             if not latest_record:
                 return jsonify({"last_execution_time": None}), 200
@@ -1620,74 +1621,6 @@ def register_routes(app: Flask):
             logger.error(f"Error getting last execution time for agent {agent_id}: {e}")
             return jsonify({"last_execution_time": None}), 200
 
-    @app.route("/api/strategy-last-execution-time/<strategy_id>")
-    def get_strategy_last_execution_time(strategy_id):
-        """Get last execution time for a specific strategy from pool data"""
-        try:
-            # Check if MongoDB connection is available
-            if app.config["MONGO_DB"] is None:
-                logger.error("MongoDB connection not available")
-                return jsonify({"last_execution_time": None}), 200
-
-            # Get the strategy to determine its type
-            strategy = app.config["MONGO_MANAGER"].get_strategy(strategy_id)
-            if not strategy:
-                logger.error(f"Strategy {strategy_id} not found")
-                return jsonify({"last_execution_time": None}), 200
-
-            # Determine the time field based on strategy type
-            strategy_type = strategy.get("type", "")
-            time_field = None
-
-            if strategy_type == "technical":
-                time_field = "tech_at"
-            elif strategy_type == "fundamental":
-                time_field = "fund_at"
-            elif strategy_type == "sentiment":
-                time_field = "pub_at"
-            elif strategy_type == "multi_agent":
-                time_field = "updated_at"
-            else:
-                # Default to using the record's timestamp
-                time_field = None
-
-            # Get the pool collection
-            pool_collection = app.config["MONGO_DB"]["pool"]
-
-            # Find the latest pool record
-            latest_record = pool_collection.find_one(sort=[("_id", -1)])
-
-            if not latest_record:
-                return jsonify({"last_execution_time": None}), 200
-
-            # Get the appropriate time field or default to record timestamp
-            if time_field and time_field in latest_record:
-                # Use the specific time field
-                last_execution_time = latest_record[time_field]
-                # If it's a datetime object, format it as string
-                if hasattr(last_execution_time, "strftime"):
-                    last_execution_time = last_execution_time.strftime(
-                        "%Y-%m-%d %H:%M:%S"
-                    )
-            else:
-                # Fall back to using the record's _id timestamp
-                from datetime import datetime
-
-                # Check if _id is an ObjectId with generation_time
-                record_id = latest_record["_id"]
-                if hasattr(record_id, "generation_time"):
-                    timestamp = record_id.generation_time
-                    last_execution_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
-                else:
-                    # If _id is a string or doesn't have generation_time, return None
-                    last_execution_time = None
-
-            return jsonify({"last_execution_time": last_execution_time}), 200
-        except Exception as e:
-            logger.error(
-                f"Error getting last execution time for strategy {strategy_id}: {e}"
-            )
-            return jsonify({"last_execution_time": None}), 200
 
     @app.route("/api/pool-data/<code>")
     def get_pool_data_by_code(code):
@@ -2383,6 +2316,7 @@ def register_routes(app: Flask):
                     "message": f"Failed to update market data: {str(e)}",
                 }
             ), 500
+
 
 
 # Example usage

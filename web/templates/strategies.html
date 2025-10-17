@@ -94,7 +94,6 @@
                                     <th>策略名称</th>
                                     <th>类型</th>
                                     <th>描述</th>
-                                    <th>上次运行</th>
                                     <th>操作</th>
                                 </tr>
                             </thead>
@@ -452,32 +451,64 @@
             });
         });
 
-        // Load last execution time for each agent
-        activeAgents.forEach(agent => {
-            loadAgentLastExecutionTime(agent._id);
-        });
+        // Load all last execution times at once
+        loadAllLastExecutionTimes();
     }
 
-    // Load last execution time for a specific agent
-    function loadAgentLastExecutionTime(agentId) {
-        fetch(`/api/agent-last-execution-time/${agentId}`)
+    // Load all last execution times and update agent displays
+    function loadAllLastExecutionTimes() {
+        fetch('/api/all-last-execution-times')
             .then(response => response.json())
             .then(data => {
-                const lastExecutionElement = document.getElementById(`last-execution-${agentId}`);
-                if (lastExecutionElement) {
-                    if (data.last_execution_time) {
-                        lastExecutionElement.textContent = data.last_execution_time;
-                    } else {
-                        lastExecutionElement.textContent = '无记录';
+                const allTimes = data.all_times || {};
+
+                // Update each agent's last execution time display
+                agents.forEach(agent => {
+                    const lastExecutionElement = document.getElementById(`last-execution-${agent._id}`);
+                    if (lastExecutionElement) {
+                        // Determine the time field based on agent type
+                        let timeField = null;
+                        const agentName = agent.name || '';
+
+                        if (agentName.includes('趋势选股')) {
+                            timeField = 'updated_at';
+                        } else if (agentName.includes('技术分析')) {
+                            timeField = 'tech_at';
+                        } else if (agentName.includes('基本面分析')) {
+                            timeField = 'fund_at';
+                        } else if (agentName.includes('舆情分析')) {
+                            timeField = 'pub_at';
+                        } else if (agentName.includes('机器学习')) {
+                            timeField = 'ml_at';
+                        } else if (agentName.includes('深度学习')) {
+                            timeField = 'dl_at';
+                        } else if (agentName.includes('强化学习')) {
+                            timeField = 'rl_at';
+                        } else if (agentName.includes('信号生成')) {
+                            timeField = 'signals_at';
+                        } else if (agentName.includes('风险控制')) {
+                            timeField = 'risk_at';
+                        } else if (agentName.includes('策略分析')) {
+                            timeField = 'analyze_at';
+                        }
+
+                        if (timeField && allTimes[timeField]) {
+                            lastExecutionElement.textContent = allTimes[timeField];
+                        } else {
+                            lastExecutionElement.textContent = '无记录';
+                        }
                     }
-                }
+                });
             })
             .catch(error => {
-                console.error(`Error loading last execution time for agent ${agentId}:`, error);
-                const lastExecutionElement = document.getElementById(`last-execution-${agentId}`);
-                if (lastExecutionElement) {
-                    lastExecutionElement.textContent = '加载失败';
-                }
+                console.error('Error loading all last execution times:', error);
+                // Set all agent execution times to '加载失败'
+                agents.forEach(agent => {
+                    const lastExecutionElement = document.getElementById(`last-execution-${agent._id}`);
+                    if (lastExecutionElement) {
+                        lastExecutionElement.textContent = '加载失败';
+                    }
+                });
             });
     }
 
@@ -496,7 +527,6 @@
                 <td>${strategy.name}</td>
                 <td>${getStrategyTypeText(strategy.type)}</td>
                 <td>${strategy.description || ''}</td>
-                <td><span id="strategy-last-execution-${strategy._id}">加载中...</span></td>
                 <td>
                     <button class="btn btn-sm btn-outline-primary edit-strategy-btn me-1" data-id="${strategy._id}">
                         <i class="fas fa-edit"></i> 编辑
@@ -524,34 +554,8 @@
             });
         });
 
-        // Load last execution time for each strategy
-        strategies.forEach(strategy => {
-            loadStrategyLastExecutionTime(strategy._id);
-        });
     }
 
-    // Load last execution time for a specific strategy
-    function loadStrategyLastExecutionTime(strategyId) {
-        fetch(`/api/strategy-last-execution-time/${strategyId}`)
-            .then(response => response.json())
-            .then(data => {
-                const lastExecutionElement = document.getElementById(`strategy-last-execution-${strategyId}`);
-                if (lastExecutionElement) {
-                    if (data.last_execution_time) {
-                        lastExecutionElement.textContent = data.last_execution_time;
-                    } else {
-                        lastExecutionElement.textContent = '无记录';
-                    }
-                }
-            })
-            .catch(error => {
-                console.error(`Error loading last execution time for strategy ${strategyId}:`, error);
-                const lastExecutionElement = document.getElementById(`strategy-last-execution-${strategyId}`);
-                if (lastExecutionElement) {
-                    lastExecutionElement.textContent = '加载失败';
-                }
-            });
-    }
 
     // Get strategy type text
     function getStrategyTypeText(type) {
@@ -958,7 +962,12 @@
             const statusElement = document.getElementById(`status-${agentId}`);
             if (statusElement) {
                 if (data.status === 'success') {
-                    statusElement.textContent = '已完成';
+                    // Display selected stock count if available
+                    if (data.result && data.result.count !== undefined) {
+                        statusElement.textContent = `已完成 (${data.result.count} 支股票)`;
+                    } else {
+                        statusElement.textContent = '已完成';
+                    }
                     statusElement.className = 'agent-status text-success';
                 } else {
                     statusElement.textContent = '失败';
@@ -993,13 +1002,8 @@
 
                  // Display selected stock count
                 if (data.result && data.result.count !== undefined) {
-                    statusElement.textContent = `已完成 (股票数量: ${data.result.count})`;
-
-                     // Update agent status based on result
-                     if (statusElement) {
-                         statusElement.textContent = `已完成 (${data.result.count} 支股票)`;
-                         statusElement.className = 'agent-status text-success';
-                     }
+                    statusElement.textContent = `已完成 (${data.result.count} 支股票)`;
+                    statusElement.className = 'agent-status text-success';
                 }
             } else {
                 globalStatus.textContent = '运行失败: ' + data.message;
