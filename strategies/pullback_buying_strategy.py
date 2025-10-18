@@ -45,10 +45,20 @@ class PullbackBuyingStrategy(BaseStrategy):
                 mapped_params["kdj_n"] = int(mapped_params["kdj_n"])
             if "rsi_period" in mapped_params and "rsi_period" not in mapped_params:
                 mapped_params["rsi_period"] = int(mapped_params["rsi_period"])
-            if "oversold_threshold" in mapped_params and "oversold_threshold" not in mapped_params:
-                mapped_params["oversold_threshold"] = int(mapped_params["oversold_threshold"])
-            if "support_band_pct" in mapped_params and "support_band_pct" not in mapped_params:
-                mapped_params["support_band_pct"] = float(mapped_params["support_band_pct"])
+            if (
+                "oversold_threshold" in mapped_params
+                and "oversold_threshold" not in mapped_params
+            ):
+                mapped_params["oversold_threshold"] = int(
+                    mapped_params["oversold_threshold"]
+                )
+            if (
+                "support_band_pct" in mapped_params
+                and "support_band_pct" not in mapped_params
+            ):
+                mapped_params["support_band_pct"] = float(
+                    mapped_params["support_band_pct"]
+                )
 
             # Ensure existing parameters are correct types
             if "ma_period" in mapped_params:
@@ -58,25 +68,31 @@ class PullbackBuyingStrategy(BaseStrategy):
             if "rsi_period" in mapped_params:
                 mapped_params["rsi_period"] = int(mapped_params["rsi_period"])
             if "oversold_threshold" in mapped_params:
-                mapped_params["oversold_threshold"] = int(mapped_params["oversold_threshold"])
+                mapped_params["oversold_threshold"] = int(
+                    mapped_params["oversold_threshold"]
+                )
             if "support_band_pct" in mapped_params:
-                mapped_params["support_band_pct"] = float(mapped_params["support_band_pct"])
+                mapped_params["support_band_pct"] = float(
+                    mapped_params["support_band_pct"]
+                )
 
             params = mapped_params
 
         super().__init__(name, params or {})
 
         # Strategy parameters
-        self.ma_period = self.params.get('ma_period', 13)
-        self.kdj_n = self.params.get('kdj_n', 9)
-        self.rsi_period = self.params.get('rsi_period', 14)
-        self.oversold_threshold = self.params.get('oversold_threshold', 30)
-        self.support_band_pct = self.params.get('support_band_pct', 0.03)
+        self.ma_period = self.params.get("ma_period", 13)
+        self.kdj_n = self.params.get("kdj_n", 9)
+        self.rsi_period = self.params.get("rsi_period", 14)
+        self.oversold_threshold = self.params.get("oversold_threshold", 30)
+        self.support_band_pct = self.params.get("support_band_pct", 0.03)
 
-        self.logger.info(f"Initialized {self.name} strategy with params: "
-                        f"ma_period={self.ma_period}, kdj_n={self.kdj_n}, "
-                        f"rsi_period={self.rsi_period}, oversold_threshold={self.oversold_threshold}, "
-                        f"support_band_pct={self.support_band_pct}")
+        self.logger.info(
+            f"Initialized {self.name} strategy with params: "
+            f"ma_period={self.ma_period}, kdj_n={self.kdj_n}, "
+            f"rsi_period={self.rsi_period}, oversold_threshold={self.oversold_threshold}, "
+            f"support_band_pct={self.support_band_pct}"
+        )
 
     def analyze(self, data: pd.DataFrame, code: str = None) -> Tuple[bool, float, str]:
         """
@@ -116,9 +132,7 @@ class PullbackBuyingStrategy(BaseStrategy):
 
         try:
             # Get required data points
-            required_data = max(
-                self.ma_period, self.kdj_n, self.rsi_period
-            )
+            required_data = max(self.ma_period, self.kdj_n, self.rsi_period)
             if len(data) < required_data:
                 return (
                     False,
@@ -145,8 +159,12 @@ class PullbackBuyingStrategy(BaseStrategy):
 
             # Calculate KDJ
             kdj_k, kdj_d = talib.STOCH(
-                high_prices, low_prices, close_prices,
-                fastk_period=self.kdj_n, slowk_period=3, slowd_period=3
+                high_prices,
+                low_prices,
+                close_prices,
+                fastk_period=self.kdj_n,
+                slowk_period=3,
+                slowd_period=3,
             )
             # Calculate J value: J = 3*K - 2*D
             kdj_j = 3 * kdj_k - 2 * kdj_d
@@ -161,7 +179,7 @@ class PullbackBuyingStrategy(BaseStrategy):
             rsi_value = rsi_values[-1] if not np.isnan(rsi_values[-1]) else None
 
             # Check if all values are valid
-            if (ma_value is None or kdj_j_value is None or rsi_value is None):
+            if ma_value is None or kdj_j_value is None or rsi_value is None:
                 return (
                     False,
                     0.0,
@@ -265,8 +283,12 @@ class PullbackBuyingStrategy(BaseStrategy):
 
             # Calculate KDJ
             kdj_k, kdj_d = talib.STOCH(
-                high_prices, low_prices, close_prices,
-                fastk_period=self.kdj_n, slowk_period=3, slowd_period=3
+                high_prices,
+                low_prices,
+                close_prices,
+                fastk_period=self.kdj_n,
+                slowk_period=3,
+                slowd_period=3,
             )
             # Calculate J value: J = 3*K - 2*D
             kdj_j = 3 * kdj_k - 2 * kdj_d
@@ -290,12 +312,18 @@ class PullbackBuyingStrategy(BaseStrategy):
 
             # Prepare technical analysis data in a format specific to Pullback Buying strategy
             technical_analysis_data = {
-                'price': round(float(current_price), 2),
-                'ma_value': round(float(ma_value), 2) if ma_value is not None else 'N/A',
-                'ma_trend': int(ma_trend),
-                'kdj_j': round(float(kdj_j_value), 2) if kdj_j_value is not None else 'N/A',
-                'rsi_value': round(float(rsi_value), 2) if rsi_value is not None else 'N/A',
-                'is_valid_pullback': bool(is_valid_pullback)
+                "price": round(float(current_price), 2),
+                "ma_value": round(float(ma_value), 2)
+                if ma_value is not None
+                else "N/A",
+                "ma_trend": int(ma_trend),
+                "kdj_j": round(float(kdj_j_value), 2)
+                if kdj_j_value is not None
+                else "N/A",
+                "rsi_value": round(float(rsi_value), 2)
+                if rsi_value is not None
+                else "N/A",
+                "is_valid_pullback": bool(is_valid_pullback),
             }
 
             return technical_analysis_data
@@ -368,7 +396,9 @@ class PullbackBuyingStrategy(BaseStrategy):
             return False
 
         # Basic conditions
-        price_condition = abs(close - ma_value) / ma_value <= self.support_band_pct  # Price within ±3% of MA
+        price_condition = (
+            abs(close - ma_value) / ma_value <= self.support_band_pct
+        )  # Price within ±3% of MA
         oversold_condition = (kdj_j < 20) or (rsi_value < 30)  # Oversold state
         trend_condition = ma_trend > 0  # Trend upward
 
@@ -399,10 +429,16 @@ class PullbackBuyingStrategy(BaseStrategy):
                 return 0
 
             # First term: KDJ oversold degree (40%)
-            term1 = 40 * max(0, (self.oversold_threshold - kdj_j)) / self.oversold_threshold
+            term1 = (
+                40 * max(0, (self.oversold_threshold - kdj_j)) / self.oversold_threshold
+            )
 
             # Second term: RSI oversold degree (30%)
-            term2 = 30 * max(0, (self.oversold_threshold - rsi_value)) / self.oversold_threshold
+            term2 = (
+                30
+                * max(0, (self.oversold_threshold - rsi_value))
+                / self.oversold_threshold
+            )
 
             # Third term: Pullback depth (30%)
             term3 = 30 * max(0, (ma_value - close)) / ma_value
@@ -456,8 +492,12 @@ class PullbackBuyingStrategy(BaseStrategy):
                             self.ma_period, self.kdj_n, self.rsi_period
                         ):
                             # Calculate technical indicators for analysis
-                            ma_values = talib.SMA(close_prices, timeperiod=self.ma_period)
-                            ma_value = ma_values[-1] if not np.isnan(ma_values[-1]) else 0
+                            ma_values = talib.SMA(
+                                close_prices, timeperiod=self.ma_period
+                            )
+                            ma_value = (
+                                ma_values[-1] if not np.isnan(ma_values[-1]) else 0
+                            )
 
                             technical_analysis = {
                                 "price": float(close_prices[-1]),
@@ -481,6 +521,9 @@ class PullbackBuyingStrategy(BaseStrategy):
                 self.log_warning(f"处理股票 {code} 时出错: {e}")
                 continue
 
+        selected_stocks = sorted(
+            selected_stocks, key=lambda x: x.get("score", 0), reverse=True
+        )[:10]
         self.log_info(f"选中 {len(selected_stocks)} 只股票")
 
         # Automatically save results to pool collection
@@ -534,8 +577,12 @@ class PullbackBuyingStrategy(BaseStrategy):
 
                 # Calculate KDJ
                 kdj_k, kdj_d = talib.STOCH(
-                    high_prices, low_prices, close_prices,
-                    fastk_period=self.kdj_n, slowk_period=3, slowd_period=3
+                    high_prices,
+                    low_prices,
+                    close_prices,
+                    fastk_period=self.kdj_n,
+                    slowk_period=3,
+                    slowd_period=3,
                 )
                 # Calculate J value: J = 3*K - 2*D
                 kdj_j = 3 * kdj_k - 2 * kdj_d
@@ -546,9 +593,13 @@ class PullbackBuyingStrategy(BaseStrategy):
                 # Calculate MA trend for each point
                 ma_trends = np.zeros(len(ma_values))
                 for i in range(2, len(ma_values)):
-                    if not np.isnan(ma_values[i]) and not np.isnan(ma_values[i-1]) and not np.isnan(ma_values[i-2]):
-                        diff1 = ma_values[i] - ma_values[i-1]
-                        diff2 = ma_values[i-1] - ma_values[i-2]
+                    if (
+                        not np.isnan(ma_values[i])
+                        and not np.isnan(ma_values[i - 1])
+                        and not np.isnan(ma_values[i - 2])
+                    ):
+                        diff1 = ma_values[i] - ma_values[i - 1]
+                        diff2 = ma_values[i - 1] - ma_values[i - 2]
                         if diff1 > 0 and diff2 > 0:
                             ma_trends[i] = 1
                         elif diff1 < 0 and diff2 < 0:
@@ -563,12 +614,20 @@ class PullbackBuyingStrategy(BaseStrategy):
                 # 2. Score > 60
                 for i in range(len(signals)):
                     # Check if we have valid data
-                    if (np.isnan(ma_values[i]) or np.isnan(kdj_j[i]) or np.isnan(rsi_values[i])):
+                    if (
+                        np.isnan(ma_values[i])
+                        or np.isnan(kdj_j[i])
+                        or np.isnan(rsi_values[i])
+                    ):
                         continue
 
                     # Check pullback conditions
                     is_valid_pullback = self._is_valid_pullback(
-                        close_prices[i], ma_values[i], kdj_j[i], rsi_values[i], ma_trends[i]
+                        close_prices[i],
+                        ma_values[i],
+                        kdj_j[i],
+                        rsi_values[i],
+                        ma_trends[i],
                     )
 
                     if is_valid_pullback:
@@ -588,15 +647,18 @@ class PullbackBuyingStrategy(BaseStrategy):
 
                         if position_size > 0:
                             signals.loc[signals.index[i], "signal"] = "BUY"
-                            signals.loc[signals.index[i], "position"] = round(position_size, 2)
+                            signals.loc[signals.index[i], "position"] = round(
+                                position_size, 2
+                            )
 
             except Exception as e:
                 self.log_warning(f"生成信号时出错: {e}")
 
         return signals
 
-    def calculate_position_size(self, signal: str, portfolio_value: float,
-                              price: float) -> float:
+    def calculate_position_size(
+        self, signal: str, portfolio_value: float, price: float
+    ) -> float:
         """
         Calculate position size based on signal and portfolio value.
 
@@ -624,6 +686,7 @@ class PullbackBuyingStrategy(BaseStrategy):
         else:
             return 0.0  # Hold position
 
+
 # Example usage
 if __name__ == "__main__":
     import logging
@@ -632,15 +695,17 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     # Create sample data
-    dates = pd.date_range('2023-01-01', periods=100, freq='D')
-    sample_data = pd.DataFrame({
-        'date': dates,
-        'open': np.random.uniform(100, 110, 100),
-        'high': np.random.uniform(110, 120, 100),
-        'low': np.random.uniform(90, 100, 100),
-        'close': np.random.uniform(100, 110, 100),
-        'volume': np.random.uniform(1000000, 2000000, 100)
-    })
+    dates = pd.date_range("2023-01-01", periods=100, freq="D")
+    sample_data = pd.DataFrame(
+        {
+            "date": dates,
+            "open": np.random.uniform(100, 110, 100),
+            "high": np.random.uniform(110, 120, 100),
+            "low": np.random.uniform(90, 100, 100),
+            "close": np.random.uniform(100, 110, 100),
+            "volume": np.random.uniform(1000000, 2000000, 100),
+        }
+    )
 
     # Initialize strategy
     strategy = PullbackBuyingStrategy()
@@ -649,4 +714,3 @@ if __name__ == "__main__":
     signals = strategy.generate_signals(sample_data)
     print(f"Generated {len(signals[signals['signal'] != 'HOLD'])} trading signals")
     print(signals.tail(10))
-

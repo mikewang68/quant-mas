@@ -216,7 +216,9 @@ class TrendFollowingStrategy(BaseStrategy):
             # Check if ma_fast is increasing (current >= previous)
             ma_fast_increasing = True
             if len(ma_fast) >= 2:
-                ma_fast_prev = ma_fast[-2] if not np.isnan(ma_fast[-2]) else ma_fast_last
+                ma_fast_prev = (
+                    ma_fast[-2] if not np.isnan(ma_fast[-2]) else ma_fast_last
+                )
                 ma_fast_increasing = ma_fast_last >= ma_fast_prev
 
             # Check for golden cross pattern (MA5 crosses above MA13 and MACD DIF crosses above DEA)
@@ -587,6 +589,9 @@ class TrendFollowingStrategy(BaseStrategy):
                 self.log_warning(f"处理股票 {code} 时出错: {e}")
                 continue
 
+        selected_stocks = sorted(
+            selected_stocks, key=lambda x: x.get("score", 0), reverse=True
+        )[:10]
         self.log_info(f"选中 {len(selected_stocks)} 只股票")
 
         # Automatically save results to pool collection

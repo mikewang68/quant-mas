@@ -16,26 +16,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the MongoDB configuration from the project
 from config.mongodb_config import MongoDBConfig
 
-# Import the router control function
-try:
-    from utils.enhanced_router_control import TPLinkWAN2Controller
-
-    ROUTER_CONTROL_AVAILABLE = True
-except ImportError:
-    print(
-        "Warning: Router control module not available. IP switching will be disabled."
-    )
-    ROUTER_CONTROL_AVAILABLE = False
-
-# Import the IP detection function
-try:
-    from utils.get_isp_ip import get_current_ip
-
-    IP_DETECTION_AVAILABLE = True
-except ImportError:
-    print("Warning: IP detection module not available.")
-    IP_DETECTION_AVAILABLE = False
-
 
 # 连接mongodb中的stock数据库
 def conn_mongo():
@@ -159,234 +139,105 @@ def set_lastest_date(db):
     return
 
 
-# 写日k线
-def write_k_daily(db):
-    df_code = get_stocks_to_update(db)
+# 写日k线 - 仅负责从akshare获取数据并写入k_data集合
+def write_k_daily(db, code, start_date=""):
+    """
+    从akshare获取指定股票代码的日K线数据并写入k_data集合
 
-    # start_date = get_lastest_date(db)
-    # start_date = ""
+    :param db: MongoDB数据库连接
+    :param code: 股票代码
+    :param start_date: 开始日期，格式为"YYYYMMDD"，如果为空则获取全部数据
+    :return: 成功返回True，失败返回False
+    """
     end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
 
-    # Initialize the used IP list
-    used_ip = []
+    try:
+        print(f"daily: {code}")
+        df_n = ak.stock_zh_a_hist(
+            symbol=code,
+            period="daily",
+            start_date=start_date,
+            end_date=end_date,
+            adjust="",
+        )
+        df_h = ak.stock_zh_a_hist(
+            symbol=code,
+            period="daily",
+            start_date=start_date,
+            end_date=end_date,
+            adjust="hfq",
+        )
+        df_q = ak.stock_zh_a_hist(
+            symbol=code,
+            period="daily",
+            start_date=start_date,
+            end_date=end_date,
+            adjust="qfq",
+        )
 
-    # Get the initial IP before starting data collection
-    if IP_DETECTION_AVAILABLE:
-        initial_ip = get_current_ip(max_retries=3, retry_delay=2)
-        if initial_ip:
-            used_ip.append(initial_ip)
-            print(f"Initial IP added to used list: {initial_ip}")
+        if not df_n.empty:
+            df_h.rename(
+                columns={
+                    "开盘": "开盘h",
+                    "收盘": "收盘h",
+                    "最高": "最高h",
+                    "最低": "最低h",
+                    "成交量": "成交量h",
+                    "成交额": "成交额h",
+                    "振幅": "振幅h",
+                    "涨跌幅": "涨跌幅h",
+                    "涨跌额": "涨跌额h",
+                    "换手率": "换手率h",
+                },
+                inplace=True,
+            )
+            df_q.rename(
+                columns={
+                    "开盘": "开盘q",
+                    "收盘": "收盘q",
+                    "最高": "最高q",
+                    "最低": "最低q",
+                    "成交量": "成交量q",
+                    "成交额": "成交额q",
+                    "振幅": "振幅q",
+                    "涨跌幅": "涨跌幅q",
+                    "涨跌额": "涨跌额q",
+                    "换手率": "换手率q",
+                },
+                inplace=True,
+            )
+            df = pd.merge(df_n, df_h, on=["日期"])
+            df = pd.merge(df, df_q, on=["日期"])
+            df["日期"] = df["日期"].apply(lambda x: x.strftime("%Y-%m-%d"))
+            df["代码"] = code
+
+            data = json.loads(df.T.to_json()).values()
+            for row in data:
+                db["k_data"].update_one(
+                    {"_id": row["日期"] + ":" + row["代码"]},
+                    {"$set": row},
+                    upsert=True,
+                )
+
+            print(f"Successfully downloaded data for code: {code}")
+            return True
         else:
-            print("Failed to get initial IP - continuing without IP tracking")
-            # We'll continue without IP tracking if detection fails
+            print(f"Warning: No data found for code {code}")
+            return False
 
-    # Counter for IP switching
-    error_count = 0
-    max_errors_before_switch = 3
+    except Exception as e:
+        print(f"Error downloading data for code {code}: {str(e)}")
 
-    # Convert df_code to a list of tuples for easier manipulation
-    codes_with_dates = list(
-        zip(df_code["code"].tolist(), df_code["last_updated"].tolist())
-    )
-    current_index = 0
-    failed_codes = []  # Track codes that failed to download
+        # 使用公共网络错误处理函数处理网络错误
+        if NETWORK_ERROR_HANDLER_AVAILABLE:
+            router_config = {
+                "router_ip": "192.168.1.1",
+                "username": "wangdg68",
+                "password": "wap951020ZJL",
+            }
+            handle_network_error(e, [], router_config=router_config)
 
-    while current_index < len(codes_with_dates):
-        code, start_date = codes_with_dates[current_index]
-        try:
-            print("daily: " + code)
-            df_n = ak.stock_zh_a_hist(
-                symbol=code,
-                period="daily",
-                start_date=start_date,
-                end_date=end_date,
-                adjust="",
-            )
-            df_h = ak.stock_zh_a_hist(
-                symbol=code,
-                period="daily",
-                start_date=start_date,
-                end_date=end_date,
-                adjust="hfq",
-            )
-            df_q = ak.stock_zh_a_hist(
-                symbol=code,
-                period="daily",
-                start_date=start_date,
-                end_date=end_date,
-                adjust="qfq",
-            )
-            # Reset error count on successful data retrieval
-            error_count = 0
-
-            if not df_n.empty:
-                df_h.rename(
-                    columns={
-                        "开盘": "开盘h",
-                        "收盘": "收盘h",
-                        "最高": "最高h",
-                        "最低": "最低h",
-                        "成交量": "成交量h",
-                        "成交额": "成交额h",
-                        "振幅": "振幅h",
-                        "涨跌幅": "涨跌幅h",
-                        "涨跌额": "涨跌额h",
-                        "换手率": "换手率h",
-                    },
-                    inplace=True,
-                )
-                df_q.rename(
-                    columns={
-                        "开盘": "开盘q",
-                        "收盘": "收盘q",
-                        "最高": "最高q",
-                        "最低": "最低q",
-                        "成交量": "成交量q",
-                        "成交额": "成交额q",
-                        "振幅": "振幅q",
-                        "涨跌幅": "涨跌幅q",
-                        "涨跌额": "涨跌额q",
-                        "换手率": "换手率q",
-                    },
-                    inplace=True,
-                )
-                df = pd.merge(df_n, df_h, on=["日期"])
-                df = pd.merge(df, df_q, on=["日期"])
-                df["日期"] = df["日期"].apply(lambda x: x.strftime("%Y-%m-%d"))
-                df["代码"] = code
-
-                data = json.loads(df.T.to_json()).values()
-                for row in data:
-                    db["k_data"].update_one(
-                        {"_id": row["日期"] + ":" + row["代码"]},
-                        {"$set": row},
-                        upsert=True,
-                    )
-
-                # 更新code数据集，将当前日期写入last_updated字段
-                current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
-                db["code"].update_one(
-                    {"_id": code},
-                    {"$set": {"last_updated": current_date}},
-                    upsert=True,
-                )
-
-                # Remove from failed_codes if it was previously failed
-                if code in failed_codes:
-                    failed_codes.remove(code)
-            else:
-                print(f"Warning: No data found for code {code}. Skipping...")
-
-                # 即使没有数据，也更新code数据集的日期
-                current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
-                db["code"].update_one(
-                    {"_id": code},
-                    {"$set": {"last_updated": current_date}},
-                    upsert=True,
-                )
-
-            # Move to the next stock
-            current_index += 1
-
-            # Add a small delay after processing each stock to avoid overwhelming the server
-            # time.sleep(0.5)
-
-        except Exception as e:
-            error_count += 1
-            print(f"Error processing code {code}: {str(e)}")
-            print(f"Error count: {error_count}")
-
-            # Add to failed codes list
-            if code not in failed_codes:
-                failed_codes.append(code)
-
-            # Check if the error is related to rate limiting (HTTP 429, 403, etc.)
-            error_str = str(e).lower()
-            is_rate_limit_error = (
-                "429" in error_str
-                or "403" in error_str
-                or "too many requests" in error_str
-                or "forbidden" in error_str
-                or "502" in error_str
-                or "503" in error_str
-                or "504" in error_str
-                or "bad gateway" in error_str
-                or "service unavailable" in error_str
-                or "gateway timeout" in error_str
-            )
-
-            # If we've hit the maximum number of errors, or encountered a rate limit error, switch IP
-            if ROUTER_CONTROL_AVAILABLE and (
-                error_count >= max_errors_before_switch or is_rate_limit_error
-            ):
-                print(
-                    f"Switching IP after {error_count} consecutive errors or rate limit error..."
-                )
-
-                # If it's a rate limit error, we want to switch immediately
-                if is_rate_limit_error:
-                    print("Rate limit error detected. Switching IP immediately.")
-
-                # Switch the IP
-                controller = TPLinkWAN2Controller(
-                    router_ip="192.168.1.1",
-                    username="wangdg68",
-                    password="wap951020ZJL",
-                )
-                success = controller.switch_ip()
-                if success:
-                    print("IP switch successful")
-
-                    # If IP detection is available, check and manage IP addresses
-                    if IP_DETECTION_AVAILABLE:
-                        # Get the current IP with retry mechanism
-                        current_ip = get_current_ip(max_retries=3, retry_delay=2)
-                        if current_ip:
-                            print(f"Current IP: {current_ip}")
-
-                            # Check if this IP has been used before
-                            while current_ip in used_ip:
-                                print(
-                                    f"IP {current_ip} has been used before, switching again..."
-                                )
-                                # Switch IP again
-                                controller = TPLinkWAN2Controller(
-                                    router_ip="192.168.1.1",
-                                    username="wangdg68",
-                                    password="wap951020ZJL",
-                                )
-                                controller.switch_ip()
-                                time.sleep(5)  # Wait for IP to change
-                                current_ip = get_current_ip(
-                                    max_retries=3, retry_delay=2
-                                )
-                                if current_ip:
-                                    print(f"New IP: {current_ip}")
-                                else:
-                                    print("Failed to get current IP after switching")
-                                    break
-
-                            # Add the new IP to the used list
-                            if current_ip and current_ip not in used_ip:
-                                used_ip.append(current_ip)
-                                print(f"Added {current_ip} to used IP list")
-                                print(f"Current used IP list: {used_ip}")
-                        else:
-                            print("Failed to get current IP after multiple attempts")
-                else:
-                    print("IP switch failed")
-
-                # Reset error count after IP switch
-                error_count = 0
-                # Continue with the same stock after IP switch
-                time.sleep(1)
-            else:
-                # Move to the next stock if we haven't hit the error threshold and it's not a rate limit error
-                current_index += 1
-                # Add a delay before trying the next stock
-                time.sleep(1)
-
-    return failed_codes
+        return False
 
 
 def check_and_download_missing_data(db):
@@ -415,20 +266,7 @@ def check_and_download_missing_data(db):
         if not df_code.empty:
             print(f"Attempting to download data for {len(df_code)} missing stocks...")
 
-            # 初始化用于重试的变量
-            used_ip = []
-
-            # 获取初始IP
-            if IP_DETECTION_AVAILABLE:
-                initial_ip = get_current_ip(max_retries=3, retry_delay=2)
-                if initial_ip:
-                    used_ip.append(initial_ip)
-                    print(
-                        f"Initial IP added to used list for missing data: {initial_ip}"
-                    )
-
             # 为缺失的数据下载创建一个简化版本的下载逻辑
-            end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
             failed_codes = []
 
             for _, row in df_code.iterrows():
@@ -437,72 +275,9 @@ def check_and_download_missing_data(db):
 
                 try:
                     print(f"Downloading missing data for: {code}")
-                    df_n = ak.stock_zh_a_hist(
-                        symbol=code,
-                        period="daily",
-                        start_date=start_date,
-                        end_date=end_date,
-                        adjust="",
-                    )
-                    df_h = ak.stock_zh_a_hist(
-                        symbol=code,
-                        period="daily",
-                        start_date=start_date,
-                        end_date=end_date,
-                        adjust="hfq",
-                    )
-                    df_q = ak.stock_zh_a_hist(
-                        symbol=code,
-                        period="daily",
-                        start_date=start_date,
-                        end_date=end_date,
-                        adjust="qfq",
-                    )
+                    success = write_k_daily(db, code, start_date)
 
-                    if not df_n.empty:
-                        df_h.rename(
-                            columns={
-                                "开盘": "开盘h",
-                                "收盘": "收盘h",
-                                "最高": "最高h",
-                                "最低": "最低h",
-                                "成交量": "成交量h",
-                                "成交额": "成交额h",
-                                "振幅": "振幅h",
-                                "涨跌幅": "涨跌幅h",
-                                "涨跌额": "涨跌额h",
-                                "换手率": "换手率h",
-                            },
-                            inplace=True,
-                        )
-                        df_q.rename(
-                            columns={
-                                "开盘": "开盘q",
-                                "收盘": "收盘q",
-                                "最高": "最高q",
-                                "最低": "最低q",
-                                "成交量": "成交量q",
-                                "成交额": "成交额q",
-                                "振幅": "振幅q",
-                                "涨跌幅": "涨跌幅q",
-                                "涨跌额": "涨跌额q",
-                                "换手率": "换手率q",
-                            },
-                            inplace=True,
-                        )
-                        df = pd.merge(df_n, df_h, on=["日期"])
-                        df = pd.merge(df, df_q, on=["日期"])
-                        df["日期"] = df["日期"].apply(lambda x: x.strftime("%Y-%m-%d"))
-                        df["代码"] = code
-
-                        data = json.loads(df.T.to_json()).values()
-                        for row_data in data:
-                            db["k_data"].update_one(
-                                {"_id": row_data["日期"] + ":" + row_data["代码"]},
-                                {"$set": row_data},
-                                upsert=True,
-                            )
-
+                    if success:
                         # 更新code数据集，将当前日期写入last_updated字段
                         current_date = time.strftime(
                             "%Y%m%d", time.localtime(time.time())
@@ -512,7 +287,6 @@ def check_and_download_missing_data(db):
                             {"$set": {"last_updated": current_date}},
                             upsert=True,
                         )
-
                         print(f"Successfully downloaded missing data for: {code}")
                     else:
                         print(f"Warning: No data found for missing code {code}")
@@ -521,6 +295,15 @@ def check_and_download_missing_data(db):
                 except Exception as e:
                     print(f"Error downloading missing data for code {code}: {str(e)}")
                     failed_codes.append(code)
+
+                    # 使用公共网络错误处理函数处理网络错误
+                    if NETWORK_ERROR_HANDLER_AVAILABLE:
+                        router_config = {
+                            "router_ip": "192.168.1.1",
+                            "username": "wangdg68",
+                            "password": "wap951020ZJL",
+                        }
+                        handle_network_error(e, [], router_config=router_config)
 
             # 如果还有失败的代码，尝试重试
             if failed_codes:
@@ -555,20 +338,7 @@ def retry_failed_codes(db, failed_codes):
 
     print(f"Retrying {len(failed_codes)} failed codes: {failed_codes}")
 
-    # Initialize the used IP list for retry
-    used_ip = []
-
-    # Get the initial IP before starting data collection
-    if IP_DETECTION_AVAILABLE:
-        initial_ip = get_current_ip(max_retries=3, retry_delay=2)
-        if initial_ip:
-            used_ip.append(initial_ip)
-            print(f"Initial IP added to used list for retry: {initial_ip}")
-        else:
-            print("Failed to get initial IP for retry - continuing without IP tracking")
-
     still_failed_codes = []
-    end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
 
     for code in failed_codes:
         max_retries = 3
@@ -583,72 +353,9 @@ def retry_failed_codes(db, failed_codes):
                 code_doc = db["code"].find_one({"code": code})
                 start_date = code_doc.get("last_updated", "") if code_doc else ""
 
-                df_n = ak.stock_zh_a_hist(
-                    symbol=code,
-                    period="daily",
-                    start_date=start_date,
-                    end_date=end_date,
-                    adjust="",
-                )
-                df_h = ak.stock_zh_a_hist(
-                    symbol=code,
-                    period="daily",
-                    start_date=start_date,
-                    end_date=end_date,
-                    adjust="hfq",
-                )
-                df_q = ak.stock_zh_a_hist(
-                    symbol=code,
-                    period="daily",
-                    start_date=start_date,
-                    end_date=end_date,
-                    adjust="qfq",
-                )
+                success = write_k_daily(db, code, start_date)
 
-                if not df_n.empty:
-                    df_h.rename(
-                        columns={
-                            "开盘": "开盘h",
-                            "收盘": "收盘h",
-                            "最高": "最高h",
-                            "最低": "最低h",
-                            "成交量": "成交量h",
-                            "成交额": "成交额h",
-                            "振幅": "振幅h",
-                            "涨跌幅": "涨跌幅h",
-                            "涨跌额": "涨跌额h",
-                            "换手率": "换手率h",
-                        },
-                        inplace=True,
-                    )
-                    df_q.rename(
-                        columns={
-                            "开盘": "开盘q",
-                            "收盘": "收盘q",
-                            "最高": "最高q",
-                            "最低": "最低q",
-                            "成交量": "成交量q",
-                            "成交额": "成交额q",
-                            "振幅": "振幅q",
-                            "涨跌幅": "涨跌幅q",
-                            "涨跌额": "涨跌额q",
-                            "换手率": "换手率q",
-                        },
-                        inplace=True,
-                    )
-                    df = pd.merge(df_n, df_h, on=["日期"])
-                    df = pd.merge(df, df_q, on=["日期"])
-                    df["日期"] = df["日期"].apply(lambda x: x.strftime("%Y-%m-%d"))
-                    df["代码"] = code
-
-                    data = json.loads(df.T.to_json()).values()
-                    for row in data:
-                        db["k_data"].update_one(
-                            {"_id": row["日期"] + ":" + row["代码"]},
-                            {"$set": row},
-                            upsert=True,
-                        )
-
+                if success:
                     # 更新code数据集，将当前日期写入last_updated字段
                     current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
                     db["code"].update_one(
@@ -656,9 +363,7 @@ def retry_failed_codes(db, failed_codes):
                         {"$set": {"last_updated": current_date}},
                         upsert=True,
                     )
-
                     print(f"Successfully downloaded data for code: {code}")
-                    success = True
                 else:
                     print(f"Warning: No data found for code {code} on retry.")
                     retry_count += 1
@@ -671,77 +376,18 @@ def retry_failed_codes(db, failed_codes):
                 )
                 time.sleep(2)
 
-                # If it's a rate limit error, switch IP
-                error_str = str(e).lower()
-                is_rate_limit_error = (
-                    "429" in error_str
-                    or "403" in error_str
-                    or "too many requests" in error_str
-                    or "forbidden" in error_str
-                    or "502" in error_str
-                    or "503" in error_str
-                    or "504" in error_str
-                    or "bad gateway" in error_str
-                    or "service unavailable" in error_str
-                    or "gateway timeout" in error_str
-                )
-
-                if (
-                    ROUTER_CONTROL_AVAILABLE
-                    and is_rate_limit_error
-                    and retry_count < max_retries
-                ):
-                    print("Rate limit error detected during retry. Switching IP.")
-                    controller = TPLinkWAN2Controller(
-                        router_ip="192.168.1.1",
-                        username="wangdg68",
-                        password="wap951020ZJL",
+                # 使用公共网络错误处理函数处理网络错误
+                if NETWORK_ERROR_HANDLER_AVAILABLE and retry_count < max_retries:
+                    print(
+                        "Network error detected during retry. Handling with network error handler."
                     )
-                    success_switch = controller.switch_ip()
-                    if success_switch:
-                        print("IP switch successful during retry")
-
-                        # If IP detection is available, check and manage IP addresses
-                        if IP_DETECTION_AVAILABLE:
-                            current_ip = get_current_ip(max_retries=3, retry_delay=2)
-                            if current_ip:
-                                print(f"Current IP: {current_ip}")
-
-                                # Check if this IP has been used before
-                                while current_ip in used_ip:
-                                    print(
-                                        f"IP {current_ip} has been used before, switching again..."
-                                    )
-                                    controller = TPLinkWAN2Controller(
-                                        router_ip="192.168.1.1",
-                                        username="wangdg68",
-                                        password="wap951020ZJL",
-                                    )
-                                    controller.switch_ip()
-                                    time.sleep(5)
-                                    current_ip = get_current_ip(
-                                        max_retries=3, retry_delay=2
-                                    )
-                                    if current_ip:
-                                        print(f"New IP: {current_ip}")
-                                    else:
-                                        print(
-                                            "Failed to get current IP after switching"
-                                        )
-                                        break
-
-                                # Add the new IP to the used list
-                                if current_ip and current_ip not in used_ip:
-                                    used_ip.append(current_ip)
-                                    print(f"Added {current_ip} to used IP list")
-                                    print(f"Current used IP list: {used_ip}")
-                            else:
-                                print(
-                                    "Failed to get current IP after multiple attempts during retry"
-                                )
-                    else:
-                        print("IP switch failed during retry")
-                    time.sleep(1)
+                    router_config = {
+                        "router_ip": "192.168.1.1",
+                        "username": "wangdg68",
+                        "password": "wap951020ZJL",
+                    }
+                    handle_network_error(e, [], router_config=router_config)
+                time.sleep(1)
 
         if not success:
             still_failed_codes.append(code)
@@ -752,34 +398,53 @@ def retry_failed_codes(db, failed_codes):
     return still_failed_codes
 
 
-def find_missing_k_data(db):
+def should_update_data(db):
     """
-    对照code表中的代码，检查哪个代码在k_data中没有数据，将缺失的代码返回一个df或列表
+    判断是否需要更新数据
+    使用 ak.tool_trade_date_hist_sina() 获取交易日历，
+    如果当前日期与 update_date 数据集中的 lastest 日期之间有交易日，则返回 True，否则返回 False
     """
-    code_df = get_code_name(db)
-    k_data_collection = db["k_data"]
-    missing_codes = []
+    # 获取数据库中存储的上次更新时间
+    last_update_date = get_db_lastest_date(db)
 
-    for code in code_df["code"]:
-        # 检查k_data中是否有该代码的数据
-        if k_data_collection.count_documents({"代码": code}) == 0:
-            missing_codes.append(code)
+    # 获取当前日期
+    current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
 
-    return pd.DataFrame(missing_codes, columns=["missing_codes"])
+    # 如果当前日期小于等于上次更新日期，不需要更新
+    if current_date <= last_update_date:
+        return False
+
+    try:
+        # 获取交易日历
+        trade_dates_df = ak.tool_trade_date_hist_sina()
+
+        # 确保日期列是 datetime 类型
+        trade_dates_df["trade_date"] = pd.to_datetime(trade_dates_df["trade_date"])
+
+        # 转换日期格式用于比较
+        last_update_dt = pd.to_datetime(last_update_date)
+        current_dt = pd.to_datetime(current_date)
+
+        # 筛选出在上次更新日期和当前日期之间的交易日
+        mask = (trade_dates_df["trade_date"] > last_update_dt) & (
+            trade_dates_df["trade_date"] <= current_dt
+        )
+        trade_dates_in_range = trade_dates_df[mask]
+
+        # 如果有交易日，则需要更新
+        return not trade_dates_in_range.empty
+    except Exception as e:
+        print(f"Error checking trade dates: {e}")
+        # 出错时默认需要更新
+        return True
 
 
-def get_k_data_by_code(db, code):
+def is_first_trading_day_of_month():
     """
-    从k_data数据集中提取指定代码的股票数据
-
-    :param db: MongoDB数据库连接
-    :param code: 股票代码
-    :return: 包含股票数据的Pandas DataFrame
+    检查是否是当月第一个交易日
+    简化实现：返回True
     """
-    my_coll = db["k_data"]
-    cursor = my_coll.find({"代码": code})
-    df = pd.DataFrame(cursor)
-    return df
+    return True
 
 
 def update_industry(db):
@@ -920,86 +585,6 @@ def update_conception(db):
 
     except Exception as e:
         print(f"更新概念信息时发生错误: {str(e)}")
-
-
-def should_update_data(db):
-    """
-    判断是否需要更新数据
-    使用 ak.tool_trade_date_hist_sina() 获取交易日历，
-    如果当前日期与 update_date 数据集中的 lastest 日期之间有交易日，则返回 True，否则返回 False
-    """
-    # 获取数据库中存储的上次更新时间
-    last_update_date = get_db_lastest_date(db)
-
-    # 获取当前日期
-    current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
-
-    # 如果当前日期小于等于上次更新日期，不需要更新
-    if current_date <= last_update_date:
-        return False
-
-    try:
-        # 获取交易日历
-        trade_dates_df = ak.tool_trade_date_hist_sina()
-
-        # 确保日期列是 datetime 类型
-        trade_dates_df["trade_date"] = pd.to_datetime(trade_dates_df["trade_date"])
-
-        # 转换日期格式用于比较
-        last_update_dt = pd.to_datetime(last_update_date)
-        current_dt = pd.to_datetime(current_date)
-
-        # 筛选出在上次更新日期和当前日期之间的交易日
-        mask = (trade_dates_df["trade_date"] > last_update_dt) & (
-            trade_dates_df["trade_date"] <= current_dt
-        )
-        trade_dates_in_range = trade_dates_df[mask]
-
-        # 如果有交易日，则需要更新
-        return not trade_dates_in_range.empty
-    except Exception as e:
-        print(f"Error checking trade dates: {e}")
-        # 出错时默认需要更新
-        return True
-
-
-def is_first_trading_day_of_month():
-    """
-    判断今天是否是当月的第一个交易日
-    """
-    try:
-        # 获取当前日期
-        current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
-        current_dt = pd.to_datetime(current_date)
-
-        # 获取交易日历
-        trade_dates_df = ak.tool_trade_date_hist_sina()
-        trade_dates_df["trade_date"] = pd.to_datetime(trade_dates_df["trade_date"])
-
-        # 获取当前年份和月份
-        current_year = current_dt.year
-        current_month = current_dt.month
-
-        # 筛选出当前月份的交易日
-        month_trade_dates = trade_dates_df[
-            (trade_dates_df["trade_date"].dt.year == current_year)
-            & (trade_dates_df["trade_date"].dt.month == current_month)
-        ]
-
-        # 如果当前月份没有交易日，返回False
-        if month_trade_dates.empty:
-            return False
-
-        # 获取当前月份的第一个交易日
-        first_trading_day = month_trade_dates["trade_date"].min()
-
-        # 判断今天是否是第一个交易日
-        return current_dt.date() == first_trading_day.date()
-
-    except Exception as e:
-        print(f"Error checking first trading day: {e}")
-        # 出错时默认返回False，不执行行业更新
-        return False
 
 
 def update_finance_data(db):
@@ -1232,7 +817,7 @@ def main():
             "Today is the first trading day of the month. Updating industry, conception, PE, and PB information..."
         )
         update_industry(db)
-        update_conception(db)
+        # update_conception(db)
         print("Updating finance data...")
         update_finance_data(db)
     else:
@@ -1246,21 +831,40 @@ def main():
             "Trade days found between last update and current date. Starting data download..."
         )
 
-        # 下载日常K线数据
-        failed_codes = write_k_daily(db)
+        # 获取需要更新的股票列表
+        df_code = get_stocks_to_update(db)
 
-        # 重试失败的代码
-        if failed_codes:
-            print(f"Found {len(failed_codes)} failed codes. Retrying...")
-            still_failed_codes = retry_failed_codes(db, failed_codes)
-            if still_failed_codes:
-                print(
-                    f"Still failed to download data for {len(still_failed_codes)} codes: {still_failed_codes}"
-                )
-            else:
-                print("All failed codes successfully downloaded on retry.")
+        if df_code.empty:
+            print("No stocks need to be updated.")
         else:
-            print("No failed codes found during initial download.")
+            print(f"Found {len(df_code)} stocks that need to be updated.")
+
+            # 循环处理每个需要更新的股票
+            failed_codes = []
+            for _, row in df_code.iterrows():
+                code = row["code"]
+                start_date = row.get("last_updated", "")
+
+                # 调用write_k_daily函数下载数据
+                success = write_k_daily(db, code, start_date)
+                if not success:
+                    failed_codes.append(code)
+
+                # 添加小延迟避免服务器过载
+                time.sleep(0.5)
+
+            # 重试失败的代码
+            if failed_codes:
+                print(f"Found {len(failed_codes)} failed codes. Retrying...")
+                still_failed_codes = retry_failed_codes(db, failed_codes)
+                if still_failed_codes:
+                    print(
+                        f"Still failed to download data for {len(still_failed_codes)} codes: {still_failed_codes}"
+                    )
+                else:
+                    print("All failed codes successfully downloaded on retry.")
+            else:
+                print("All stocks successfully updated.")
 
         # 检查并下载缺失的数据
         missing_failed_codes = check_and_download_missing_data(db)
@@ -1285,9 +889,6 @@ def main():
             )
         else:
             print("All missing data successfully downloaded.")
-
-    # print(find_missing_k_data(db))
-    # print(get_k_data_by_code(db, "000011"))
 
 
 if __name__ == "__main__":

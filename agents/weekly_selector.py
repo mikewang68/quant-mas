@@ -161,6 +161,7 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
 
             # Load only the strategies assigned to this agent
             from bson import ObjectId
+
             selected_strategies = []
             for strategy_id in strategy_ids:
                 strategy = self.db_manager.strategies_collection.find_one(
@@ -378,10 +379,28 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
                 self.logger.info(f"Last data date used for selection: {last_data_date}")
 
             # Store results for this strategy
-            strategy_results[strategy_name] = (
+            # Sort stocks by score and take top 10
+            sorted_stocks = sorted(
                 selected_stocks,
-                selected_scores,  # 这是字典，包含每个股票的分数
-                json_values,  # 这是字典，包含每个股票的JSON值
+                key=lambda code: selected_scores.get(code, 0.0),
+                reverse=True,
+            )
+            top_10_stocks = sorted_stocks[:10]
+
+            # Create filtered dictionaries for top 10 stocks
+            top_10_scores = {
+                code: selected_scores[code]
+                for code in top_10_stocks
+                if code in selected_scores
+            }
+            top_10_json_values = {
+                code: json_values[code] for code in top_10_stocks if code in json_values
+            }
+
+            strategy_results[strategy_name] = (
+                top_10_stocks,
+                top_10_scores,  # 这是字典，包含每个股票的分数
+                top_10_json_values,  # 这是字典，包含每个股票的JSON值
             )
 
         # Multiple strategies mode - return the dictionary format
@@ -591,7 +610,11 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
             latest_record_year_week = latest_record["_id"]
 
             # Validate that the _id is in the expected year-week format
-            if not (isinstance(latest_record_year_week, str) and "-" in latest_record_year_week and len(latest_record_year_week) == 7):
+            if not (
+                isinstance(latest_record_year_week, str)
+                and "-" in latest_record_year_week
+                and len(latest_record_year_week) == 7
+            ):
                 # If _id is not in expected format, use current week
                 latest_record_year_week = f"{datetime.now().isocalendar()[0]}-{datetime.now().isocalendar()[1]:02d}"
 
@@ -608,14 +631,13 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
                         "updated_at": datetime.now(),
                         "count": len(all_stocks_data),
                         "strategy_key": all_strategy_ids,
-                        "strategy_name": all_strategy_names
+                        "strategy_name": all_strategy_names,
                     }
                 }
 
                 # Update the pool record
                 result = collection.update_one(
-                    {"_id": latest_record["_id"]},
-                    update_data
+                    {"_id": latest_record["_id"]}, update_data
                 )
             else:
                 # CREATE new record - different week
@@ -628,13 +650,15 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
                     "strategy_name": all_strategy_names,  # Use all strategy names
                     "count": len(all_stocks_data),
                     "created_at": datetime.now(),
-                    "updated_at": datetime.now()
+                    "updated_at": datetime.now(),
                 }
 
                 # Insert new pool record
                 result = collection.insert_one(new_record)
 
-            if (hasattr(result, 'modified_count') and result.modified_count > 0) or result.inserted_id:
+            if (
+                hasattr(result, "modified_count") and result.modified_count > 0
+            ) or result.inserted_id:
                 self.log_info(
                     f"Successfully {'updated' if is_same_week else 'created'} pool with {len(all_stocks_data)} stocks from {len(all_strategy_names)} strategies"
                 )
@@ -648,9 +672,7 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
                     f"Successfully saved {len(all_stocks_data)} stocks from {len(all_strategy_names)} strategies"
                 )
             else:
-                self.logger.error(
-                    f"Failed to save stocks from strategies"
-                )
+                self.logger.error(f"Failed to save stocks from strategies")
 
             return success
         except Exception as e:
@@ -672,7 +694,9 @@ class WeeklyStockSelector(BaseAgent, DataProviderInterface):
             # Calculate total number of selected stocks across all strategies
             total_stocks = 0
             for strategy_name, strategy_result in strategy_results.items():
-                selected_stocks = strategy_result[0]  # First element is list of selected stocks
+                selected_stocks = strategy_result[
+                    0
+                ]  # First element is list of selected stocks
                 total_stocks += len(selected_stocks)
 
             # Save selection to pool

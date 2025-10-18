@@ -8,8 +8,7 @@ import os
 import logging
 
 # Add project root to path
-project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, project_root)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from data.mongodb_manager import MongoDBManager
 
@@ -17,13 +16,14 @@ from data.mongodb_manager import MongoDBManager
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def add_accelerating_uptrend_strategy():
     """Add the Accelerating Uptrend Strategy to the strategies collection"""
     db_manager = None
     try:
         # Initialize MongoDB manager
         db_manager = MongoDBManager()
-        
+
         # Define the new strategy
         strategy_data = {
             "name": "加速上涨策略",
@@ -33,20 +33,23 @@ def add_accelerating_uptrend_strategy():
                 "angle_threshold": 30,
                 "lookback_period": 20,
                 "volume_ratio_threshold": 1.2,
-                "acceleration_window": 2
+                "acceleration_window": 2,
             },
-            "program": "accelerating_uptrend_strategy.py"
+            "program": "accelerating_uptrend_strategy.py",
         }
-        
+
         # Check if strategy already exists
-        existing_strategy = db_manager.strategies_collection.find_one({"name": strategy_data["name"]})
-        
+        existing_strategy = db_manager.strategies_collection.find_one(
+            {"name": strategy_data["name"]}
+        )
+
         if existing_strategy:
-            logger.info(f"Strategy '{strategy_data['name']}' already exists. Updating...")
+            logger.info(
+                f"Strategy '{strategy_data['name']}' already exists. Updating..."
+            )
             # Update existing strategy
             result = db_manager.strategies_collection.update_one(
-                {"name": strategy_data["name"]},
-                {"$set": strategy_data}
+                {"name": strategy_data["name"]}, {"$set": strategy_data}
             )
             if result.modified_count > 0:
                 logger.info(f"Successfully updated strategy '{strategy_data['name']}'")
@@ -55,10 +58,14 @@ def add_accelerating_uptrend_strategy():
         else:
             # Insert new strategy
             result = db_manager.strategies_collection.insert_one(strategy_data)
-            logger.info(f"Successfully inserted strategy '{strategy_data['name']}' with ID: {result.inserted_id}")
-        
+            logger.info(
+                f"Successfully inserted strategy '{strategy_data['name']}' with ID: {result.inserted_id}"
+            )
+
         # Verify the strategy was added/updated
-        updated_strategy = db_manager.strategies_collection.find_one({"name": strategy_data["name"]})
+        updated_strategy = db_manager.strategies_collection.find_one(
+            {"name": strategy_data["name"]}
+        )
         if updated_strategy:
             logger.info("Strategy details:")
             logger.info(f"  Name: {updated_strategy['name']}")
@@ -66,13 +73,13 @@ def add_accelerating_uptrend_strategy():
             logger.info(f"  Description: {updated_strategy['description']}")
             logger.info(f"  Program: {updated_strategy['program']}")
             logger.info("  Parameters:")
-            for param, value in updated_strategy['parameters'].items():
+            for param, value in updated_strategy["parameters"].items():
                 logger.info(f"    {param}: {value}")
         else:
             logger.error("Failed to verify strategy insertion/update")
-            
+
         return True
-        
+
     except Exception as e:
         logger.error(f"Error adding strategy to database: {e}")
         return False
@@ -81,6 +88,6 @@ def add_accelerating_uptrend_strategy():
         if db_manager:
             db_manager.close_connection()
 
+
 if __name__ == "__main__":
     add_accelerating_uptrend_strategy()
-

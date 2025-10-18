@@ -560,6 +560,9 @@ class BullishGoldenCrossVolumeStrategy(BaseStrategy):
                 self.log_warning(f"处理股票 {code} 时出错: {e}")
                 continue
 
+        selected_stocks = sorted(
+            selected_stocks, key=lambda x: x.get("score", 0), reverse=True
+        )[:10]
         self.log_info(f"选中 {len(selected_stocks)} 只股票")
 
         # Automatically save results to pool collection
