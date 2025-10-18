@@ -63,8 +63,16 @@ def setup_chrome_driver(headless=True, max_retries=3, retry_delay=1):
             chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
             chrome_options.add_experimental_option("useAutomationExtension", False)
 
-            # 自动下载和设置ChromeDriver
-            service = Service(ChromeDriverManager().install())
+            # 自动下载和设置ChromeDriver，添加超时机制
+            logger.info("开始下载ChromeDriver...")
+            try:
+                service = Service(ChromeDriverManager().install())
+                logger.info("ChromeDriver下载完成")
+            except Exception as e:
+                logger.error(f"ChromeDriver下载失败: {e}")
+                logger.info("尝试使用系统已安装的ChromeDriver...")
+                # 如果自动下载失败，尝试使用系统路径中的chromedriver
+                service = Service()  # 不指定路径，使用系统PATH中的chromedriver
 
             # 创建WebDriver实例
             driver = webdriver.Chrome(service=service, options=chrome_options)

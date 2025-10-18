@@ -743,6 +743,35 @@ python -m backtesting.backtester
 - **PERFORMANCE IMPROVEMENT**: Reduced from N database queries to 1, significantly improving page load speed
 - **REMOVED**: Deleted unused strategy execution time API and frontend code
 
+### Network Error Retry Handler Enhancement
+- **COMPLETED**: Created centralized network error retry handler for consistent error handling across the system
+- **NEW FUNCTION**: Added `handle_network_error_with_retry` function in `utils/network_retry_handler.py`
+- **FEATURES**:
+  - Automatic retry mechanism with configurable retry count (default: 2)
+  - Configurable retry delay (default: 5 seconds)
+  - Comprehensive network error detection including connection aborted, remote disconnected, and rate limit errors
+  - Router IP switching capability for TP-Link WAN2 interface
+- **INTEGRATED**: Updated all network error handling functions to use the new centralized handler:
+  - `build_concept_index` function in down2mongo.py
+  - `write_k_daily` function in down2mongo.py
+  - `update_conception` function in down2mongo.py
+- **BENEFITS**:
+  - Code simplification: Reduced from 10+ lines to 1-2 lines per error handler
+  - Consistency: All network errors handled with same logic
+  - Maintainability: Single point of modification for retry strategies
+  - Flexibility: Customizable retry parameters
+  - Extensibility: Can be used anywhere in the project
+
+### ChromeDriver Download Optimization
+- **FIXED**: Resolved ChromeDriver download hanging issue in router control functionality
+- **ENHANCED**: Added robust ChromeDriver download mechanism with fallback to system PATH
+- **FEATURES**:
+  - Download progress logging
+  - Exception handling for download failures
+  - Automatic fallback to system-installed ChromeDriver
+  - Retry mechanism with exponential backoff
+- **VERIFIED**: Router control now works reliably without blocking on ChromeDriver downloads
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-17*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-18*
 

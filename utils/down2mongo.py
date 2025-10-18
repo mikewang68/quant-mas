@@ -8,13 +8,15 @@ import time
 import json
 import sys
 import os
-import datetime
+from datetime import datetime
 
 # Add the project root to the Python path to resolve imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the MongoDB configuration from the project
 from config.mongodb_config import MongoDBConfig
+
+from utils.network_error_handler import handle_network_error
 
 
 # 连接mongodb中的stock数据库
@@ -140,7 +142,7 @@ def set_lastest_date(db):
 
 
 # 写日k线 - 仅负责从akshare获取数据并写入k_data集合
-def write_k_daily(db, code, start_date=""):
+def write_k_daily(db, code, start_date="") -> bool:
     """
     从akshare获取指定股票代码的日K线数据并写入k_data集合
 
@@ -149,7 +151,7 @@ def write_k_daily(db, code, start_date=""):
     :param start_date: 开始日期，格式为"YYYYMMDD"，如果为空则获取全部数据
     :return: 成功返回True，失败返回False
     """
-    end_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+    end_date = datetime.now().strftime("%Y%m%d")
 
     try:
         print(f"daily: {code}")
@@ -223,179 +225,16 @@ def write_k_daily(db, code, start_date=""):
             return True
         else:
             print(f"Warning: No data found for code {code}")
-            return False
+            return True
 
     except Exception as e:
         print(f"Error downloading data for code {code}: {str(e)}")
 
-        # 使用公共网络错误处理函数处理网络错误
-        if NETWORK_ERROR_HANDLER_AVAILABLE:
-            router_config = {
-                "router_ip": "192.168.1.1",
-                "username": "wangdg68",
-                "password": "wap951020ZJL",
-            }
-            handle_network_error(e, [], router_config=router_config)
-
+        # 使用公共网络错误重试函数
+        from utils.network_retry_handler import handle_network_error_with_retry
+        if not handle_network_error_with_retry(e):
+            print(f"经过重试后仍然失败，跳过股票{code}")
         return False
-
-
-def check_and_download_missing_data(db):
-    """
-    检查并下载缺失的数据
-    在程序结束前，检查是否所有股票数据都已下载，如果没有则下载缺失的数据
-    """
-    print("Checking for missing data...")
-
-    # 获取所有股票代码
-    code_df = get_code_name(db)
-    all_codes = code_df["code"].tolist()
-
-    # 获取在 k_data 中没有数据的股票代码
-    missing_codes_df = find_missing_k_data(db)
-    missing_codes = (
-        missing_codes_df["missing_codes"].tolist() if not missing_codes_df.empty else []
-    )
-
-    if missing_codes:
-        print(f"Found {len(missing_codes)} stocks with missing data: {missing_codes}")
-
-        # 强制更新这些缺失数据的股票
-        df_code = get_stocks_to_update(db, force_update_missing=True)
-
-        if not df_code.empty:
-            print(f"Attempting to download data for {len(df_code)} missing stocks...")
-
-            # 为缺失的数据下载创建一个简化版本的下载逻辑
-            failed_codes = []
-
-            for _, row in df_code.iterrows():
-                code = row["code"]
-                start_date = row.get("last_updated", "")
-
-                try:
-                    print(f"Downloading missing data for: {code}")
-                    success = write_k_daily(db, code, start_date)
-
-                    if success:
-                        # 更新code数据集，将当前日期写入last_updated字段
-                        current_date = time.strftime(
-                            "%Y%m%d", time.localtime(time.time())
-                        )
-                        db["code"].update_one(
-                            {"_id": code},
-                            {"$set": {"last_updated": current_date}},
-                            upsert=True,
-                        )
-                        print(f"Successfully downloaded missing data for: {code}")
-                    else:
-                        print(f"Warning: No data found for missing code {code}")
-                        failed_codes.append(code)
-
-                except Exception as e:
-                    print(f"Error downloading missing data for code {code}: {str(e)}")
-                    failed_codes.append(code)
-
-                    # 使用公共网络错误处理函数处理网络错误
-                    if NETWORK_ERROR_HANDLER_AVAILABLE:
-                        router_config = {
-                            "router_ip": "192.168.1.1",
-                            "username": "wangdg68",
-                            "password": "wap951020ZJL",
-                        }
-                        handle_network_error(e, [], router_config=router_config)
-
-            # 如果还有失败的代码，尝试重试
-            if failed_codes:
-                print(f"Retrying {len(failed_codes)} failed codes for missing data...")
-                still_failed_codes = retry_failed_codes(db, failed_codes)
-                if still_failed_codes:
-                    print(
-                        f"Still failed to download data for {len(still_failed_codes)} missing codes: {still_failed_codes}"
-                    )
-                    return still_failed_codes
-                else:
-                    print("All missing data successfully downloaded.")
-                    return []
-            else:
-                print("All missing data successfully downloaded.")
-                return []
-        else:
-            print("No missing data to download.")
-            return []
-    else:
-        print("No missing data found.")
-        return []
-
-
-def retry_failed_codes(db, failed_codes):
-    """
-    重新尝试下载失败的股票代码数据
-    """
-    if not failed_codes:
-        print("No failed codes to retry.")
-        return []
-
-    print(f"Retrying {len(failed_codes)} failed codes: {failed_codes}")
-
-    still_failed_codes = []
-
-    for code in failed_codes:
-        max_retries = 3
-        retry_count = 0
-        success = False
-
-        while retry_count < max_retries and not success:
-            try:
-                print(f"Retrying ({retry_count + 1}/{max_retries}) code: {code}")
-
-                # 获取该股票的最后更新日期
-                code_doc = db["code"].find_one({"code": code})
-                start_date = code_doc.get("last_updated", "") if code_doc else ""
-
-                success = write_k_daily(db, code, start_date)
-
-                if success:
-                    # 更新code数据集，将当前日期写入last_updated字段
-                    current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
-                    db["code"].update_one(
-                        {"_id": code},
-                        {"$set": {"last_updated": current_date}},
-                        upsert=True,
-                    )
-                    print(f"Successfully downloaded data for code: {code}")
-                else:
-                    print(f"Warning: No data found for code {code} on retry.")
-                    retry_count += 1
-                    time.sleep(1)
-
-            except Exception as e:
-                retry_count += 1
-                print(
-                    f"Error retrying code {code} (attempt {retry_count}/{max_retries}): {str(e)}"
-                )
-                time.sleep(2)
-
-                # 使用公共网络错误处理函数处理网络错误
-                if NETWORK_ERROR_HANDLER_AVAILABLE and retry_count < max_retries:
-                    print(
-                        "Network error detected during retry. Handling with network error handler."
-                    )
-                    router_config = {
-                        "router_ip": "192.168.1.1",
-                        "username": "wangdg68",
-                        "password": "wap951020ZJL",
-                    }
-                    handle_network_error(e, [], router_config=router_config)
-                time.sleep(1)
-
-        if not success:
-            still_failed_codes.append(code)
-            print(
-                f"Failed to download data for code: {code} after {max_retries} retries"
-            )
-
-    return still_failed_codes
 
 
 def should_update_data(db):
@@ -408,11 +247,7 @@ def should_update_data(db):
     last_update_date = get_db_lastest_date(db)
 
     # 获取当前日期
-    current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
-
-    # 如果当前日期小于等于上次更新日期，不需要更新
-    if current_date <= last_update_date:
-        return False
+    current_date = datetime.now().strftime("%Y%m%d")
 
     try:
         # 获取交易日历
@@ -441,10 +276,41 @@ def should_update_data(db):
 
 def is_first_trading_day_of_month():
     """
-    检查是否是当月第一个交易日
-    简化实现：返回True
+    判断今天是否是当月的第一个交易日
     """
-    return True
+    try:
+        # 获取当前日期
+        current_date = time.strftime("%Y%m%d", time.localtime(time.time()))
+        current_dt = pd.to_datetime(current_date)
+
+        # 获取交易日历
+        trade_dates_df = ak.tool_trade_date_hist_sina()
+        trade_dates_df["trade_date"] = pd.to_datetime(trade_dates_df["trade_date"])
+
+        # 获取当前年份和月份
+        current_year = current_dt.year
+        current_month = current_dt.month
+
+        # 筛选出当前月份的交易日
+        month_trade_dates = trade_dates_df[
+            (trade_dates_df["trade_date"].dt.year == current_year)
+            & (trade_dates_df["trade_date"].dt.month == current_month)
+        ]
+
+        # 如果当前月份没有交易日，返回False
+        if month_trade_dates.empty:
+            return False
+
+        # 获取当前月份的第一个交易日
+        first_trading_day = month_trade_dates["trade_date"].min()
+
+        # 判断今天是否是第一个交易日
+        return current_dt.date() == first_trading_day.date()
+
+    except Exception as e:
+        print(f"Error checking first trading day: {e}")
+        # 出错时默认返回False，不执行行业更新
+        return False
 
 
 def update_industry(db):
@@ -537,11 +403,12 @@ def build_concept_index():
                     stock_concept_map[stock_code] = []
                 stock_concept_map[stock_code].append(concept)
 
-            # 限制请求频率
-            time.sleep(0.1)
-
         except Exception as e:
             print(f"获取概念{concept}失败: {e}")
+            # 使用公共网络错误重试函数
+            from utils.network_retry_handler import handle_network_error_with_retry
+            handle_network_error_with_retry(e)
+            print(f"跳过概念{concept}，继续处理其他概念")
             continue
 
     return concept_index, stock_concept_map
@@ -585,6 +452,12 @@ def update_conception(db):
 
     except Exception as e:
         print(f"更新概念信息时发生错误: {str(e)}")
+        # 使用公共网络错误重试函数
+        from utils.network_retry_handler import handle_network_error_with_retry
+        if handle_network_error_with_retry(e):
+            print("网络错误处理成功，建议重新运行更新")
+        else:
+            print("网络错误处理失败")
 
 
 def update_finance_data(db):
@@ -807,88 +680,72 @@ def update_finance_data(db):
         print(f"更新财务数据时发生错误: {str(e)}")
 
 
+# 获取需要更新的股票列表
+def get_should_update_code(db):
+    """
+    获取需要更新的股票代码
+    逻辑：
+    1. 如果update_date的lastest字段的日期与当前日期之间有交易日，则返回code中所有股票代码
+    2. 如果没有交易日，则检查code数据集中的last_updated字段的日期小于update_date数据集中lastest的股票代码
+    """
+    # 检查是否有交易日需要更新
+    if should_update_data(db):
+        # 有交易日，返回所有股票代码
+        my_coll = db["code"]
+        cursor = my_coll.find({})
+        df = pd.DataFrame(cursor)
+        return df
+    else:
+        # 没有交易日，返回last_updated小于lastest的股票代码
+        latest_date = get_db_lastest_date(db)
+        query = {
+            "$or": [
+                {"last_updated": {"$exists": False}},
+                {"last_updated": {"$lt": latest_date}},
+            ]
+        }
+        my_coll = db["code"]
+        cursor = my_coll.find(query)
+        df = pd.DataFrame(cursor)
+        return df
+
+
 def main():
     db = conn_mongo()
     update_code_name(db)
 
     # 检查是否是当月第一个交易日，如果是则更新行业信息、概念和财务数据
-    if is_first_trading_day_of_month():
+    if is_first_trading_day_of_month() or True:
         print(
             "Today is the first trading day of the month. Updating industry, conception, PE, and PB information..."
         )
-        update_industry(db)
-        # update_conception(db)
+        # update_industry(db)
+        update_conception(db)
         print("Updating finance data...")
-        update_finance_data(db)
+        # update_finance_data(db)
     else:
         print(
             "Today is not the first trading day of the month. Skipping industry and finance data update."
         )
 
-    # 检查是否需要更新数据
-    if should_update_data(db):
-        print(
-            "Trade days found between last update and current date. Starting data download..."
-        )
-
-        # 获取需要更新的股票列表
-        df_code = get_stocks_to_update(db)
-
-        if df_code.empty:
-            print("No stocks need to be updated.")
-        else:
-            print(f"Found {len(df_code)} stocks that need to be updated.")
-
-            # 循环处理每个需要更新的股票
-            failed_codes = []
-            for _, row in df_code.iterrows():
-                code = row["code"]
-                start_date = row.get("last_updated", "")
-
-                # 调用write_k_daily函数下载数据
-                success = write_k_daily(db, code, start_date)
-                if not success:
-                    failed_codes.append(code)
-
-                # 添加小延迟避免服务器过载
-                time.sleep(0.5)
-
-            # 重试失败的代码
-            if failed_codes:
-                print(f"Found {len(failed_codes)} failed codes. Retrying...")
-                still_failed_codes = retry_failed_codes(db, failed_codes)
-                if still_failed_codes:
-                    print(
-                        f"Still failed to download data for {len(still_failed_codes)} codes: {still_failed_codes}"
-                    )
-                else:
-                    print("All failed codes successfully downloaded on retry.")
-            else:
-                print("All stocks successfully updated.")
-
-        # 检查并下载缺失的数据
-        missing_failed_codes = check_and_download_missing_data(db)
-        if missing_failed_codes:
-            print(
-                f"Failed to download data for {len(missing_failed_codes)} missing codes: {missing_failed_codes}"
-            )
-        else:
-            print("All missing data successfully downloaded.")
-
-        # 更新最后更新日期
-        set_lastest_date(db)
-    else:
-        print(
-            "No trade days between last update and current date. Skipping data download."
-        )
-        # 即使不更新数据，也检查是否有缺失的数据需要下载
-        missing_failed_codes = check_and_download_missing_data(db)
-        if missing_failed_codes:
-            print(
-                f"Failed to download data for {len(missing_failed_codes)} missing codes: {missing_failed_codes}"
-            )
-        else:
-            print("All missing data successfully downloaded.")
+    # 获取需要更新的股票列表
+    # df = get_should_update_code(db)
+    # # 下载df中所有股票的日线数据
+    # while not df.empty:
+    #     for _, row in df.iterrows():
+    #         code = row["code"]
+    #         start_date = row.get("last_updated", "")
+    #         is_success = write_k_daily(db, code, start_date)
+    #         if is_success:
+    #             current_date = datetime.now().strftime("%Y%m%d")
+    #             db["code"].update_one(
+    #                 {"_id": code},
+    #                 {"$set": {"last_updated": current_date}},
+    #                 upsert=True,
+    #             )
+    #     df = get_should_update_code(db)
+    # set_lastest_date(db)
+    #
 
 
 if __name__ == "__main__":
