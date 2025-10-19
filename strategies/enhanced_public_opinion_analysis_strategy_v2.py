@@ -33,6 +33,11 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
     # 类级别的千股千评数据DataFrame
     _qian_gu_qian_ping_df = None
 
+    # 类级别的资金流数据DataFrame
+    _individual_fund_flow_df = None
+    _industry_fund_flow_df = None
+    _concept_fund_flow_df = None
+
     def __init__(self, name: str, params: Dict, db_manager: MongoDBManager = None):
         """
         初始化策略
@@ -48,6 +53,9 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
 
         # 在策略初始化时加载千股千评数据
         self._load_qian_gu_qian_ping_data()
+
+        # 在策略初始化时加载资金流数据
+        self._load_fund_flow_data()
 
     def _load_qian_gu_qian_ping_data(self):
         """
@@ -96,6 +104,216 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             EnhancedPublicOpinionAnalysisStrategyV2._qian_gu_qian_ping_df = (
                 pd.DataFrame()
             )
+
+    def _load_fund_flow_data(self):
+        """
+        加载资金流数据到类级别的DataFrame
+        """
+        try:
+            # 如果已经加载过，直接返回
+            if (
+                EnhancedPublicOpinionAnalysisStrategyV2._individual_fund_flow_df
+                is not None
+                and EnhancedPublicOpinionAnalysisStrategyV2._industry_fund_flow_df
+                is not None
+                and EnhancedPublicOpinionAnalysisStrategyV2._concept_fund_flow_df
+                is not None
+            ):
+                self.log_info("资金流数据已加载，跳过重复加载")
+                return
+
+            self.log_info("开始加载资金流数据...")
+
+            # 直接调用akshare的函数获取资金流数据
+            import akshare as ak
+
+            try:
+                # 获取个股资金流排名
+                individual_fund_flow = ak.stock_individual_fund_flow_rank("今日")
+                if not individual_fund_flow.empty:
+                    EnhancedPublicOpinionAnalysisStrategyV2._individual_fund_flow_df = (
+                        individual_fund_flow
+                    )
+                    self.log_info(
+                        f"成功加载个股资金流数据，包含 {len(individual_fund_flow)} 只股票"
+                    )
+                else:
+                    self.log_warning("获取到的个股资金流数据为空")
+                    EnhancedPublicOpinionAnalysisStrategyV2._individual_fund_flow_df = (
+                        pd.DataFrame()
+                    )
+
+                # 获取行业资金流排名
+                industry_fund_flow = ak.stock_sector_fund_flow_rank(
+                    "今日", "行业资金流"
+                )
+                if not industry_fund_flow.empty:
+                    EnhancedPublicOpinionAnalysisStrategyV2._industry_fund_flow_df = (
+                        industry_fund_flow
+                    )
+                    self.log_info(
+                        f"成功加载行业资金流数据，包含 {len(industry_fund_flow)} 个行业"
+                    )
+                else:
+                    self.log_warning("获取到的行业资金流数据为空")
+                    EnhancedPublicOpinionAnalysisStrategyV2._industry_fund_flow_df = (
+                        pd.DataFrame()
+                    )
+
+                # 获取概念资金流排名
+                concept_fund_flow = ak.stock_sector_fund_flow_rank("今日", "概念资金流")
+                if not concept_fund_flow.empty:
+                    EnhancedPublicOpinionAnalysisStrategyV2._concept_fund_flow_df = (
+                        concept_fund_flow
+                    )
+                    self.log_info(
+                        f"成功加载概念资金流数据，包含 {len(concept_fund_flow)} 个概念"
+                    )
+                else:
+                    self.log_warning("获取到的概念资金流数据为空")
+                    EnhancedPublicOpinionAnalysisStrategyV2._concept_fund_flow_df = (
+                        pd.DataFrame()
+                    )
+
+            except Exception as e:
+                self.log_error(f"调用akshare资金流函数失败: {e}")
+                # 使用公共网络错误重试函数
+                from utils.network_retry_handler import handle_network_error_with_retry
+
+                if not handle_network_error_with_retry(e):
+                    print(f"经过重试后仍然失败，跳过")
+
+        except Exception as e:
+            self.log_error(f"加载资金流数据时出错: {e}")
+            EnhancedPublicOpinionAnalysisStrategyV2._individual_fund_flow_df = (
+                pd.DataFrame()
+            )
+            EnhancedPublicOpinionAnalysisStrategyV2._industry_fund_flow_df = (
+                pd.DataFrame()
+            )
+            EnhancedPublicOpinionAnalysisStrategyV2._concept_fund_flow_df = (
+                pd.DataFrame()
+            )
+
+    def _get_fund_flow_data_for_stock(
+        self, stock_code: str, industry_info: Dict
+    ) -> Dict:
+        """
+        获取指定股票的资金流数据
+
+        Args:
+            stock_code: 股票代码
+            industry_info: 行业信息字典（包含industry和conception）
+
+        Returns:
+            资金流数据字典
+        """
+        try:
+            fund_flow_data = {
+                "individual_fund_flow": {},
+                "industry_fund_flow": {},
+                "concept_fund_flow": {},
+            }
+
+            # 获取个股资金流数据
+            if (
+                EnhancedPublicOpinionAnalysisStrategyV2._individual_fund_flow_df
+                is not None
+                and not EnhancedPublicOpinionAnalysisStrategyV2._individual_fund_flow_df.empty
+            ):
+                df = EnhancedPublicOpinionAnalysisStrategyV2._individual_fund_flow_df
+                # 查找股票代码匹配的数据
+                stock_data = df[df["代码"] == stock_code]
+                if not stock_data.empty:
+                    # 只提取需要的字段：今日涨跌幅、今日主力净流入-净占比
+                    stock_row = stock_data.iloc[0]
+                    filtered_individual_data = {
+                        "今日涨跌幅": stock_row.get("今日涨跌幅", "N/A"),
+                        "今日主力净流入-净占比": stock_row.get(
+                            "今日主力净流入-净占比", "N/A"
+                        ),
+                    }
+                    fund_flow_data["individual_fund_flow"] = filtered_individual_data
+                    self.log_info(f"从缓存中获取股票 {stock_code} 的个股资金流数据")
+
+            # 获取行业资金流数据
+            industry = industry_info.get("industry", "")
+            if (
+                EnhancedPublicOpinionAnalysisStrategyV2._industry_fund_flow_df
+                is not None
+                and not EnhancedPublicOpinionAnalysisStrategyV2._industry_fund_flow_df.empty
+                and industry
+            ):
+                df = EnhancedPublicOpinionAnalysisStrategyV2._industry_fund_flow_df
+                # 查找行业匹配的数据
+                industry_data = df[df["名称"] == industry]
+                if not industry_data.empty:
+                    # 只提取需要的字段：今日涨跌幅、今日主力净流入-净占比
+                    industry_row = industry_data.iloc[0]
+                    filtered_industry_data = {
+                        "今日涨跌幅": industry_row.get("今日涨跌幅", "N/A"),
+                        "今日主力净流入-净占比": industry_row.get(
+                            "今日主力净流入-净占比", "N/A"
+                        ),
+                    }
+                    fund_flow_data["industry_fund_flow"] = filtered_industry_data
+                    self.log_info(f"从缓存中获取行业 {industry} 的资金流数据")
+
+            # 获取概念资金流数据
+            conception = industry_info.get("conception", [])
+            if (
+                EnhancedPublicOpinionAnalysisStrategyV2._concept_fund_flow_df
+                is not None
+                and not EnhancedPublicOpinionAnalysisStrategyV2._concept_fund_flow_df.empty
+                and conception
+            ):
+                df = EnhancedPublicOpinionAnalysisStrategyV2._concept_fund_flow_df
+                # 查找概念匹配的数据 - conception是一个数组，包含多个概念名称
+                concept_flow_data = []
+                if isinstance(conception, list):
+                    for concept_name in conception:
+                        concept_data = df[df["名称"] == concept_name]
+                        if not concept_data.empty:
+                            # 只提取需要的字段：今日涨跌幅和日主力净流入-净额
+                            concept_row = concept_data.iloc[0]
+                            filtered_concept_data = {
+                                "概念名称": concept_name,
+                                "今日涨跌幅": concept_row.get("今日涨跌幅", "N/A"),
+                                "今日主力净流入-净占比": concept_row.get(
+                                    "今日主力净流入-净占比", "N/A"
+                                ),
+                            }
+                            concept_flow_data.append(filtered_concept_data)
+                            self.log_info(
+                                f"从缓存中获取概念 {concept_name} 的资金流数据"
+                            )
+                elif isinstance(conception, str):
+                    concept_data = df[df["名称"] == conception]
+                    if not concept_data.empty:
+                        # 只提取需要的字段：概念名称、今日涨跌幅、今日主力净流入-净占比
+                        concept_row = concept_data.iloc[0]
+                        filtered_concept_data = {
+                            "概念名称": conception,
+                            "今日涨跌幅": concept_row.get("今日涨跌幅", "N/A"),
+                            "今日主力净流入-净占比": concept_row.get(
+                                "今日主力净流入-净占比", "N/A"
+                            ),
+                        }
+                        concept_flow_data.append(filtered_concept_data)
+                        self.log_info(f"从缓存中获取概念 {conception} 的资金流数据")
+
+                if concept_flow_data:
+                    fund_flow_data["concept_fund_flow"] = concept_flow_data
+            self.log_info(f"Fund flow data collected: {fund_flow_data}")
+            return fund_flow_data
+
+        except Exception as e:
+            self.log_warning(f"获取资金流数据失败: {e}")
+            return {
+                "individual_fund_flow": {},
+                "industry_fund_flow": {},
+                "concept_fund_flow": {},
+            }
 
     def _get_qian_gu_qian_ping_data_for_stock(self, stock_code: str) -> Dict:
         """
@@ -327,6 +545,7 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 "stock_info": {"code": stock_code, "name": stock_name},
                 "akshare_news": [],
                 "industry_info": {},
+                "fund_flow_data": {},
                 "qian_gu_qian_ping_data": {},
                 "detailed_guba_data": {},
                 "guba_data": {},
@@ -369,6 +588,21 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             except Exception as e:
                 self.log_warning(f"获取行业和概念信息失败: {e}")
                 all_data["industry_info"] = {}
+
+            # 收集资金流数据
+            try:
+                fund_flow_data = self._get_fund_flow_data_for_stock(
+                    stock_code, all_data["industry_info"]
+                )
+                all_data["fund_flow_data"] = fund_flow_data
+                self.log_info(f"成功获取资金流数据用于 {stock_code}")
+            except Exception as e:
+                self.log_warning(f"获取资金流数据失败: {e}")
+                all_data["fund_flow_data"] = {
+                    "individual_fund_flow": {},
+                    "industry_fund_flow": {},
+                    "concept_fund_flow": {},
+                }
 
             # # 收集千股千评数据 - 从缓存中获取
             try:
@@ -458,6 +692,44 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                     formatted_text += f"  行业: {industry_info['industry']}\n"
                 if "conception" in industry_info:
                     formatted_text += f"  概念: {industry_info['conception']}\n"
+                formatted_text += "\n"
+
+            # 添加资金流数据
+            if all_data.get("fund_flow_data"):
+                formatted_text += "资金流数据:\n"
+                fund_flow_data = all_data["fund_flow_data"]
+
+                # 添加个股资金流数据
+                if fund_flow_data.get("individual_fund_flow"):
+                    individual_data = fund_flow_data["individual_fund_flow"]
+                    if individual_data:
+                        formatted_text += "  个股资金流:\n"
+                        # 显示关键资金流指标 - 使用正确的字段名
+                        if "今日涨跌幅" in individual_data:
+                            formatted_text += f"    今日涨跌幅: {individual_data.get('今日涨跌幅', 'N/A')}%\n"
+                        if "今日主力净流入-净占比" in individual_data:
+                            formatted_text += f"    今日主力净流入-净占比: {individual_data.get('今日主力净流入-净占比', 'N/A')}%\n"
+
+                # 添加行业资金流数据
+                if fund_flow_data.get("industry_fund_flow"):
+                    industry_data = fund_flow_data["industry_fund_flow"]
+                    if industry_data:
+                        formatted_text += "  行业资金流:\n"
+                        # 显示关键资金流指标 - 使用正确的字段名
+                        if "今日涨跌幅" in industry_data:
+                            formatted_text += f"    今日涨跌幅: {industry_data.get('今日涨跌幅', 'N/A')}%\n"
+                        if "今日主力净流入-净占比" in industry_data:
+                            formatted_text += f"    今日主力净流入-净占比: {industry_data.get('今日主力净流入-净占比', 'N/A')}%\n"
+
+                # 添加概念资金流数据
+                if fund_flow_data.get("concept_fund_flow"):
+                    concept_data = fund_flow_data["concept_fund_flow"]
+                    if concept_data:
+                        formatted_text += "  概念资金流:\n"
+                        # 显示关键资金流指标 - 显示前5个概念
+                        for i, concept in enumerate(concept_data[:5], 1):
+                            formatted_text += f"    {i}. {concept.get('概念名称', 'N/A')}: 今日涨跌幅 {concept.get('今日涨跌幅', 'N/A')}%, 主力净流入-净占比 {concept.get('今日主力净流入-净占比', 'N/A')}%\n"
+
                 formatted_text += "\n"
 
             # 添加千股千评数据

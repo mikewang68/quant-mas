@@ -772,6 +772,21 @@ python -m backtesting.backtester
   - Retry mechanism with exponential backoff
 - **VERIFIED**: Router control now works reliably without blocking on ChromeDriver downloads
 
+### Enhanced Public Opinion Analysis Strategy V2 Fund Flow Data Formatting Fix
+- **FIXED**: Resolved fund flow data display issue where individual, industry, and concept fund flow data were not appearing in LLM user prompts
+- **ROOT CAUSE**: Field name mismatches between actual data structure and formatting logic
+- **FIXES IMPLEMENTED**:
+  - Updated field names in `_format_data_for_llm` method to match actual data structure:
+    - "今日涨跌幅" instead of "涨跌幅"
+    - "今日主力净流入-净占比" instead of "主力净流入"
+  - Fixed concept fund flow display to show individual concept items with proper formatting
+  - Fixed logger error in `_get_fund_flow_data_for_stock` method
+- **VERIFIED**: All fund flow data now correctly displays in user prompts with proper formatting:
+  - Individual fund flow: 今日涨跌幅 and 今日主力净流入-净占比
+  - Industry fund flow: 今日涨跌幅 and 今日主力净流入-净占比
+  - Concept fund flow: 概念名称, 今日涨跌幅, and 今日主力净流入-净占比 for top 5 concepts
+- **TESTED**: Comprehensive testing confirms fund flow data is properly collected, formatted, and included in LLM analysis
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-18*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-19*
 
