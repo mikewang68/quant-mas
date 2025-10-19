@@ -184,19 +184,18 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
                 {"_id": latest_pool_record["_id"]},
                 {
                     "$set": {
-                        update_field: {
-                            "score": score,
-                            "value": value
-                        },
-                        "pub_at": datetime.now()
+                        update_field: {"score": score, "value": value},
+                        "pub_at": datetime.now(),
                     }
-                }
+                },
             )
 
             if result.modified_count > 0:
                 self.log_info(f"成功更新股票 {stock_code} 的pub字段")
             else:
-                self.log_info(f"股票 {stock_code} 的pub字段未更新（可能已存在相同数据）")
+                self.log_info(
+                    f"股票 {stock_code} 的pub字段未更新（可能已存在相同数据）"
+                )
 
         except Exception as e:
             self.log_error(f"更新pool数据库时出错: {e}")
@@ -347,11 +346,29 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
 
             # 收集行业信息
             try:
-                industry_info = self.akshare_client.get_stock_industry_info(stock_code)
-                all_data["industry_info"] = industry_info
-                self.log_info(f"Retrieved industry information for {stock_code}")
+                # 从stock数据库中的code数据集获取industry和conception信息
+                if self.db_manager:
+                    stock_info = self.db_manager.stock_codes_collection.find_one(
+                        {"code": stock_code}
+                    )
+                    if stock_info:
+                        industry_info = {
+                            "industry": stock_info.get("industry", ""),
+                            "conception": stock_info.get("conception", ""),
+                        }
+                        all_data["industry_info"] = industry_info
+                        self.log_info(
+                            f"从数据库获取行业和概念信息: {stock_code} - 行业: {industry_info.get('industry', 'N/A')}, 概念: {industry_info.get('conception', 'N/A')}"
+                        )
+                    else:
+                        self.log_warning(f"未找到股票 {stock_code} 的行业和概念信息")
+                        all_data["industry_info"] = {}
+                else:
+                    self.log_warning("没有数据库管理器，无法获取行业和概念信息")
+                    all_data["industry_info"] = {}
             except Exception as e:
-                self.log_warning(f"获取行业信息失败: {e}")
+                self.log_warning(f"获取行业和概念信息失败: {e}")
+                all_data["industry_info"] = {}
 
             # # 收集千股千评数据 - 从缓存中获取
             try:
@@ -436,8 +453,11 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             # 添加行业信息
             if all_data["industry_info"]:
                 formatted_text += "行业信息:\n"
-                for key, value in all_data["industry_info"].items():
-                    formatted_text += f"  {key}: {value}\n"
+                industry_info = all_data["industry_info"]
+                if "industry" in industry_info:
+                    formatted_text += f"  行业: {industry_info['industry']}\n"
+                if "conception" in industry_info:
+                    formatted_text += f"  概念: {industry_info['conception']}\n"
                 formatted_text += "\n"
 
             # 添加千股千评数据
