@@ -232,6 +232,7 @@ def write_k_daily(db, code, start_date="") -> bool:
 
         # 使用公共网络错误重试函数
         from utils.network_retry_handler import handle_network_error_with_retry
+
         if not handle_network_error_with_retry(e):
             print(f"经过重试后仍然失败，跳过股票{code}")
         return False
@@ -407,6 +408,7 @@ def build_concept_index():
             print(f"获取概念{concept}失败: {e}")
             # 使用公共网络错误重试函数
             from utils.network_retry_handler import handle_network_error_with_retry
+
             handle_network_error_with_retry(e)
             print(f"跳过概念{concept}，继续处理其他概念")
             continue
@@ -454,6 +456,7 @@ def update_conception(db):
         print(f"更新概念信息时发生错误: {str(e)}")
         # 使用公共网络错误重试函数
         from utils.network_retry_handler import handle_network_error_with_retry
+
         if handle_network_error_with_retry(e):
             print("网络错误处理成功，建议重新运行更新")
         else:
@@ -715,7 +718,7 @@ def main():
     update_code_name(db)
 
     # 检查是否是当月第一个交易日，如果是则更新行业信息、概念和财务数据
-    if is_first_trading_day_of_month() or True:
+    if is_first_trading_day_of_month():
         print(
             "Today is the first trading day of the month. Updating industry, conception, PE, and PB information..."
         )
@@ -729,23 +732,22 @@ def main():
         )
 
     # 获取需要更新的股票列表
-    # df = get_should_update_code(db)
-    # # 下载df中所有股票的日线数据
-    # while not df.empty:
-    #     for _, row in df.iterrows():
-    #         code = row["code"]
-    #         start_date = row.get("last_updated", "")
-    #         is_success = write_k_daily(db, code, start_date)
-    #         if is_success:
-    #             current_date = datetime.now().strftime("%Y%m%d")
-    #             db["code"].update_one(
-    #                 {"_id": code},
-    #                 {"$set": {"last_updated": current_date}},
-    #                 upsert=True,
-    #             )
-    #     df = get_should_update_code(db)
-    # set_lastest_date(db)
-    #
+    df = get_should_update_code(db)
+    # 下载df中所有股票的日线数据
+    while not df.empty:
+        for _, row in df.iterrows():
+            code = row["code"]
+            start_date = row.get("last_updated", "")
+            is_success = write_k_daily(db, code, start_date)
+            if is_success:
+                current_date = datetime.now().strftime("%Y%m%d")
+                db["code"].update_one(
+                    {"_id": code},
+                    {"$set": {"last_updated": current_date}},
+                    upsert=True,
+                )
+        df = get_should_update_code(db)
+    set_lastest_date(db)
 
 
 if __name__ == "__main__":

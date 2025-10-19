@@ -1422,7 +1422,7 @@ def register_routes(app: Flask):
                     "price": stock_k_data.get("price", 0.0),
                     "change_percent": stock_k_data.get("change_percent", 0.0),
                     "turnover_rate": stock_k_data.get("turnover_rate", 0.0),
-                    "signal": stock.get("signal", {}),
+                    "signals": stock.get("signals", {}),
                     "trend": {
                         "score": stock.get("trend", {}).get("score", 0.0)
                         if stock.get("trend")

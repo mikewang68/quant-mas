@@ -82,7 +82,7 @@
 
                 data.forEach(stock => {
                     // Extract signals data - this is the actual signals field from the database
-                    const signals = stock.signal || {};
+                    const signals = stock.signals || {};
 
                     // Initialize variables to store values
                     let action = '';
