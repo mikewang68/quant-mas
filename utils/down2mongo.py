@@ -692,25 +692,22 @@ def get_should_update_code(db):
     2. 如果没有交易日，则检查code数据集中的last_updated字段的日期小于update_date数据集中lastest的股票代码
     """
     # 检查是否有交易日需要更新
-    if should_update_data(db):
-        # 有交易日，返回所有股票代码
-        my_coll = db["code"]
-        cursor = my_coll.find({})
-        df = pd.DataFrame(cursor)
-        return df
-    else:
+    # 有交易日，返回没有更新的所有股票代码
+    latest_date = datetime.now().strftime("%Y%m%d")
+
+    if not should_update_data(db):
         # 没有交易日，返回last_updated小于lastest的股票代码
         latest_date = get_db_lastest_date(db)
-        query = {
-            "$or": [
-                {"last_updated": {"$exists": False}},
-                {"last_updated": {"$lt": latest_date}},
-            ]
-        }
-        my_coll = db["code"]
-        cursor = my_coll.find(query)
-        df = pd.DataFrame(cursor)
-        return df
+    query = {
+        "$or": [
+            {"last_updated": {"$exists": False}},
+            {"last_updated": {"$lt": latest_date}},
+        ]
+    }
+    my_coll = db["code"]
+    cursor = my_coll.find(query)
+    df = pd.DataFrame(cursor)
+    return df
 
 
 def main():
