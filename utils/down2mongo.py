@@ -233,7 +233,7 @@ def write_k_daily(db, code, start_date="") -> bool:
         # 使用公共网络错误重试函数
         from utils.network_retry_handler import handle_network_error_with_retry
 
-        if not handle_network_error_with_retry(e):
+        if not handle_network_error_with_retry(e, 50):
             print(f"经过重试后仍然失败，跳过股票{code}")
         return False
 

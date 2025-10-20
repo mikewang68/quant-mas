@@ -8,13 +8,15 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def handle_network_error_with_retry(error: Exception, max_retries: int = 2, retry_delay: int = 5) -> bool:
+def handle_network_error_with_retry(
+    error: Exception, max_retries: int = 10, retry_delay: int = 5
+) -> bool:
     """
     处理网络错误的公共函数，包含重试机制
 
     Args:
         error (Exception): 捕获到的异常
-        max_retries (int): 最大重试次数，默认2次
+        max_retries (int): 最大重试次数，默认10次
         retry_delay (int): 重试间隔（秒），默认5秒
 
     Returns:
@@ -38,4 +40,3 @@ def handle_network_error_with_retry(error: Exception, max_retries: int = 2, retr
         return False
 
     return True
-
