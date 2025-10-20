@@ -550,13 +550,13 @@ class SignalGenerationV1Strategy(BaseStrategy):
     def _get_global_strategy_count(self, db_manager) -> int:
         """
         Get the global strategy count from the latest pool record.
-        This counts the actual strategies that have contributed data to the pool.
+        This counts all unique strategies across all stocks in the pool.
 
         Args:
             db_manager: Database manager instance
 
         Returns:
-            int: Count of strategies that have contributed data to the pool
+            int: Count of all unique strategies across all stocks
         """
         try:
             # Get the latest pool record
@@ -574,20 +574,23 @@ class SignalGenerationV1Strategy(BaseStrategy):
                 self.log_error("No stocks found in latest pool record")
                 return 0
 
-            # Count strategies from the first stock (all stocks should have the same strategy structure)
-            first_stock = pool_stocks[0]
-            strategy_count = 0
+            # Collect all unique strategies across all stocks
+            all_strategies = set()
 
-            # Process all fields except 'signal', 'code', and 'signals'
-            for field_name, field_value in first_stock.items():
-                # Skip non-dict fields and excluded fields
-                if field_name in ['signal', 'code', 'signals'] or not isinstance(field_value, dict):
-                    continue
+            for stock in pool_stocks:
+                # Process all fields except 'signal', 'code', and 'signals'
+                for field_name, field_value in stock.items():
+                    # Skip non-dict fields and excluded fields
+                    if field_name in ['signal', 'code', 'signals'] or not isinstance(field_value, dict):
+                        continue
 
-                # Count strategies in this field
-                strategy_count += len(field_value)
+                    # Add all strategies in this field
+                    for strategy_name in field_value.keys():
+                        strategy_key = f"{field_name}_{strategy_name}"
+                        all_strategies.add(strategy_key)
 
-            self.log_info(f"Found {strategy_count} strategies in latest pool record")
+            strategy_count = len(all_strategies)
+            self.log_info(f"Found {strategy_count} unique strategies across all stocks in latest pool record")
             return strategy_count
 
         except Exception as e:
