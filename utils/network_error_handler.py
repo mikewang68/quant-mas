@@ -63,10 +63,23 @@ def is_rate_limit_error(error_str: str) -> bool:
         "network is unreachable",
         "no route to host",
         "name or service not known",
+        # 爬虫重定向限制
+        "主动触发IP更换",
     ]
 
     error_lower = error_str.lower()
-    return any(indicator in error_lower for indicator in network_error_indicators)
+    # 对于中文文本，直接使用原字符串进行比较，因为中文没有大小写区分
+    # 对于英文文本，使用小写进行比较
+    for indicator in network_error_indicators:
+        # 如果指示器包含中文字符，直接比较原字符串
+        if any('一' <= char <= '鿿' for char in indicator):
+            if indicator in error_str:
+                return True
+        else:
+            # 对于英文指示器，使用小写比较
+            if indicator.lower() in error_lower:
+                return True
+    return False
 
 
 def handle_network_error(

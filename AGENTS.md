@@ -298,6 +298,13 @@ The Quant MAS (Multi-Agent System) is a quantitative trading platform with multi
 - Created verification script `test/verify_fundamental_scores.py` to check pool data integrity
 - Updated documentation to include fundamental selector in usage patterns
 - Fundamental selector properly loads strategies from database and executes LLM-based fundamental analysis
+
+### Network Error Handler Fix for Enhanced Public Opinion Analysis Strategy
+- **FIXED**: Resolved issue where fake error "主动触发IP更换" was not being recognized as a rate limit error
+- Modified `is_rate_limit_error` function in `utils/network_error_handler.py` to properly handle Chinese text
+- Added special logic for Chinese characters: direct string comparison instead of lowercase conversion
+- Verified that "主动触发IP更换" is now correctly identified as a rate limit error
+- Ensures proper IP switching when processing 8 stocks in Enhanced Public Opinion Analysis Strategy V2
 - Results are correctly written to the pool collection with fund field containing strategy scores and analysis
 - **OPTIMIZED**: Added logic to skip stock analysis when valid scores already exist in pool data, reducing unnecessary LLM calls during network issues
 

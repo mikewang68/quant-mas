@@ -622,11 +622,26 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
             except Exception as e:
                 self.log_warning(f"获取详细Guba数据失败: {e}")
 
-            # 收集Guba数据
+            # 收集Guba数据(股吧数据)
             try:
                 guba_data = self._get_guba_data(stock_code)
                 all_data["guba_data"] = guba_data
                 self.log_info(f"Retrieved Guba data for {stock_code}")
+
+                # 计数，处理8个股票后更换IP
+                stock_count = getattr(self, "_stock_count", 0) + 1
+                self._stock_count = stock_count
+
+                if stock_count % 8 == 0:
+                    self.log_info(f"已处理 {stock_count} 个股票，准备更换IP")
+                    from utils.network_retry_handler import (
+                        handle_network_error_with_retry,
+                    )
+
+                    # 创建一个模拟的网络错误来触发IP更换
+                    fake_error = Exception("主动触发IP更换")
+                    handle_network_error_with_retry(fake_error)
+                # time.sleep(60)
             except Exception as e:
                 self.log_warning(f"获取Guba数据失败: {e}")
 
