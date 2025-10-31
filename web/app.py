@@ -1328,6 +1328,20 @@ def register_routes(app: Flask):
             # Extract stocks information
             stocks = latest_record.get("stocks", [])
 
+            # Get trend filter from query parameters
+            trend_filter = request.args.get("trend_filter", "")
+
+            # Filter stocks by trend strategy if specified
+            if trend_filter:
+                filtered_stocks = []
+                for stock in stocks:
+                    trend_data = stock.get("trend", {})
+                    # Check if the stock has data for the specified trend strategy
+                    if trend_filter in trend_data:
+                        filtered_stocks.append(stock)
+                stocks = filtered_stocks
+                logger.info(f"Applied trend filter '{trend_filter}', found {len(stocks)} stocks")
+
             # Get stock codes for fetching data
             stock_codes = [stock.get("code") for stock in stocks if stock.get("code")]
 
@@ -1423,14 +1437,7 @@ def register_routes(app: Flask):
                     "change_percent": stock_k_data.get("change_percent", 0.0),
                     "turnover_rate": stock_k_data.get("turnover_rate", 0.0),
                     "signals": stock.get("signals", {}),
-                    "trend": {
-                        "score": stock.get("trend", {}).get("score", 0.0)
-                        if stock.get("trend")
-                        else 0.0,
-                        "value": stock.get("trend", {}).get("value", "")
-                        if stock.get("trend")
-                        else "",
-                    },
+                    "trend": stock.get("trend", {}),
                     "tech": stock.get("tech", {}),
                     "fund": stock.get("fund", {}),
                     "pub": stock.get("pub", {}),
@@ -1612,6 +1619,46 @@ def register_routes(app: Flask):
         except Exception as e:
             logger.error(f"Error getting all last execution times: {e}")
             return jsonify({"all_times": {}}), 200
+
+    @app.route("/api/latest-pool-strategies")
+    def get_latest_pool_strategies():
+        """Get the latest strategy names from pool data"""
+        try:
+            # Check if MongoDB connection is available
+            if app.config["MONGO_DB"] is None:
+                logger.error("MongoDB connection not available")
+                return jsonify({"strategies": []}), 200
+
+            # Get pool collection
+            pool_collection = app.config["MONGO_DB"]["pool"]
+
+            # Find the latest record sorted by _id (which contains the date)
+            latest_record = pool_collection.find_one(sort=[("_id", -1)])
+
+            if not latest_record:
+                logger.warning("No records found in pool collection")
+                return jsonify({"strategies": []}), 200
+
+            # Extract stocks information
+            stocks = latest_record.get("stocks", [])
+
+            # Collect unique strategy names from trend field
+            strategy_names = set()
+            for stock in stocks:
+                trend_data = stock.get("trend", {})
+                # Look for strategy keys in trend data
+                for key in trend_data.keys():
+                    if key not in ["score", "value"]:  # Skip non-strategy fields
+                        strategy_names.add(key)
+
+            # Convert set to sorted list
+            strategies_list = sorted(list(strategy_names))
+
+            return jsonify({"strategies": strategies_list}), 200
+
+        except Exception as e:
+            logger.error(f"Error getting latest pool strategies: {e}")
+            return jsonify({"strategies": []}), 200
 
     @app.route("/api/pool-data/<code>")
     def get_pool_data_by_code(code):

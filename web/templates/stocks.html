@@ -15,16 +15,24 @@
 <div class="row mb-1">
     <div class="col-md-12">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-search"></i> 股票查询
-                </h5>
+            <div class="card-header d-flex align-items-center justify-content-between">
                 <div class="d-flex align-items-center">
-                    <label for="stock-search" class="form-label me-2 mb-0">输入股票代码、名称或拼音缩写</label>
-                    <input type="text" class="form-control form-control-sm me-2" id="stock-search" placeholder="例如：000001 或 平安银行 或 PAYH" style="width: 300px;">
-                    <button class="btn btn-primary" id="search-stock">
-                        <i class="fas fa-search"></i> 查询
-                    </button>
+                    <h5 class="mb-0 me-3">
+                        <i class="fas fa-search"></i> 股票查询
+                    </h5>
+                    <div class="d-flex align-items-center">
+                        <input type="text" class="form-control form-control-sm me-2" id="stock-search" placeholder="000001 或 平安银行 或 PAYH" style="width: 225px;">
+                        <button class="btn btn-primary" id="search-stock">
+                            <i class="fas fa-search"></i> 查询
+                        </button>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center">
+                    <span class="me-2">趋势筛选：</span>
+                    <select class="form-select form-select-sm" id="trend-filter" style="width: 300px;">
+                        <option value="">全部</option>
+                        <!-- 策略选项将通过JavaScript动态加载 -->
+                    </select>
                 </div>
             </div>
         </div>
@@ -137,7 +145,24 @@
                     `;
                     // Add double-click event to open K-line chart
                     row.addEventListener('dblclick', function() {
-                        window.open(`/stock-kline?code=${stock.code}&name=${encodeURIComponent(stock.name || stock.code)}`, '_blank');
+                        // Get current trend filter
+                        const trendFilter = document.getElementById('trend-filter').value;
+
+                        // Get the current filtered stocks data
+                        const filteredStocks = getCurrentFilteredStocks();
+
+                        // Create URL with stock data
+                        let url = `/stock-kline?code=${stock.code}&name=${encodeURIComponent(stock.name || stock.code)}`;
+                        if (trendFilter) {
+                            url += `&trend_filter=${encodeURIComponent(trendFilter)}`;
+                        }
+
+                        // Store filtered stocks data in localStorage for the K-line page to use
+                        if (filteredStocks && filteredStocks.length > 0) {
+                            localStorage.setItem('filteredStocksData', JSON.stringify(filteredStocks));
+                        }
+
+                        window.open(url, '_blank');
                     });
                     tbody.appendChild(row);
                 });
@@ -147,6 +172,96 @@
                 const tbody = document.getElementById('pool-stocks-body');
                 tbody.innerHTML = '<tr><td colspan="10" class="text-center text-danger">加载数据失败</td></tr>';
             });
+    }
+
+    // Function to display filtered stocks
+    function displayFilteredStocks(stocks) {
+        const tbody = document.getElementById('pool-stocks-body');
+        tbody.innerHTML = '';
+
+        if (stocks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center">暂无数据</td></tr>';
+            return;
+        }
+
+        stocks.forEach(stock => {
+            // Extract signals data - this is the actual signals field from the database
+            const signals = stock.signals || {};
+
+            // Initialize variables to store values
+            let action = '';
+            let counts = 0;
+            let score_calc = 0;
+            let score_ai = 0;
+
+            // Extract values directly from the specific strategy
+            // The structure is: signals."信号生成V1".各项值
+            const strategyName = "信号生成V1";
+            if (signals[strategyName]) {
+                const strategyData = signals[strategyName];
+
+                // Extract the specific values as requested
+                action = strategyData.action || '';
+                counts = strategyData.counts !== undefined ? Math.floor(strategyData.counts) : 0;
+                score_calc = strategyData.score_calc !== undefined ? strategyData.score_calc : 0;
+                score_ai = strategyData.score_ai !== undefined ? strategyData.score_ai : 0;
+            }
+
+            // Format change percentage with % symbol and color coding
+            let changePercentDisplay = '';
+            if (stock.change_percent !== undefined && stock.change_percent !== null) {
+                const changePercent = parseFloat(stock.change_percent);
+                const formattedChange = changePercent.toFixed(2);
+                const sign = changePercent >= 0 ? '+' : '';
+                const colorClass = changePercent >= 0 ? 'text-success' : 'text-danger';
+                changePercentDisplay = `<span class="${colorClass}">${sign}${formattedChange}%</span>`;
+            }
+
+            // Format turnover rate with % symbol
+            let turnoverRateDisplay = '';
+            if (stock.turnover_rate !== undefined && stock.turnover_rate !== null) {
+                const turnoverRate = parseFloat(stock.turnover_rate);
+                turnoverRateDisplay = `${turnoverRate.toFixed(2)}%`;
+            }
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${stock.code}</td>
+                <td>${stock.name || ''}</td>
+                <td>${stock.price.toFixed(2)}</td>
+                <td>${changePercentDisplay}</td>
+                <td>${turnoverRateDisplay}</td>
+                <td>${action}</td>
+                <td>${counts}</td>
+                <td>${score_calc.toFixed(2)}</td>
+                <td>${score_ai.toFixed(2)}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-success buy-btn" data-code="${stock.code}" data-name="${stock.name || stock.code}" data-price="${stock.price.toFixed(2)}">买入</button>
+                </td>
+            `;
+            // Add double-click event to open K-line chart
+            row.addEventListener('dblclick', function() {
+                // Get current trend filter
+                const trendFilter = document.getElementById('trend-filter').value;
+
+                // Get the current filtered stocks data
+                const filteredStocks = getCurrentFilteredStocks();
+
+                // Create URL with stock data
+                let url = `/stock-kline?code=${stock.code}&name=${encodeURIComponent(stock.name || stock.code)}`;
+                if (trendFilter) {
+                    url += `&trend_filter=${encodeURIComponent(trendFilter)}`;
+                }
+
+                // Store filtered stocks data in localStorage for the K-line page to use
+                if (filteredStocks && filteredStocks.length > 0) {
+                    localStorage.setItem('filteredStocksData', JSON.stringify(filteredStocks));
+                }
+
+                window.open(url, '_blank');
+            });
+            tbody.appendChild(row);
+        });
     }
 
             // Search functionality
@@ -225,9 +340,94 @@
                 });
             }
     
+    // Function to load trend filter options
+    function loadTrendFilterOptions() {
+        fetch('/api/latest-pool-strategies')
+            .then(response => response.json())
+            .then(data => {
+                const trendFilter = document.getElementById('trend-filter');
+                // 清空现有选项（保留"全部"选项）
+                trendFilter.innerHTML = '<option value="">全部</option>';
+
+                if (data.strategies && data.strategies.length > 0) {
+                    data.strategies.forEach(strategy => {
+                        const option = document.createElement('option');
+                        option.value = strategy;
+                        option.textContent = strategy;
+                        trendFilter.appendChild(option);
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading trend filter options:', error);
+            });
+    }
+
+    // Function to filter stocks by trend strategy
+    function filterStocksByTrend(stocks, selectedStrategy) {
+        if (!selectedStrategy) {
+            return stocks; // 返回全部股票
+        }
+
+        return stocks.filter(stock => {
+            // 检查股票是否有该策略的数据
+            // 策略名称是 trend 对象的直接键
+            return stock.trend && stock.trend[selectedStrategy];
+        });
+    }
+
+    // Function to get current filtered stocks data
+    function getCurrentFilteredStocks() {
+        const trendFilter = document.getElementById('trend-filter').value;
+        const allStocks = Array.from(document.querySelectorAll('#pool-stocks-body tr')).map(row => {
+            const cells = row.querySelectorAll('td');
+            return {
+                code: cells[0].textContent,
+                name: cells[1].textContent,
+                price: parseFloat(cells[2].textContent) || 0,
+                change_percent: cells[3].textContent,
+                turnover_rate: cells[4].textContent,
+                action: cells[5].textContent,
+                counts: parseInt(cells[6].textContent) || 0,
+                score_calc: parseFloat(cells[7].textContent) || 0,
+                score_ai: parseFloat(cells[8].textContent) || 0
+            };
+        });
+
+        // If no trend filter is applied, return all stocks
+        if (!trendFilter) {
+            return allStocks;
+        }
+
+        // Filter stocks by trend strategy
+        return allStocks.filter(stock => {
+            // This is a simplified filter - in a real implementation,
+            // you would need to check if the stock has the specific trend strategy data
+            // For now, we'll return all stocks since we don't have the trend data in the table
+            return true;
+        });
+    }
+
     // Load data when page loads
     document.addEventListener('DOMContentLoaded', function() {
         loadLatestPoolStocks();
+        loadTrendFilterOptions();
+
+        // Trend filter change event
+        document.getElementById('trend-filter').addEventListener('change', function() {
+            const selectedStrategy = this.value;
+
+            // 重新加载股票数据并应用筛选
+            fetch('/api/latest-pool-stocks')
+                .then(response => response.json())
+                .then(data => {
+                    const filteredStocks = filterStocksByTrend(data, selectedStrategy);
+                    displayFilteredStocks(filteredStocks);
+                })
+                .catch(error => {
+                    console.error('Error loading filtered stocks:', error);
+                });
+        });
 
         // Buy modal functionality
         let currentStockCode = '';
@@ -374,13 +574,13 @@
                     </div>
                     <div class="mb-3">
                         <label for="accountSelect" class="form-label">账户</label>
-                        <select class="form-select" id="accountSelect" required>
+                        <select class="form-select" id="accountSelect" style="width: 150%;" required>
                             <option value="">请选择账户</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label for="stockCode" class="form-label">股票代码</label>
-                        <input type="text" class="form-control" id="stockCode" required>
+                        <input type="text" class="form-control" id="stockCode" style="width: 25%;" required>
                     </div>
                     <div class="mb-3">
                         <label for="stockName" class="form-label">股票名称</label>

@@ -525,7 +525,52 @@
     // Function to load stock pool data
     function loadStockPoolData() {
         console.log('Loading stock pool data');
-        fetch('/api/latest-pool-stocks')
+
+        // First, try to get filtered stocks data from localStorage (passed from stocks page)
+        const filteredStocksData = localStorage.getItem('filteredStocksData');
+        if (filteredStocksData) {
+            try {
+                const data = JSON.parse(filteredStocksData);
+                console.log('Using filtered stocks data from localStorage:', data);
+                console.log('Number of stocks in filtered pool:', data.length);
+                console.log('Stock codes in filtered pool:', data.map(stock => stock.code));
+                stockPool = data;
+
+                // Find the current stock index in the pool
+                currentStockIndex = stockPool.findIndex(stock => stock.code === stockCode);
+                console.log('Current stock index:', currentStockIndex);
+                console.log('Current stock code:', stockCode);
+
+                // Update button states
+                updateNavigationButtons();
+                return; // Exit early, we already have the data
+            } catch (error) {
+                console.error('Error parsing filtered stocks data from localStorage:', error);
+            }
+        }
+
+        // If no filtered data in localStorage, fall back to API call
+        // Get trend filter from URL parameters or localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        let trendFilter = urlParams.get('trend_filter') || localStorage.getItem('selectedTrendFilter') || '';
+
+        // Save trend filter to localStorage for persistence
+        if (trendFilter) {
+            localStorage.setItem('selectedTrendFilter', trendFilter);
+        } else {
+            // Clear trend filter if not specified
+            localStorage.removeItem('selectedTrendFilter');
+        }
+
+        // Build URL with trend filter parameter if specified
+        let url = '/api/latest-pool-stocks';
+        if (trendFilter) {
+            url += `?trend_filter=${encodeURIComponent(trendFilter)}`;
+        }
+
+        console.log('Fetching stock pool data from API:', url);
+
+        fetch(url)
             .then(response => {
                 console.log('API response status:', response.status);
                 if (!response.ok) {
@@ -534,12 +579,15 @@
                 return response.json();
             })
             .then(data => {
-                console.log('Received stock pool data:', data);
+                console.log('Received stock pool data from API:', data);
+                console.log('Number of stocks in filtered pool:', data.length);
+                console.log('Stock codes in filtered pool:', data.map(stock => stock.code));
                 stockPool = data;
 
                 // Find the current stock index in the pool
                 currentStockIndex = stockPool.findIndex(stock => stock.code === stockCode);
                 console.log('Current stock index:', currentStockIndex);
+                console.log('Current stock code:', stockCode);
 
                 // Update button states
                 updateNavigationButtons();
@@ -559,15 +607,19 @@
             return;
         }
 
+        console.log('Updating navigation buttons - current index:', currentStockIndex, 'stock pool length:', stockPool.length);
+
         // Disable/enable previous button
         if (currentStockIndex <= 0) {
             prevBtn.disabled = true;
             prevBtn.classList.add('btn-secondary');
             prevBtn.classList.remove('btn-primary');
+            console.log('Previous button disabled - at first stock');
         } else {
             prevBtn.disabled = false;
             prevBtn.classList.remove('btn-secondary');
             prevBtn.classList.add('btn-primary');
+            console.log('Previous button enabled');
         }
 
         // Disable/enable next button
@@ -575,10 +627,12 @@
             nextBtn.disabled = true;
             nextBtn.classList.add('btn-secondary');
             nextBtn.classList.remove('btn-primary');
+            console.log('Next button disabled - at last stock');
         } else {
             nextBtn.disabled = false;
             nextBtn.classList.remove('btn-secondary');
             nextBtn.classList.add('btn-primary');
+            console.log('Next button enabled');
         }
     }
 
@@ -618,6 +672,10 @@
         console.log('Navigating to previous stock, current index:', currentStockIndex);
         if (currentStockIndex > 0) {
             navigateToStock(currentStockIndex - 1);
+        } else {
+            console.log('Already at first stock, cannot navigate previous');
+            // Ensure button is properly disabled
+            updateNavigationButtons();
         }
     }
 
@@ -626,6 +684,10 @@
         console.log('Navigating to next stock, current index:', currentStockIndex);
         if (currentStockIndex < stockPool.length - 1) {
             navigateToStock(currentStockIndex + 1);
+        } else {
+            console.log('Already at last stock, cannot navigate next');
+            // Ensure button is properly disabled
+            updateNavigationButtons();
         }
     }
 

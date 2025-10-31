@@ -794,6 +794,17 @@ python -m backtesting.backtester
   - Concept fund flow: 概念名称, 今日涨跌幅, and 今日主力净流入-净占比 for top 5 concepts
 - **TESTED**: Comprehensive testing confirms fund flow data is properly collected, formatted, and included in LLM analysis
 
+### Stock K-line Navigation Dataset Fix
+- **FIXED**: Resolved stock K-line chart navigation logic error where previous/next buttons were using full dataset instead of filtered dataset
+- **ROOT CAUSE**: K-line page was re-fetching all stocks from API instead of using the filtered dataset from stock list page
+- **FIXES IMPLEMENTED**:
+  - Added `getCurrentFilteredStocks()` function in stock list page to capture current filtered dataset
+  - Modified double-click event handlers to pass filtered dataset via localStorage to K-line page
+  - Updated K-line page to prioritize using filtered dataset from localStorage over API calls
+  - Enhanced navigation button state management with proper boundary checking
+- **VERIFIED**: When user applies trend filter (e.g., from 31 stocks to 10 stocks), K-line navigation now correctly cycles through only the filtered 10 stocks
+- **BENEFITS**: Consistent navigation experience, proper button state management, and improved performance by avoiding unnecessary API calls
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-19*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-10-30*
 
