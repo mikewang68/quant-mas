@@ -51,11 +51,26 @@ class EnhancedPublicOpinionAnalysisStrategyV2(BaseStrategy):
         self.db_manager = db_manager
         self.akshare_client = AkshareClient()
 
+        # 更换新ip
+        self._swith_ip()
+
         # 在策略初始化时加载千股千评数据
         self._load_qian_gu_qian_ping_data()
 
         # 在策略初始化时加载资金流数据
         self._load_fund_flow_data()
+
+        # 更换新ip
+        self._swith_ip()
+
+    def _swith_ip(self):
+        from utils.network_retry_handler import (
+            handle_network_error_with_retry,
+        )
+
+        # 创建一个模拟的网络错误来触发IP更换
+        fake_error = Exception("主动触发IP更换")
+        handle_network_error_with_retry(fake_error)
 
     def _load_qian_gu_qian_ping_data(self):
         """
