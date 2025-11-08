@@ -9,6 +9,7 @@ import json
 import sys
 import os
 from datetime import datetime
+import requests
 
 # Add the project root to the Python path to resolve imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -17,6 +18,118 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config.mongodb_config import MongoDBConfig
 
 from utils.network_error_handler import handle_network_error
+from utils.enhanced_router_control import TPLinkWAN2Controller
+
+# 全局IP使用记录数组，长度为50
+ip_used = []
+MAX_IP_HISTORY = 50
+
+
+def get_current_ip():
+    """获取当前ISP提供的IP地址"""
+    try:
+        # 使用最方便的IP查询服务 - 直接返回纯文本IP
+        service = "https://ip.3322.net/"
+
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+
+        response = requests.get(service, headers=headers, timeout=10)
+        if response.status_code == 200:
+            # 直接返回响应内容，不需要解析
+            ip = response.text.strip()
+            print(f"获取到当前IP: {ip}")
+            return ip
+        else:
+            print(f"IP查询服务返回状态码: {response.status_code}")
+            return "unknown"
+
+    except Exception as e:
+        print(f"获取IP地址失败: {e}")
+        return "unknown"
+
+
+def is_ip_used(ip):
+    """检查IP是否已经在使用记录中"""
+    global ip_used
+    return ip in ip_used
+
+
+def add_ip_to_history(ip):
+    """将IP添加到使用记录中"""
+    global ip_used
+
+    # 如果IP已经在记录中，不需要重复添加
+    if ip in ip_used:
+        return
+
+    # 如果数组已满，删除第一个元素
+    if len(ip_used) >= MAX_IP_HISTORY:
+        ip_used.pop(0)
+
+    # 添加新IP到数组末尾
+    ip_used.append(ip)
+    print(f"IP {ip} 已添加到使用记录，当前记录数: {len(ip_used)}")
+
+
+def switch_to_new_ip():
+    """切换到新的IP地址，确保不使用重复的IP"""
+    global ip_used
+
+    print("开始IP轮换过程...")
+    print(f"当前IP使用记录: {ip_used}")
+
+    # 初始化路由器控制器
+    router_config = {
+        "router_ip": "192.168.1.1",
+        "username": "wangdg68",
+        "password": "wap951020ZJL",
+    }
+
+    controller = TPLinkWAN2Controller(
+        router_ip=router_config["router_ip"],
+        username=router_config["username"],
+        password=router_config["password"],
+    )
+
+    max_attempts = 10  # 最大尝试次数
+    attempt = 0
+
+    while attempt < max_attempts:
+        attempt += 1
+        print(f"\n第 {attempt} 次尝试切换IP...")
+
+        # 执行IP切换
+        success = controller.switch_ip()
+        if not success:
+            print("IP切换失败，继续尝试...")
+            continue
+
+        # 等待网络稳定
+        print("等待网络稳定...")
+        time.sleep(15)
+
+        # 获取新IP
+        new_ip = get_current_ip()
+
+        if new_ip == "unknown":
+            print("无法获取新IP，继续尝试...")
+            continue
+
+        # 检查IP是否重复
+        if not is_ip_used(new_ip):
+            print(f"✅ 成功获取新IP: {new_ip} (未使用过)")
+            add_ip_to_history(new_ip)
+            print(f"✅ IP切换成功！当前IP使用记录数组: {ip_used}")
+            controller.close()
+            return True
+        else:
+            print(f"⚠️ 获取的IP {new_ip} 已在使用记录中，继续尝试...")
+
+    print(f"❌ 经过 {max_attempts} 次尝试后仍无法获取新IP")
+    controller.close()
+    return False
 
 
 # 连接mongodb中的stock数据库
@@ -233,7 +346,7 @@ def write_k_daily(db, code, start_date="") -> bool:
         # 使用公共网络错误重试函数
         from utils.network_retry_handler import handle_network_error_with_retry
 
-        if not handle_network_error_with_retry(e, 50):
+        if not handle_network_error_with_retry(e, max_retries=5000, retry_delay=2):
             print(f"经过重试后仍然失败，跳过股票{code}")
         return False
 
@@ -719,10 +832,10 @@ def main():
         print(
             "Today is the first trading day of the month. Updating industry, conception, PE, and PB information..."
         )
-        # update_industry(db)
+        update_industry(db)
         update_conception(db)
         print("Updating finance data...")
-        # update_finance_data(db)
+        update_finance_data(db)
     else:
         print(
             "Today is not the first trading day of the month. Skipping industry and finance data update."

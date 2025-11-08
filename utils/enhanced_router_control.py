@@ -11,11 +11,11 @@ from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.common.exceptions import (
     TimeoutException,
-    NoSuchElementException,
     ElementNotInteractableException,
 )
 import json
 import os
+from utils.network_retry_handler import handle_network_error_with_retry
 
 # 设置日志
 logging.basicConfig(
@@ -138,17 +138,31 @@ class TPLinkWAN2Controller:
     def setup_driver(self):
         """设置Chrome WebDriver"""
         logger.info("设置Chrome WebDriver...")
-        self.driver = setup_chrome_driver(headless=self.headless)
-        if self.driver:
-            self.driver.implicitly_wait(3)  # 减少隐式等待时间
-            logger.info("Chrome WebDriver设置成功")
-            return True
-        else:
-            logger.error("Chrome WebDriver设置失败")
-            return False
+        try:
+            self.driver = setup_chrome_driver(headless=self.headless)
+            if self.driver:
+                self.driver.implicitly_wait(3)  # 减少隐式等待时间
+                logger.info("Chrome WebDriver设置成功")
+                return True
+            else:
+                logger.error("Chrome WebDriver设置失败")
+                return False
+        except Exception as e:
+            logger.error(f"设置Chrome WebDriver时发生网络错误: {e}")
+            # 尝试处理网络错误
+            if handle_network_error_with_retry(e):
+                logger.info("网络错误处理成功，重新尝试设置WebDriver")
+                return self.setup_driver()
+            else:
+                logger.error("网络错误处理失败")
+                return False
 
     def _safe_click(self, element):
-        """安全点击元素"""
+        """安全点击元素，处理mask元素拦截问题"""
+        if not self.driver:
+            logger.error("WebDriver未初始化")
+            return False
+
         try:
             # 滚动到元素并确保可见
             self.driver.execute_script("arguments[0].scrollIntoView(true);", element)
@@ -157,21 +171,88 @@ class TPLinkWAN2Controller:
             # 尝试直接点击
             element.click()
             return True
-        except ElementNotInteractableException:
-            # 如果直接点击失败，尝试使用JavaScript
-            logger.warning("直接点击失败，尝试使用JavaScript点击")
-            try:
-                self.driver.execute_script("arguments[0].click();", element)
-                return True
-            except Exception as e:
-                logger.error(f"JavaScript点击也失败: {e}")
+        except ElementNotInteractableException as e:
+            # 检查是否是mask元素拦截
+            if "mask" in str(e).lower() or "other element would receive the click" in str(e):
+                logger.warning("检测到mask元素拦截，尝试绕过mask...")
+
+                # 策略1: 尝试移除或隐藏mask元素
+                try:
+                    # 查找并隐藏mask元素
+                    mask_elements = self.driver.find_elements(By.CSS_SELECTOR, "div[id*='mask'], div[class*='mask']")
+                    for mask in mask_elements:
+                        if mask.is_displayed():
+                            logger.info("找到并隐藏mask元素")
+                            self.driver.execute_script("arguments[0].style.display = 'none';", mask)
+                            time.sleep(0.5)
+                except Exception as mask_error:
+                    logger.warning(f"隐藏mask元素失败: {mask_error}")
+
+                # 策略2: 尝试使用JavaScript点击
+                try:
+                    logger.info("尝试使用JavaScript点击绕过mask")
+                    self.driver.execute_script("arguments[0].click();", element)
+                    return True
+                except Exception as js_error:
+                    logger.warning(f"JavaScript点击失败: {js_error}")
+
+                # 策略3: 尝试使用ActionChains模拟点击
+                try:
+                    logger.info("尝试使用ActionChains模拟点击")
+                    from selenium.webdriver.common.action_chains import ActionChains
+                    actions = ActionChains(self.driver)
+                    actions.move_to_element(element).click().perform()
+                    return True
+                except Exception as action_error:
+                    logger.warning(f"ActionChains点击失败: {action_error}")
+
+                # 策略4: 尝试强制点击
+                try:
+                    logger.info("尝试强制点击")
+                    self.driver.execute_script("""
+                        var element = arguments[0];
+                        var event = new MouseEvent('click', {
+                            'view': window,
+                            'bubbles': true,
+                            'cancelable': true
+                        });
+                        element.dispatchEvent(event);
+                    """, element)
+                    return True
+                except Exception as force_error:
+                    logger.warning(f"强制点击失败: {force_error}")
+
+                # 策略5: 尝试等待mask消失后重试
+                logger.info("等待mask元素可能消失...")
+                for attempt in range(3):
+                    try:
+                        time.sleep(1)
+                        element.click()
+                        return True
+                    except:
+                        continue
+
+                logger.error("所有绕过mask的策略都失败了")
                 return False
+            else:
+                # 如果不是mask拦截，尝试JavaScript点击
+                logger.warning("直接点击失败，尝试使用JavaScript点击")
+                try:
+                    self.driver.execute_script("arguments[0].click();", element)
+                    return True
+                except Exception as js_error:
+                    logger.error(f"JavaScript点击也失败: {js_error}")
+                    return False
         except Exception as e:
             logger.error(f"点击元素时出错: {e}")
             return False
 
     def _find_element_safely(self, selectors, timeout=3, clickable=False):
         """安全查找元素"""
+        if not self.driver:
+            logger.error("WebDriver未初始化")
+            return None
+
         for selector_type, selector_value in selectors:
             try:
                 logger.debug(f"尝试定位元素: {selector_type} = {selector_value}")
@@ -204,6 +285,9 @@ class TPLinkWAN2Controller:
             # 访问登录页面
             login_url = f"{self.base_url}/webpages/login.html"
             logger.info(f"访问登录页面: {login_url}")
+            if not self.driver:
+                logger.error("WebDriver未初始化")
+                return False
             self.driver.get(login_url)
 
             # 减少等待时间
@@ -247,6 +331,9 @@ class TPLinkWAN2Controller:
             password_fields = []
             for selector_type, selector_value in password_selectors:
                 try:
+                    if not self.driver:
+                        logger.error("WebDriver未初始化")
+                        return False
                     elements = self.driver.find_elements(selector_type, selector_value)
                     password_fields.extend(elements)
                 except:
@@ -287,20 +374,27 @@ class TPLinkWAN2Controller:
 
             # 如果通过标准方式未找到，尝试查找包含"登录"文本的span元素
             if not login_button:
-                login_spans = self.driver.find_elements(
-                    By.XPATH, "//span[contains(text(), '登录')]"
-                )
-                for span in login_spans:
-                    try:
-                        button = span.find_element(
-                            By.XPATH,
-                            "./ancestor::div[contains(@class, 'button') or contains(@class, 'btn')]",
-                        )
-                        if button.is_displayed() and button.is_enabled():
-                            login_button = button
-                            break
-                    except:
-                        continue
+                if not self.driver:
+                    logger.error("WebDriver未初始化")
+                    return False
+
+                try:
+                    login_spans = self.driver.find_elements(
+                        By.XPATH, "//span[contains(text(), '登录')]"
+                    )
+                    for span in login_spans:
+                        try:
+                            button = span.find_element(
+                                By.XPATH,
+                                "./ancestor::div[contains(@class, 'button') or contains(@class, 'btn')]",
+                            )
+                            if button.is_displayed() and button.is_enabled():
+                                login_button = button
+                                break
+                        except:
+                            continue
+                except Exception as e:
+                    logger.warning(f"查找登录span元素时出错: {e}")
 
             if not login_button:
                 logger.error("错误: 未找到登录按钮")
@@ -319,6 +413,10 @@ class TPLinkWAN2Controller:
             time.sleep(3)
 
             # 检查是否登录成功
+            if not self.driver:
+                logger.error("WebDriver未初始化")
+                return False
+
             current_url = self.driver.current_url
             logger.info(f"登录后页面URL: {current_url}")
 
@@ -450,6 +548,9 @@ class TPLinkWAN2Controller:
             wan2_element = None
             for selector_type, selector_value in wan2_selectors:
                 try:
+                    if not self.driver:
+                        logger.error("WebDriver未初始化")
+                        return False
                     logger.debug(
                         f"尝试定位WAN2元素: {selector_type} = {selector_value}"
                     )
@@ -469,6 +570,9 @@ class TPLinkWAN2Controller:
                 logger.warning("未找到WAN2设置选项，尝试查找右侧区域的WAN2相关元素...")
                 # 尝试查找右侧框架中的WAN2元素
                 try:
+                    if not self.driver:
+                        logger.error("WebDriver未初始化")
+                        return False
                     # 查找所有可能的WAN2元素
                     wan2_elements = self.driver.find_elements(
                         By.XPATH, "//*[contains(text(), 'WAN2')]"
@@ -544,6 +648,9 @@ class TPLinkWAN2Controller:
                 logger.warning("未通过标准方式找到断开按钮，尝试更通用的查找方法")
                 # 尝试更通用的查找方法
                 try:
+                    if not self.driver:
+                        logger.error("WebDriver未初始化")
+                        return False
                     # 查找所有按钮并检查文本
                     buttons = self.driver.find_elements(By.TAG_NAME, "button")
                     for btn in buttons:
@@ -628,6 +735,9 @@ class TPLinkWAN2Controller:
                 logger.warning("未通过标准方式找到连接按钮，尝试更通用的查找方法")
                 # 尝试更通用的查找方法
                 try:
+                    if not self.driver:
+                        logger.error("WebDriver未初始化")
+                        return False
                     # 查找所有按钮并检查文本
                     buttons = self.driver.find_elements(By.TAG_NAME, "button")
                     for btn in buttons:
@@ -685,16 +795,20 @@ class TPLinkWAN2Controller:
         logger.info("开始切换TP-Link路由器WAN2连接")
         logger.info("=" * 50)
 
-        # 设置WebDriver
-        if not self.setup_driver():
-            logger.error("错误: WebDriver设置失败")
-            return False
+        # 如果WebDriver已经存在，直接使用，否则创建新的
+        if not self.driver:
+            if not self.setup_driver():
+                logger.error("错误: WebDriver设置失败")
+                return False
 
         try:
-            # 登录路由器
-            if not self.login():
-                logger.error("错误: 登录失败")
-                return False
+            # 检查当前页面是否已经是登录状态
+            current_url = self.driver.current_url
+            if "/webpages/index.html" not in current_url:
+                # 如果不在管理页面，需要重新登录
+                if not self.login():
+                    logger.error("错误: 登录失败")
+                    return False
 
             # 导航到WAN设置
             if not self.navigate_to_wan_settings():
@@ -737,9 +851,7 @@ class TPLinkWAN2Controller:
 
             traceback.print_exc()
             return False
-        finally:
-            # 关闭浏览器
-            self.close()
+        # 注意：这里不关闭浏览器，保持会话状态
 
     def close(self):
         """关闭浏览器"""
