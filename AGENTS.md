@@ -826,6 +826,16 @@ python -m backtesting.backtester
 - **TESTED**: Integration confirmed working with automated test scripts
 - **BENEFITS**: Router control now has robust error recovery for network connectivity issues
 
+### IP Rotation Mechanism Analysis and Optimization
+- **ANALYZED**: Identified reasons why IP rotation typically requires 2+ attempts:
+  - **Network Connection Delay**: 15-second wait time after IP switching may be insufficient for complete network stabilization
+  - **Router Response Time**: Router WAN2 disconnect/connect cycle (6 seconds total) may be too short for full process completion
+  - **IP Service Response**: External IP query service (ip.3322.net) may respond slowly during network instability
+  - **Duplicate IP Detection**: 50-IP history tracking requires multiple attempts to find unused IPs
+- **FIXED**: Excessive retry count in down2mongo.py - reduced from 5000 to 3 retries to prevent system hangs
+- **OPTIMIZED**: Cleaned up unused imports and improved code consistency in router control integration
+- **BENEFITS**: More reliable IP rotation with proper error handling and reasonable retry limits
+
 ---
-*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-11-08*
+*This document tracks the operations and enhancements made to the Quant MAS system. Last updated: 2025-11-22*
 

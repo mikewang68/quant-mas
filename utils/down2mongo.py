@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import the MongoDB configuration from the project
 from config.mongodb_config import MongoDBConfig
 
-from utils.network_error_handler import handle_network_error
-from utils.enhanced_router_control import TPLinkWAN2Controller
+# from utils.network_error_handler import handle_network_error  # Unused import
+# from utils.enhanced_router_control import TPLinkWAN2Controller  # Unused import
 
 # 全局IP使用记录数组，长度为50
 ip_used = []
@@ -80,17 +80,15 @@ def switch_to_new_ip():
     print("开始IP轮换过程...")
     print(f"当前IP使用记录: {ip_used}")
 
-    # 初始化路由器控制器
-    router_config = {
-        "router_ip": "192.168.1.1",
-        "username": "wangdg68",
-        "password": "wap951020ZJL",
-    }
+    # 使用优化版路由器控制器
+    from utils.optimized_router_control import OptimizedTPLinkWAN2Controller
 
-    controller = TPLinkWAN2Controller(
-        router_ip=router_config["router_ip"],
-        username=router_config["username"],
-        password=router_config["password"],
+    controller = OptimizedTPLinkWAN2Controller(
+        router_ip="192.168.1.1",
+        username="wangdg68",
+        password="wap951020ZJL",
+        headless=True,
+        reuse_session=True
     )
 
     max_attempts = 10  # 最大尝试次数
@@ -122,12 +120,13 @@ def switch_to_new_ip():
             print(f"✅ 成功获取新IP: {new_ip} (未使用过)")
             add_ip_to_history(new_ip)
             print(f"✅ IP切换成功！当前IP使用记录数组: {ip_used}")
-            controller.close()
+            # 注意：不关闭浏览器，保持会话
             return True
         else:
             print(f"⚠️ 获取的IP {new_ip} 已在使用记录中，继续尝试...")
 
     print(f"❌ 经过 {max_attempts} 次尝试后仍无法获取新IP")
+    # 关闭会话
     controller.close()
     return False
 
@@ -346,7 +345,7 @@ def write_k_daily(db, code, start_date="") -> bool:
         # 使用公共网络错误重试函数
         from utils.network_retry_handler import handle_network_error_with_retry
 
-        if not handle_network_error_with_retry(e, max_retries=5000, retry_delay=2):
+        if not handle_network_error_with_retry(e, max_retries=3, retry_delay=2):
             print(f"经过重试后仍然失败，跳过股票{code}")
         return False
 
