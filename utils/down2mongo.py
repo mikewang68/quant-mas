@@ -8,7 +8,7 @@ import time
 import json
 import sys
 import os
-from datetime import datetime
+from datetime import datetime, date
 import requests
 
 # Add the project root to the Python path to resolve imports
@@ -88,7 +88,7 @@ def switch_to_new_ip():
         username="wangdg68",
         password="wap951020ZJL",
         headless=True,
-        reuse_session=True
+        reuse_session=True,
     )
 
     max_attempts = 10  # 最大尝试次数
@@ -606,8 +606,8 @@ def update_finance_data(db):
                         if col not in ["序号"]:
                             value = row[col]
                             if pd.notna(value):
-                                # 转换datetime.date对象为字符串
-                                if isinstance(value, datetime.date):
+                                # 转换date对象为字符串
+                                if isinstance(value, date):
                                     value = value.strftime("%Y-%m-%d")
                                 record_data[col] = value
 
@@ -644,8 +644,8 @@ def update_finance_data(db):
                         if col not in ["序号"]:
                             value = row[col]
                             if pd.notna(value):
-                                # 转换datetime.date对象为字符串
-                                if isinstance(value, datetime.date):
+                                # 转换date对象为字符串
+                                if isinstance(value, date):
                                     value = value.strftime("%Y-%m-%d")
                                 record_data[col] = value
 
@@ -682,8 +682,8 @@ def update_finance_data(db):
                         if col not in ["序号"]:
                             value = row[col]
                             if pd.notna(value):
-                                # 转换datetime.date对象为字符串
-                                if isinstance(value, datetime.date):
+                                # 转换date对象为字符串
+                                if isinstance(value, date):
                                     value = value.strftime("%Y-%m-%d")
                                 record_data[col] = value
 
@@ -720,8 +720,8 @@ def update_finance_data(db):
                         if col not in ["序号"]:
                             value = row[col]
                             if pd.notna(value):
-                                # 转换datetime.date对象为字符串
-                                if isinstance(value, datetime.date):
+                                # 转换date对象为字符串
+                                if isinstance(value, date):
                                     value = value.strftime("%Y-%m-%d")
                                 record_data[col] = value
 
@@ -766,8 +766,8 @@ def update_finance_data(db):
                         if col not in ["序号"]:
                             value = row[col]
                             if pd.notna(value):
-                                # 转换datetime.date对象为字符串
-                                if isinstance(value, datetime.date):
+                                # 转换date对象为字符串
+                                if isinstance(value, date):
                                     value = value.strftime("%Y-%m-%d")
                                 # 将"名称"字段重命名为"股票简称"
                                 if col == "名称":
